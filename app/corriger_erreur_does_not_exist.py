@@ -9,6 +9,10 @@ if sys.platform == "win32":
 
 # requests n'est plus utilisé (suppression API)
 import json
+import requests
+
+session = requests.Session()
+
 
 print("=" * 70)
 print("CORRECTION ERREUR 'DOES NOT EXIST' DANS LES CHARTS")
