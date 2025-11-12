@@ -261,6 +261,10 @@ print("-" * 70)
 
 sys.path.insert(0, ".")
 from app.services.data_repo import DataRepository
+import requests
+
+session = requests.Session()
+
 
 try:
     # Build DSN from environment to avoid hard-coded credentials in the repo.
