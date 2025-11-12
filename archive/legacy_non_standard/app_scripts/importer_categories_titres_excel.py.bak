@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Script pour importer les catégories et titres d'emploi depuis le fichier Excel
+et mettre à jour la base de données
+"""
+
+import sys
+import os
+import pandas as pd
+from pathlib import Path
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.insert(0, parent_dir)
+
+try:
+    from providers.postgres_provider import PostgresProvider
+
+    provider = PostgresProvider()
+
+    if not provider.repo:
+        print("❌ Impossible de se connecter à la base de données")
+        sys.exit(1)
+
+    print("\n" + "=" * 80)
+    print("  IMPORT DES CATÉGORIES ET TITRES D'EMPLOI DEPUIS EXCEL")
+    print("=" * 80 + "\n")
+
+    # Lire le fichier Excel
+    excel_file = Path("Classeur1.xlsx")
+    if not excel_file.exists():
+        print(f"❌ Fichier introuvable: {excel_file}")
+        sys.exit(1)
+
+    print(f"📖 Lecture du fichier Excel: {excel_file}")
+    df = pd.read_excel(excel_file, engine="openpyxl")
+    print(f"  ✓ {len(df)} lignes lues")
+
+    # Identifier les colonnes
+    cat_col = "Categorie d'emploi"
+    title_col = "titre d'emploi"
+    ligne_col = "N de ligne"
+
+    if cat_col not in df.columns or title_col not in df.columns:
+        print(f"❌ Colonnes manquantes dans le fichier Excel")
+        print(f"  Colonnes disponibles: {list(df.columns)}")
+        sys.exit(1)
+
+    # Créer un dictionnaire de mapping: (source_file, n_de_ligne) -> (categorie, titre)
+    print("\n📊 Préparation des données...")
+    mapping = {}
+    for idx, row in df.iterrows():
+        ligne_num = row.get(
+            ligne_col, idx + 2
+        )  # +2 car ligne 1 = header, ligne 2 = première donnée
+        cat = str(row.get(cat_col, "")).strip() if pd.notna(row.get(cat_col)) else None
+        titre = (
+            str(row.get(title_col, "")).strip()
+            if pd.notna(row.get(title_col))
+            else None
+        )
+
+        if cat and cat != "" and cat != "nan":
+            mapping[(excel_file.name, int(ligne_num))] = (
+                cat,
+                titre if titre and titre != "nan" else None,
+            )
+
+    print(f"  ✓ {len(mapping)} entrées préparées")
+
+    # Compter les catégories et titres
+    categories = {}
+    titres = {}
+    for (file, ligne), (cat, titre) in mapping.items():
+        categories[cat] = categories.get(cat, 0) + 1
+        if titre:
+            titres[titre] = titres.get(titre, 0) + 1
+
+    print(f"\n📋 Catégories trouvées: {len(categories)}")
+    for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
+        print(f"  • {cat}: {count} lignes")
+
+    print(f"\n📋 Titres trouvés: {len(titres)}")
+    for titre, count in sorted(titres.items(), key=lambda x: x[1], reverse=True)[:20]:
+        print(f"  • {titre}: {count} lignes")
+    if len(titres) > 20:
+        print(f"  ... et {len(titres) - 20} autres titres")
+
+    # Mettre à jour la base de données
+    print("\n🔄 Mise à jour de la base de données...")
+
+    def update_db(conn):
+        updated_cat = 0
+        updated_title = 0
+
+        with conn.cursor() as cur:
+            for (file, ligne), (cat, titre) in mapping.items():
+                # Mettre à jour categorie_emploi
+                if cat:
+                    sql_cat = """
+                        UPDATE paie.stg_paie_transactions
+                        SET categorie_emploi = %(cat)s
+                        WHERE source_file = %(file)s 
+                          AND source_row_number = %(ligne)s
+                          AND (categorie_emploi IS NULL OR TRIM(categorie_emploi) = '')
+                    """
+                    cur.execute(sql_cat, {"cat": cat, "file": file, "ligne": ligne})
+                    updated_cat += cur.rowcount
+
+                # Mettre à jour titre_emploi
+                if titre:
+                    sql_title = """
+                        UPDATE paie.stg_paie_transactions
+                        SET titre_emploi = %(titre)s
+                        WHERE source_file = %(file)s 
+                          AND source_row_number = %(ligne)s
+                          AND (titre_emploi IS NULL OR TRIM(titre_emploi) = '')
+                    """
+                    cur.execute(
+                        sql_title, {"titre": titre, "file": file, "ligne": ligne}
+                    )
+                    updated_title += cur.rowcount
+
+        return (updated_cat, updated_title)
+
+    try:
+        updated_cat, updated_title = provider.repo.run_tx(update_db)
+        print(f"  ✓ {updated_cat} lignes mises à jour pour categorie_emploi")
+        print(f"  ✓ {updated_title} lignes mises à jour pour titre_emploi")
+    except Exception as e:
+        if "droit refusé" in str(e) or "permission denied" in str(e).lower():
+            print(f"\n⚠️ Droits insuffisants pour mettre à jour directement.")
+            print(f"  Création d'un script SQL à exécuter avec le rôle postgres...")
+
+            # Créer un script SQL
+            sql_script = f"""-- =============================================================================
+-- Mise à jour des catégories et titres d'emploi depuis le fichier Excel
+-- À exécuter avec le rôle postgres
+-- =============================================================================
+
+\\set ON_ERROR_STOP on
+SET client_min_messages TO NOTICE;
+
+\\echo ''
+\\echo '========================================================================='
+\\echo 'Mise à jour des catégories et titres d''emploi'
+\\echo '========================================================================='
+\\echo ''
+
+"""
+
+            # Générer les UPDATE pour chaque ligne
+            batch_size = 100
+            for i, ((file, ligne), (cat, titre)) in enumerate(mapping.items()):
+                if i % batch_size == 0 and i > 0:
+                    sql_script += "\n"
+
+                if cat:
+                    sql_script += f"""
+UPDATE paie.stg_paie_transactions
+SET categorie_emploi = '{cat.replace("'", "''")}'
+WHERE source_file = '{file.replace("'", "''")}' 
+  AND source_row_number = {ligne}
+  AND (categorie_emploi IS NULL OR TRIM(categorie_emploi) = '');
+
+"""
+
+                if titre:
+                    sql_script += f"""
+UPDATE paie.stg_paie_transactions
+SET titre_emploi = '{titre.replace("'", "''")}'
+WHERE source_file = '{file.replace("'", "''")}' 
+  AND source_row_number = {ligne}
+  AND (titre_emploi IS NULL OR TRIM(titre_emploi) = '');
+
+"""
+
+            sql_script += """
+\\echo ''
+\\echo '📊 Vérification des résultats:'
+SELECT 
+    categorie_emploi,
+    COUNT(DISTINCT matricule) as nb_employes,
+    COUNT(*) as nb_lignes
+FROM paie.stg_paie_transactions
+WHERE categorie_emploi IS NOT NULL AND TRIM(categorie_emploi) != ''
+GROUP BY categorie_emploi
+ORDER BY nb_employes DESC;
+
+\\echo ''
+\\echo '========================================================================='
+\\echo '✅ Mise à jour terminée'
+\\echo '========================================================================='
+"""
+
+            script_path = Path("migration/016_mise_a_jour_categories_titres.sql")
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(sql_script)
+
+            print(f"\n✓ Script SQL créé: {script_path}")
+            print(f"  Nombre de mises à jour: {len(mapping)} lignes")
+            print(f"\n  Pour exécuter ce script, utilisez:")
+            print(
+                f"  psql -h localhost -U postgres -d payroll_db -f migration/016_mise_a_jour_categories_titres.sql"
+            )
+        else:
+            raise
+
+    print("\n" + "=" * 80)
+    print("  ✅ Import terminé")
+    print("=" * 80 + "\n")
+
+except Exception as e:
+    print(f"❌ Erreur: {e}")
+    import traceback
+
+    traceback.print_exc()
+    sys.exit(1)

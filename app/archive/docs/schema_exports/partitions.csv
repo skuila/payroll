@@ -1,0 +1,22 @@
+parent_schema,parent_table,strategy,partition_schema,partition_name,boundary
+payroll,idx_payroll_code,,payroll,payroll_transactions_2024_pay_code_idx,
+payroll,idx_payroll_code,,payroll,payroll_transactions_2025_pay_code_idx,
+payroll,idx_payroll_code,,payroll,payroll_transactions_2026_pay_code_idx,
+payroll,idx_payroll_date,,payroll,payroll_transactions_2024_pay_date_idx,
+payroll,idx_payroll_date,,payroll,payroll_transactions_2025_pay_date_idx,
+payroll,idx_payroll_date,,payroll,payroll_transactions_2026_pay_date_idx,
+payroll,idx_payroll_employee,,payroll,payroll_transactions_2024_employee_id_idx,
+payroll,idx_payroll_employee,,payroll,payroll_transactions_2025_employee_id_idx,
+payroll,idx_payroll_employee,,payroll,payroll_transactions_2026_employee_id_idx,
+payroll,idx_payroll_employee_date,,payroll,payroll_transactions_2024_employee_id_pay_date_idx,
+payroll,idx_payroll_employee_date,,payroll,payroll_transactions_2025_employee_id_pay_date_idx,
+payroll,idx_payroll_employee_date,,payroll,payroll_transactions_2026_employee_id_pay_date_idx,
+payroll,idx_payroll_period,,payroll,payroll_transactions_2024_pay_year_pay_month_idx,
+payroll,idx_payroll_period,,payroll,payroll_transactions_2025_pay_year_pay_month_idx,
+payroll,idx_payroll_period,,payroll,payroll_transactions_2026_pay_year_pay_month_idx,
+payroll,payroll_transactions,RANGE (pay_date),payroll,payroll_transactions_2024,FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')
+payroll,payroll_transactions,RANGE (pay_date),payroll,payroll_transactions_2025,FOR VALUES FROM ('2025-01-01') TO ('2026-01-01')
+payroll,payroll_transactions,RANGE (pay_date),payroll,payroll_transactions_2026,FOR VALUES FROM ('2026-01-01') TO ('2027-01-01')
+payroll,pk_payroll_transactions,,payroll,payroll_transactions_2024_pkey,
+payroll,pk_payroll_transactions,,payroll,payroll_transactions_2025_pkey,
+payroll,pk_payroll_transactions,,payroll,payroll_transactions_2026_pkey,

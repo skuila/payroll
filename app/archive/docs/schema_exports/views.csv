@@ -1,0 +1,110 @@
+schema,view,definition
+core,v_employees_enriched," SELECT e.employee_id,
+    e.employee_key,
+    e.matricule_norm,
+    e.matricule_raw,
+    e.nom_norm,
+    e.prenom_norm,
+    e.nom_complet,
+    e.statut,
+    e.source_system,
+    e.created_at,
+    e.updated_at,
+    e.created_by,
+    e.updated_by,
+    count(DISTINCT t.pay_date) AS nb_periodes_paie,
+    min(t.pay_date) AS premiere_paie,
+    max(t.pay_date) AS derniere_paie,
+    sum(t.amount_cents) / 100.0 AS total_paie_lifetime
+   FROM core.employees e
+     LEFT JOIN payroll.payroll_transactions t ON e.employee_id = t.employee_id
+  GROUP BY e.employee_id;"
+payroll,v_imported_payroll," SELECT id,
+    TRIM(BOTH FROM ""N de ligne ""::text) AS numero_ligne,
+    TRIM(BOTH FROM ""Categorie d'emploi"") AS categorie_emploi,
+    TRIM(BOTH FROM ""code emploi"") AS code_emploi,
+    TRIM(BOTH FROM ""titre d'emploi"") AS titre_emploi,
+    ""date de paie "" AS date_paie,
+    TRIM(BOTH FROM ""matricule "") AS matricule,
+    TRIM(BOTH FROM ""employé "") AS employe,
+    TRIM(BOTH FROM ""categorie de paie "") AS categorie,
+    TRIM(BOTH FROM ""code de paie "") AS code_paie,
+    TRIM(BOTH FROM ""desc code de paie "") AS desc_code,
+    TRIM(BOTH FROM ""poste Budgetaire "") AS poste_budgetaire,
+    TRIM(BOTH FROM ""desc poste Budgétaire "") AS desc_poste,
+    ""montant "" AS montant,
+    ""part employeur "" AS part_employeur,
+    TRIM(BOTH FROM ""Mnt/Cmb"") AS mnt_cmb,
+    source_file,
+    source_row_number,
+    imported_at
+   FROM payroll.imported_payroll_master;"
+payroll,v_imported_payroll_compat," SELECT e.matricule_raw AS ""matricule "",
+    e.nom_complet AS ""employÃ© "",
+    t.pay_date AS ""date de paie "",
+    t.pay_code AS ""categorie de paie "",
+    t.amount_cents::numeric / 100.0 AS ""montant "",
+    t.employee_id,
+    t.transaction_id
+   FROM payroll.payroll_transactions t
+     JOIN core.employees e ON t.employee_id = e.employee_id;"
+payroll,v_nouveaux_par_batch," WITH batches_avec_date AS (
+         SELECT DISTINCT ib.batch_id,
+            ib.filename,
+            t.pay_date,
+            ib.started_at
+           FROM payroll.import_batches ib
+             JOIN payroll.payroll_transactions t ON t.import_batch_id = ib.batch_id
+          WHERE ib.status::text = 'completed'::text
+        ), matricules_par_batch AS (
+         SELECT DISTINCT t.import_batch_id AS batch_id,
+            b.pay_date,
+            b.filename,
+            e.employee_id,
+            e.matricule_norm,
+            e.nom_norm,
+            e.prenom_norm,
+                CASE
+                    WHEN e.matricule_norm::text ~ '^[0-9]+$'::text THEN e.matricule_norm::integer
+                    ELSE NULL::integer
+                END AS matricule_int
+           FROM payroll.payroll_transactions t
+             JOIN core.employees e ON t.employee_id = e.employee_id
+             JOIN batches_avec_date b ON b.batch_id = t.import_batch_id
+          WHERE e.matricule_norm IS NOT NULL AND e.matricule_norm::text ~ '^[0-9]+$'::text AND t.amount_cents <> 0
+        ), max_par_batch AS (
+         SELECT matricules_par_batch.batch_id,
+            matricules_par_batch.pay_date,
+            matricules_par_batch.filename,
+            max(matricules_par_batch.matricule_int) AS max_matricule,
+            count(DISTINCT matricules_par_batch.employee_id) AS nb_employes
+           FROM matricules_par_batch
+          GROUP BY matricules_par_batch.batch_id, matricules_par_batch.pay_date, matricules_par_batch.filename
+        ), batches_avec_precedent AS (
+         SELECT max_par_batch.batch_id,
+            max_par_batch.pay_date,
+            max_par_batch.filename,
+            max_par_batch.max_matricule AS max_actuel,
+            max_par_batch.nb_employes,
+            lag(max_par_batch.max_matricule) OVER (ORDER BY max_par_batch.pay_date) AS max_precedent,
+            lag(max_par_batch.pay_date) OVER (ORDER BY max_par_batch.pay_date) AS date_precedente
+           FROM max_par_batch
+        )
+ SELECT mp.batch_id,
+    mp.pay_date,
+    mp.filename,
+    mp.employee_id,
+    mp.matricule_norm,
+    mp.matricule_int,
+    mp.nom_norm,
+    mp.prenom_norm,
+    bp.max_precedent,
+    bp.max_actuel,
+    bp.date_precedente,
+        CASE
+            WHEN mp.matricule_int > COALESCE(bp.max_precedent, 0) THEN true
+            ELSE false
+        END AS est_nouveau
+   FROM matricules_par_batch mp
+     JOIN batches_avec_precedent bp ON mp.batch_id = bp.batch_id
+  ORDER BY mp.pay_date DESC, mp.matricule_int;"

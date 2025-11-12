@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Test DataTables Employés</title>
+    <link href="./dist/css/tabler.min.css?1692870487" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/responsive.bootstrap5.min.css" rel="stylesheet"/>
+  </head>
+  <body class="p-4">
+    <div class="container">
+      <h1 class="mb-4">Test DataTables — Employés (2025-08-28)</h1>
+      <div class="mb-3">
+        <label>Date de paie</label>
+        <input type="date" class="form-control" id="test-date" value="2025-08-28"/>
+      </div>
+      <div class="mb-3">
+        <button class="btn btn-primary" id="btn-load">Charger</button>
+      </div>
+      <table id="tbl-test" class="table table-bordered table-striped w-100">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Matricule</th>
+            <th>Catégorie</th>
+            <th>Titre</th>
+            <th class="text-end">Total ($)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <th colspan="4" class="text-end">Total net</th>
+            <th class="text-end" id="test-total"></th>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="mt-3 text-muted" id="test-debug"></div>
+    </div>
+
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="./dist/libs/datatables/loader.js?v=20251107"></script>
+    <script src="./js/datatables-helper.js?v=20251108"></script>
+    <script>
+      (function(){
+        const totalCell = document.getElementById('test-total');
+        const debugCell = document.getElementById('test-debug');
+        const inputDate = document.getElementById('test-date');
+
+        function buildSql(dateStr){
+          const d = dateStr || new Date().toISOString().slice(0,10);
+          return `
+            WITH agg AS (
+              SELECT 
+                e.employee_id,
+                COALESCE(e.nom_complet, e.nom_norm || ', ' || COALESCE(e.prenom_norm, '')) AS nom,
+                COALESCE(e.matricule_norm, '') AS matricule,
+                COALESCE(SUM(t.amount_cents) / 100.0, 0.0) AS salaire_net
+              FROM payroll.payroll_transactions t
+              JOIN core.employees e ON e.employee_id = t.employee_id
+              WHERE t.pay_date = DATE '${d}'
+              GROUP BY
+                e.employee_id,
+                e.nom_complet,
+                e.nom_norm,
+                e.prenom_norm,
+                e.matricule_norm
+            ),
+            stg AS (
+              SELECT
+                COALESCE(matricule::text, '') AS matricule,
+                MAX(categorie_emploi) AS categorie_emploi,
+                MAX(titre_emploi) AS titre_emploi
+              FROM paie.stg_paie_transactions
+              WHERE date_paie = DATE '${d}'
+                AND COALESCE(is_valid, TRUE) = TRUE
+              GROUP BY COALESCE(matricule::text, '')
+            )
+            SELECT
+              agg.nom,
+              agg.matricule,
+              COALESCE(stg.categorie_emploi, '') AS categorie_emploi,
+              COALESCE(stg.titre_emploi, '') AS titre_emploi,
+              agg.salaire_net AS total_a_payer
+            FROM agg
+            LEFT JOIN stg ON stg.matricule = agg.matricule
+            ORDER BY agg.nom
+          `;
+        }
+
+        let dtInstance = null;
+
+        async function initTable(){
+          const dateStr = inputDate.value || new Date().toISOString().slice(0,10);
+          if (dtInstance) {
+            dtInstance.ajax && dtInstance.ajax.reload(null, false);
+            return;
+          }
+          dtInstance = await window.DataTablesHelper.initWithAppBridge(
+            '#tbl-test',
+            () => buildSql(dateStr),
+            [
+              { title: 'Nom', data: 0 },
+              { title: 'Matricule', data: 1 },
+              { title: 'Catégorie', data: 2 },
+              { title: 'Titre', data: 3 },
+              { title: 'Total ($)', data: 4, className: 'text-end', render: window.DataTablesHelper.formatCurrency }
+            ],
+            {
+              drawCallback: function(){
+                const api = this.api();
+                const dataRows = api.rows({search: 'applied'}).data().toArray();
+                let total = 0;
+                dataRows.forEach(r => total += Number(r[4] || 0));
+                totalCell.textContent = window.DataTablesHelper.formatCurrency(total);
+                if (debugCell) {
+                  debugCell.textContent = `Lignes: ${dataRows.length} — Total brut: ${total.toFixed(2)}`;
+                }
+              }
+            }
+          );
+        }
+
+        document.getElementById('btn-load').addEventListener('click', async () => {
+          const dateStr = inputDate.value;
+          if (!dateStr) {
+            alert('Sélectionnez une date');
+            return;
+          }
+          if (dtInstance) {
+            const prevSql = buildSql(dateStr);
+            window.DataTablesHelper.lastSql = prevSql;
+            dtInstance.ajax.reload(null, false);
+          } else {
+            await initTable();
+          }
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+          if (typeof qt !== 'undefined' && qt.webChannelTransport) {
+            new QWebChannel(qt.webChannelTransport, function(channel){
+              window.appBridge = channel.objects.AppBridge;
+              initTable();
+            });
+          } else {
+            debugCell.textContent = 'QWebChannel non disponible.';
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+
+

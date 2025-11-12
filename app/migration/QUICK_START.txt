@@ -1,0 +1,49 @@
+================================================================================
+QUICK START - Migration Référentiel Employés
+================================================================================
+
+FICHIERS LIVRÉS (dans migration/)
+----------------------------------
+1. 01_ddl_referentiel.sql           (DDL complet - tables, index, fonctions)
+2. 02_migrate_to_referentiel.sql    (Script migration données)
+3. 03_tests_validation.sql          (Tests avant/après)
+4. 04_patch_python.md               (Instructions patch Python)
+5. test_kpi_regression.py           (Tests Python)
+6. README_EXECUTION.md              (Guide complet étape par étape)
+7. LIVRABLES.md                     (Détail de tous les fichiers)
+
+EXÉCUTION RAPIDE (5 ÉTAPES)
+----------------------------
+
+ÉTAPE 1: BACKUP (OBLIGATOIRE)
+  pg_dump -U payroll_app -d payroll_db -F custom -f backup_pre_migration.dump
+
+ÉTAPE 2: CRÉER STRUCTURES
+  psql -U payroll_app -d payroll_db -f migration/01_ddl_referentiel.sql
+
+ÉTAPE 3: MIGRER DONNÉES
+  psql -U payroll_app -d payroll_db -f migration/02_migrate_to_referentiel.sql
+
+ÉTAPE 4: VALIDER
+  psql -U payroll_app -d payroll_db -f migration/03_tests_validation.sql
+
+ÉTAPE 5: TESTER KPI
+  python migration/test_kpi_regression.py
+
+ATTENDUS
+--------
+Nouveau comptage 2025-08 : 295 employés (au lieu de 531)
+Réduction                : 236 employés (44.4%)
+Orphelins                : 0
+Tests Python             : TOUS RÉUSSIS
+
+ROLLBACK SI PROBLÈME
+--------------------
+  pg_restore backup_pre_migration.dump
+
+DOCUMENTATION COMPLÈTE
+----------------------
+Voir: migration/README_EXECUTION.md (procédure détaillée avec checklist)
+
+================================================================================
+

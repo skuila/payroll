@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Analyse - Catégories de paie</title>
+    <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/responsive.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/fixedHeader.bootstrap5.min.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark"><a href="./index.html">PayrollAnalyzer</a></h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      <div class="page-wrapper">
+        <div class="page-header d-print-none sticky-top bg-white border-bottom">
+          <div class="container-xl"><h2 class="page-title">Catégories de paie</h2></div>
+        </div>
+        <div class="page-body">
+          <div class="container mt-4">
+            <div class="card mb-3">
+              <div class="card-header"><h3 class="card-title">Pareto par code</h3></div>
+              <div class="card-body"><div id="chart-categories" style="height:300px;"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Par code de paie</h3></div>
+              <div class="table-responsive">
+                <table id="tbl-categories" class="table table-bordered table-hover w-100">
+                  <thead><tr><th>Code</th><th>Description</th><th>Catégorie</th><th>Total combine</th><th>Part employeur</th><th># Lignes</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./dist/libs/datatables/loader.js"></script>
+    <script src="./js/datatables-helper.js"></script>
+    <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
+    <script src="./js/charts-helper.js"></script>
+    <script src="./js/analytics-helpers.js"></script>
+    <script src="./dist/js/tabler.min.js"></script>
+    <script>
+      (function(){
+        document.addEventListener('DOMContentLoaded', function(){
+          const chart = ChartsHelper.mount('#chart-categories', 'bar', {
+            series: [{name:'Montant combine', data: []}],
+            xaxis: { categories: [] },
+            dataLabels: { enabled: false }
+          });
+          // DataTables côté serveur
+          $('#tbl-categories').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: function (_data, callback) {
+              // Mode desktop: utiliser AppBridge.get_kpi_details pour récupérer codes
+              try {
+                const channel = new QWebChannel(qt.webChannelTransport, function(ch){
+                  const bridge = ch.objects.AppBridge;
+                  Promise.resolve(bridge.get_kpi_details(''))
+                    .then(json => {
+                      const payload = JSON.parse(json || '{}');
+                      const rows = (payload && payload.codes_paie) ? payload.codes_paie : [];
+                      // Mettre à jour le chart avec les 10 premières lignes
+                      const top = rows.slice(0,10);
+                      chart.updateOptions({ xaxis: { categories: top.map(r=>r.code_paie) } });
+                      chart.updateSeries([{ name:'Montant combine', data: top.map(r=> Number(r.montant_total||0)) }]);
+                      callback({ draw: 1, recordsTotal: rows.length, recordsFiltered: rows.length, data: rows });
+                    })
+                    .catch(()=> callback({ draw: 1, recordsTotal: 0, recordsFiltered: 0, data: [] }));
+                });
+              } catch (e) {
+                console.warn(e);
+                callback({ draw: 1, recordsTotal: 0, recordsFiltered: 0, data: [] });
+              }
+            },
+            columns: [
+              {title:'Code', data:'code_paie'},
+              {title:'Description', data:'libelle_code'},
+              {title:'Catégorie', data:'categorie_paie'},
+              {title:'Total combine', data:'montant_total', className:'text-end',
+               render: function(d){ return window.DataTablesHelper.formatCurrency(d); }},
+              {title:'Part employeur', data:'part_employeur', className:'text-end',
+               render: function(d){ return window.DataTablesHelper.formatCurrency(d); }},
+              {title:'# Lignes', data:'nb_lignes', className:'text-end'}
+            ],
+            dom: 'Bfrtip',
+            buttons: ['excelHtml5','csvHtml5','pdfHtml5','print','pageLength'],
+            language: { url: './dist/libs/datatables/i18n/fr-CA.json' }
+          });
+        });
+      })();
+    </script>
+  </body>
+  </html>
+
+

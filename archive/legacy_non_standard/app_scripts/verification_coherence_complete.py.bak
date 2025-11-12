@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+"""
+Script de vérification intégrale de la cohérence des noms de colonnes
+entre l'application, la base de données et les KPI/API
+"""
+
+import psycopg
+import os
+from pathlib import Path
+import re
+import sys
+
+# Connexion — construit à partir des variables d'environnement pour éviter les secrets en clair
+DSN = (
+    os.getenv("DATABASE_URL")
+    or os.getenv("PAYROLL_DSN")
+    or (
+        f"postgresql://{os.getenv('PAYROLL_DB_USER','payroll_app')}:"
+        f"{os.getenv('PAYROLL_DB_PASSWORD','__SET_AT_DEPLOY__')}@"
+        f"{os.getenv('PAYROLL_DB_HOST','localhost')}:{os.getenv('PAYROLL_DB_PORT','5432')}/"
+        f"{os.getenv('PAYROLL_DB_NAME','payroll_db')}"
+    )
+)
+
+if "__SET_AT_DEPLOY__" in DSN:
+    print(
+        "WARNING: PAYROLL_DB_PASSWORD non configuré dans l'environnement — vérifiez .env ou variables CI"
+    )
+
+
+def get_table_columns(conn, schema, table):
+    """Récupère les colonnes d'une table"""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_schema = %s AND table_name = %s
+            ORDER BY ordinal_position
+        """,
+            (schema, table),
+        )
+        return {row[0]: row[1] for row in cur.fetchall()}
+
+
+def get_view_columns(conn, schema, view):
+    """Récupère les colonnes d'une vue"""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_schema = %s AND table_name = %s
+            ORDER BY ordinal_position
+        """,
+            (schema, view),
+        )
+        return {row[0]: row[1] for row in cur.fetchall()}
+
+
+def get_view_definition(conn, schema, view):
+    """Récupère la définition SQL d'une vue"""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT definition 
+            FROM pg_views 
+            WHERE schemaname = %s AND viewname = %s
+        """,
+            (schema, view),
+        )
+        result = cur.fetchone()
+        return result[0] if result else None
+
+
+def check_coherence():
+    """Vérifie la cohérence intégrale"""
+    print("=" * 80)
+    print("🔍 VÉRIFICATION INTÉGRALE DE COHÉRENCE DES COLONNES")
+    print("=" * 80)
+
+    issues = []
+    warnings = []
+
+    try:
+        conn = psycopg.connect(DSN)
+
+        # ====================================================================
+        # 1. VÉRIFICATION DES TABLES DE BASE
+        # ====================================================================
+        print("\n📋 1. Vérification des tables de base")
+        print("-" * 80)
+
+        # Table core.employees
+        emp_cols = get_table_columns(conn, "core", "employees")
+        print(f"✅ core.employees: {len(emp_cols)} colonnes trouvées")
+        print(f"   Colonnes: {', '.join(sorted(emp_cols.keys()))}")
+
+        # Vérifier colonnes utilisées dans les vues mais absentes
+        view_expected = ["categorie_emploi", "poste_budgetaire"]
+        for col in view_expected:
+            if col not in emp_cols:
+                issues.append(
+                    f"❌ CRITIQUE: core.employees n'a pas '{col}' mais utilisé dans les vues!"
+                )
+                print(f"   ❌ CRITIQUE: {col} manquante (utilisée dans les vues)")
+
+        # Table payroll.payroll_transactions
+        trans_cols = get_table_columns(conn, "payroll", "payroll_transactions")
+        print(f"✅ payroll.payroll_transactions: {len(trans_cols)} colonnes trouvées")
+        print(f"   Colonnes: {', '.join(sorted(trans_cols.keys()))}")
+
+        expected_trans_cols = [
+            "transaction_id",
+            "employee_id",
+            "pay_date",
+            "pay_code",
+            "amount_cents",
+        ]
+        for col in expected_trans_cols:
+            if col not in trans_cols:
+                issues.append(f"❌ payroll.payroll_transactions manque: {col}")
+                print(f"   ❌ Colonne manquante: {col}")
+
+        # ====================================================================
+        # 2. VÉRIFICATION DES VUES KPI
+        # ====================================================================
+        print("\n📊 2. Vérification des vues KPI")
+        print("-" * 80)
+
+        kpi_views = {
+            "paie": [
+                "v_kpi_periode",
+                "v_kpi_par_categorie_emploi",
+                "v_kpi_par_code_paie",
+                "v_kpi_par_poste_budgetaire",
+                "v_kpi_par_employe_periode",
+            ]
+        }
+
+        view_columns_map = {}
+        for schema, views in kpi_views.items():
+            for view in views:
+                try:
+                    cols = get_view_columns(conn, schema, view)
+                    view_columns_map[f"{schema}.{view}"] = cols
+                    print(f"\n✅ {schema}.{view}: {len(cols)} colonnes")
+                    print(f"   Colonnes: {', '.join(sorted(cols.keys()))}")
+
+                    # Vérifier colonnes obligatoires selon le contrat
+                    required = [
+                        "periode",
+                        "date_paie",
+                        "gains_brut",
+                        "net_a_payer",
+                        "nb_employes",
+                        "cout_total",
+                    ]
+                    for req in required:
+                        if req not in cols:
+                            issues.append(f"❌ {schema}.{view} manque: {req}")
+                            print(f"   ❌ Colonne manquante: {req}")
+
+                    # Vérifier présence de periode_paie (utilisé par API)
+                    if "periode_paie" not in cols and "periode" in cols:
+                        warnings.append(
+                            f"⚠️ {schema}.{view} n'a pas 'periode_paie' mais l'API l'utilise"
+                        )
+                        print(
+                            f"   ⚠️ Attention: API utilise 'periode_paie' mais vue a 'periode'"
+                        )
+
+                except Exception as e:
+                    issues.append(f"❌ Erreur accès {schema}.{view}: {e}")
+                    print(f"   ❌ Erreur: {e}")
+
+        # ====================================================================
+        # 3. VÉRIFICATION DES INCOHÉRENCES DANS LES VUES SQL
+        # ====================================================================
+        print("\n🔍 3. Vérification des incohérences dans les scripts SQL")
+        print("-" * 80)
+
+        sql_file = Path(__file__).parent / "admin_create_kpi_views.sql"
+        if sql_file.exists():
+            with open(sql_file, "r", encoding="utf-8") as f:
+                sql_content = f.read()
+
+            # Vérifier références à payroll.employees (devrait être core.employees)
+            if "payroll.employees" in sql_content:
+                issues.append(
+                    "❌ CRITIQUE: admin_create_kpi_views.sql référence 'payroll.employees' au lieu de 'core.employees'"
+                )
+                print("   ❌ CRITIQUE: Référence à payroll.employees trouvée")
+                print("      → Devrait être: core.employees")
+
+            # Vérifier références à e.categorie_emploi
+            if "e.categorie_emploi" in sql_content or "categorie_emploi" in sql_content:
+                if "categorie_emploi" not in emp_cols:
+                    issues.append(
+                        "❌ CRITIQUE: Les vues utilisent 'e.categorie_emploi' mais core.employees n'a pas cette colonne"
+                    )
+                    print(
+                        "   ❌ CRITIQUE: e.categorie_emploi utilisé mais colonne absente de core.employees"
+                    )
+
+            # Vérifier références à e.poste_budgetaire
+            if "e.poste_budgetaire" in sql_content or "poste_budgetaire" in sql_content:
+                if "poste_budgetaire" not in emp_cols:
+                    issues.append(
+                        "❌ CRITIQUE: Les vues utilisent 'e.poste_budgetaire' mais core.employees n'a pas cette colonne"
+                    )
+                    print(
+                        "   ❌ CRITIQUE: e.poste_budgetaire utilisé mais colonne absente de core.employees"
+                    )
+
+        # ====================================================================
+        # 4. VÉRIFICATION DES COLONNES DANS L'API
+        # ====================================================================
+        print("\n🔌 4. Vérification des variant de colonnes utilisées dans l'API")
+        print("-" * 80)
+
+        api_file = Path(__file__).parent.parent / "api" / "routes" / "kpi.py"
+        if api_file.exists():
+            with open(api_file, "r", encoding="utf-8") as f:
+                api_content = f.read()
+
+            # Colonnes critiques utilisées par l'API
+            api_issues = []
+
+            # Vérifier periode_paie vs periode
+            if "periode_paie" in api_content:
+                if "v_kpi_periode" in view_columns_map.get("paie.v_kpi_periode", {}):
+                    if "periode_paie" not in view_columns_map.get(
+                        "paie.v_kpi_periode", {}
+                    ):
+                        api_issues.append(
+                            "❌ API utilise 'periode_paie' mais v_kpi_periode a 'periode'"
+                        )
+                        print("   ❌ API utilise 'periode_paie' mais vue a 'periode'")
+
+            # Vérifier cout_employeur_pnl vs cout_total
+            if "cout_employeur_pnl" in api_content:
+                if "cout_employeur_pnl" not in view_columns_map.get(
+                    "paie.v_kpi_periode", {}
+                ):
+                    if "cout_total" in view_columns_map.get("paie.v_kpi_periode", {}):
+                        api_issues.append(
+                            "❌ API utilise 'cout_employeur_pnl' mais vue a 'cout_total'"
+                        )
+                        print(
+                            "   ❌ API utilise 'cout_employeur_pnl' mais vue a 'cout_total'"
+                        )
+
+            # Vérifier deductions_totales vs deductions_net
+            if "deductions_totales" in api_content:
+                if "deductions_totales" not in view_columns_map.get(
+                    "paie.v_kpi_par_poste_budgetaire", {}
+                ):
+                    if "deductions_net" in view_columns_map.get(
+                        "paie.v_kpi_par_poste_budgetaire", {}
+                    ):
+                        api_issues.append(
+                            "❌ API utilise 'deductions_totales' mais vue a 'deductions_net'"
+                        )
+                        print(
+                            "   ❌ API utilise 'deductions_totales' mais vue a 'deductions_net'"
+                        )
+
+            issues.extend(api_issues)
+
+        # ====================================================================
+        # 5. VÉRIFICATION DES JOINS ERRONÉS
+        # ====================================================================
+        print("\n🔗 5. Vérification des JOINs")
+        print("-" * 80)
+
+        if sql_file.exists():
+            with open(sql_file, "r", encoding="utf-8") as f:
+                sql_content = f.read()
+
+            # Vérifier JOIN avec payroll.employees
+            if (
+                "LEFT JOIN payroll.employees" in sql_content
+                or "JOIN payroll.employees" in sql_content
+            ):
+                issues.append(
+                    "❌ CRITIQUE: JOIN avec payroll.employees - devrait être core.employees"
+                )
+                print("   ❌ CRITIQUE: JOIN utilise payroll.employees")
+                print(
+                    "      → Devrait être: LEFT JOIN paie.stg_paie_transactions s ON t.source_file = s.source_file AND t.source_row_number = s.source_row_number"
+                )
+
+        # ====================================================================
+        # 6. VÉRIFICATION DES DÉFINITIONS DE VUES
+        # ====================================================================
+        print("\n📝 6. Vérification des définitions de vues")
+        print("-" * 80)
+
+        for view_path, view_cols in view_columns_map.items():
+            schema, view = view_path.split(".")
+            view_def = get_view_definition(conn, schema, view)
+            if view_def:
+                # Vérifier références à payroll.employees dans la définition
+                if "payroll.employees" in view_def.lower():
+                    issues.append(
+                        f"❌ CRITIQUE: {view_path} référence payroll.employees dans sa définition"
+                    )
+                    print(f"   ❌ {view_path} référence payroll.employees")
+
+        # ====================================================================
+        # 7. RÉSUMÉ DES PROBLÈMES
+        # ====================================================================
+        print("\n" + "=" * 80)
+        print("📊 RÉSUMÉ DES PROBLÈMES DÉTECTÉS")
+        print("=" * 80)
+
+        if not issues and not warnings:
+            print("✅ Aucun problème détecté - Tout est cohérent!")
+        else:
+            if issues:
+                print(f"\n❌ {len(issues)} PROBLÈME(S) CRITIQUE(S):\n")
+                for i, issue in enumerate(issues, 1):
+                    print(f"   {i}. {issue}")
+
+            if warnings:
+                print(f"\n⚠️ {len(warnings)} AVERTISSEMENT(S):\n")
+                for i, warning in enumerate(warnings, 1):
+                    print(f"   {i}. {warning}")
+
+        conn.close()
+        return len(issues) == 0
+
+    except Exception as e:
+        print(f"❌ Erreur lors de la vérification: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
+
+
+if __name__ == "__main__":
+    success = check_coherence()
+    sys.exit(0 if success else 1)

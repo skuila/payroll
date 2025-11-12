@@ -1,0 +1,37 @@
+name: validate-db-standard
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Validate DB standard
+        run: python scripts/forbid_direct_db_connect.py
+
+      - name: Ruff (lint)
+        run: ruff check app
+
+      - name: Mypy (type check)
+        run: mypy app
+
+      - name: Bandit (security scan)
+        run: bandit -r app
+
+      - name: Safety (dependency audit)
+        run: safety check

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Analyse - Paramètres</title>
+    <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark"><a href="./index.html">PayrollAnalyzer</a></h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./analytics_masse.html"><span class="nav-link-title">Analyse</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      <div class="page-wrapper">
+        <div class="page-header d-print-none sticky-top bg-white border-bottom">
+          <div class="container-xl"><h2 class="page-title">Paramètres - Logique de calcul</h2></div>
+        </div>
+        <div class="page-body">
+          <div class="container-xl mt-4">
+            
+            <!-- Section 1: Mapping codes de paie -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h3 class="card-title">Mapping des codes de paie</h3>
+                <div class="card-subtitle">Définissez la catégorie (Gains, Déductions, etc.) pour chaque code</div>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <button class="btn btn-primary" id="btn-add-code">+ Ajouter un code</button>
+                </div>
+                <table id="tbl-codes" class="table table-bordered table-hover w-100">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Libellé</th>
+                      <th>Catégorie</th>
+                      <th>Imposable</th>
+                      <th>Cotisation</th>
+                      <th>Actif</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Section 2: Synonymes de catégories -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h3 class="card-title">Synonymes de catégories</h3>
+                <div class="card-subtitle">Définissez les termes équivalents (ex: "gains", "revenu", "salaire")</div>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Gains (synonymes séparés par virgule)</label>
+                    <input type="text" class="form-control" id="syn-gains" placeholder="gains,revenu,salaire,brut">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Déductions (synonymes séparés par virgule)</label>
+                    <input type="text" class="form-control" id="syn-deductions" placeholder="deductions,retenues,retenue,debit">
+                  </div>
+                </div>
+                <button class="btn btn-success" id="btn-save-synonyms">Enregistrer synonymes</button>
+              </div>
+            </div>
+
+            <!-- Section 3: Flags de calcul -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Options de calcul</h3>
+              </div>
+              <div class="card-body">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="flag-sign-fallback" checked>
+                  <label class="form-check-label" for="flag-sign-fallback">
+                    Utiliser le fallback par signe (montant >0 → Gains, <0 → Déductions) si catégorie inconnue
+                  </label>
+                </div>
+                <button class="btn btn-success mt-3" id="btn-save-flags">Enregistrer options</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./dist/libs/datatables/loader.js"></script>
+    <script src="./js/datatables-helper.js"></script>
+    <script src="./dist/js/tabler.min.js"></script>
+    <script>
+      (function(){
+        let codesData = [];
+        document.addEventListener('DOMContentLoaded', function(){
+          loadCodes();
+          loadSynonyms();
+          loadFlags();
+
+          document.getElementById('btn-add-code').addEventListener('click', ()=>{
+            const code = prompt('Code de paie:');
+            if (!code) return;
+            const libelle = prompt('Libellé:') || '';
+            const categorie = prompt('Catégorie (Gains/Deductions/Deductions_legales/Assurances/Syndicats):') || 'Gains';
+            saveCode({code_paie: code, libelle_paie: libelle, categorie_paie: categorie, est_imposable: true, est_cotisation: false, actif: true});
+          });
+
+          document.getElementById('btn-save-synonyms').addEventListener('click', saveSynonyms);
+          document.getElementById('btn-save-flags').addEventListener('click', saveFlags);
+        });
+
+        function loadCodes(){
+          // Mode desktop: pas d'API
+          Promise.resolve([])
+            .then(r=>r.json())
+            .then(payload=>{
+              codesData = payload.data || [];
+              DataTablesHelper.init('#tbl-codes', codesData, [
+                {title:'Code', data:'code_paie'},
+                {title:'Libellé', data:'libelle_paie'},
+                {title:'Catégorie', data:'categorie_paie'},
+                {title:'Imposable', data:'est_imposable', render: d=>d?'Oui':'Non'},
+                {title:'Cotisation', data:'est_cotisation', render: d=>d?'Oui':'Non'},
+                {title:'Actif', data:'actif', render: d=>d?'Oui':'Non'},
+                {title:'Actions', data:null, render: (d,t,row)=>`<button class="btn btn-sm btn-primary" onclick="editCode('${row.code_paie}')">Modifier</button>`}
+              ], {order:[[0,'asc']]});
+            })
+            .catch(()=>alert('Erreur chargement codes'));
+        }
+
+        function saveCode(code){
+          // Mode desktop: désactivé
+          Promise.resolve({ok:true})
+            .then(r=>r.json())
+            .then(()=>{alert('Code enregistré'); loadCodes();})
+            .catch(()=>alert('Erreur enregistrement'));
+        }
+
+        window.editCode = function(code_paie){
+          const row = codesData.find(c=>c.code_paie===code_paie);
+          if (!row) return;
+          const libelle = prompt('Libellé:', row.libelle_paie) || row.libelle_paie;
+          const categorie = prompt('Catégorie:', row.categorie_paie) || row.categorie_paie;
+          saveCode({...row, libelle_paie: libelle, categorie_paie: categorie});
+        };
+
+        function loadSynonyms(){
+          // Mode desktop: désactivé
+          Promise.resolve([])
+            .then(r=>r.json())
+            .then(payload=>{
+              const data = payload.data || [];
+              const gains = data.find(s=>s.categorie==='Gains');
+              const deds = data.find(s=>s.categorie==='Deductions');
+              if (gains) document.getElementById('syn-gains').value = (gains.synonyms||[]).join(',');
+              if (deds) document.getElementById('syn-deductions').value = (deds.synonyms||[]).join(',');
+            });
+        }
+
+        function saveSynonyms(){
+          const gainsVal = document.getElementById('syn-gains').value.split(',').map(s=>s.trim()).filter(Boolean);
+          const dedsVal = document.getElementById('syn-deductions').value.split(',').map(s=>s.trim()).filter(Boolean);
+          Promise.all([
+            Promise.resolve({ok:true}),
+            Promise.resolve({ok:true})
+          ]).then(()=>alert('Synonymes enregistrés')).catch(()=>alert('Erreur'));
+        }
+
+        function loadFlags(){
+          // Mode desktop: désactivé
+          Promise.resolve([])
+            .then(r=>r.json())
+            .then(data=>{
+              document.getElementById('flag-sign-fallback').checked = data.use_sign_fallback || false;
+            });
+        }
+
+        function saveFlags(){
+          const flag = document.getElementById('flag-sign-fallback').checked;
+          // Mode desktop: désactivé
+          Promise.resolve({ok:true})
+            .then(()=>alert('Options enregistrées'))
+            .catch(()=>alert('Erreur'));
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,37 @@
+name: Validate DB Standard
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install psycopg[binary]
+    
+    - name: Validate DB connections standard
+      run: |
+        cd app
+        python scripts/forbid_direct_db_connect.py
+      
+    - name: Report status
+      if: failure()
+      run: |
+        echo "❌ Des connexions non standardisées ont été détectées"
+        echo "Consultez app/guides/CONNEXION_STANDARDISEE.md pour les règles"
+        exit 1
+

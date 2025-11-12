@@ -1,0 +1,24 @@
+schema,table,est_rows,total_size,comment
+core,budget_posts,170,152 kB,
+core,employee_job_history,-1,40 kB,
+core,employees,295,200 kB,RÃ©fÃ©rentiel unique employÃ©s (dimension)
+core,job_categories,-1,24 kB,
+core,job_codes,-1,24 kB,
+core,pay_codes,148,104 kB,
+payroll,budget_posts,-1,48 kB,
+payroll,import_batches,-1,80 kB,Historique imports (audit/traÃ§abilitÃ©)
+payroll,import_log,-1,32 kB,Log détaillé alertes import (non bloquant)
+payroll,import_runs,-1,32 kB,Historique des imports (traçabilité)
+payroll,imported_payroll_master,7735,3944 kB,
+payroll,kpi_snapshot,-1,48 kB,
+payroll,pay_periods,0,584 kB,
+payroll,payroll_transactions,3352,0 bytes,Fait paie (partitionnÃ© par annÃ©e sur pay_date)
+payroll,payroll_transactions_2024,0,56 kB,Partition annÃ©e 2024
+payroll,payroll_transactions_2025,3352,856 kB,Partition annÃ©e 2025
+payroll,payroll_transactions_2026,0,56 kB,Partition annÃ©e 2026
+payroll,stg_imported_payroll,3352,720 kB,"Staging import (temporaire, nettoyÃ© aprÃ¨s validation)"
+public,alembic_version,-1,24 kB,
+reference,budget_posts,-1,48 kB,
+reference,pay_code_mappings,-1,32 kB,
+reference,pay_codes,-1,72 kB,RÃ©fÃ©rentiel codes de paie
+reference,sign_policies,-1,24 kB,

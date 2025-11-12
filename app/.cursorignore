@@ -1,0 +1,35 @@
+﻿# Environnements virtuels (Cursor n'a pas besoin de les indexer)
+api/venv/
+venv/
+.venv/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Fichiers volumineux
+*.dll
+*.so
+*.dylib
+
+# Logs
+*.log
+logs/
+
+# Base de donnÃ©es
+*.db
+*.sqlite
+
+# Fichiers temporaires
+*.tmp
+*.temp
+.cache/
+
+# Fichiers de sauvegarde
+*.bak
+backups/
+
+# Fichiers Excel volumineux
+*.xlsx
+*.xls

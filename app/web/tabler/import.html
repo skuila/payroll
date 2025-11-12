@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Import Paie — PayrollAnalyzer</title>
+  <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+  <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+  <style>
+    .file-dropzone {
+      border: 2px dashed #cbd5e0;
+      border-radius: 8px;
+      padding: 3rem;
+      text-align: center;
+      background-color: #f7fafc;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .file-dropzone:hover {
+      border-color: #4299e1;
+      background-color: #ebf8ff;
+    }
+  </style>
+</head>
+<body>
+  <script src="./dist/js/tabler.min.js"></script>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+      <div class="container-fluid">
+        <h1 class="navbar-brand"><a href="./index.html">PayrollAnalyzer</a></h1>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav pt-lg-3">
+            <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./periods.html"><span class="nav-link-title">Périodes</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
+            <li class="nav-item active"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./assistant.html"><span class="nav-link-title">Assistant IA</span></a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Page content -->
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div class="container-xl">
+          <h2 class="page-title">Importer des données de paie</h2>
+          <div class="page-subtitle">PostgreSQL via WebChannel</div>
+        </div>
+      </div>
+      
+      <div class="page-body">
+        <div class="container-xl">
+          
+          <!-- Formulaire d'import -->
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Sélectionner un fichier</h3>
+                </div>
+                <div class="card-body">
+              
+                  <div class="mb-3">
+                <label class="form-label">Fichier de paie (.xlsx, .xls, .csv)</label>
+                <input type="file" class="form-control" id="file-input" accept=".xlsx,.xls,.xlsm,.csv">
+                  </div>
+                  
+              <div class="mb-3">
+                <label class="form-label required">Date de paie</label>
+                <input type="date" class="form-control" id="pay-date" required>
+                <small class="form-hint">Date exacte de la paie (ex: 2025-01-15)</small>
+                    </div>
+                    
+              <div class="mb-3">
+                <label class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="apply-sign-correction" checked>
+                  <span class="form-check-label">Appliquer la correction automatique des signes (+/-)</span>
+                </label>
+                <small class="form-hint">Décochez si les signes de votre fichier sont déjà corrects (déductions négatives, gains positifs)</small>
+                    </div>
+                    
+              <div id="file-preview" class="mb-3" style="display:none;">
+                <div class="alert alert-info">
+                  <h4 class="alert-title">Fichier sélectionné</h4>
+                  <div id="file-info"></div>
+                      </div>
+                    </div>
+                    
+              <button class="btn btn-primary" id="btn-import" onclick="startImport()" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" /><path d="M9 15l3 -3l3 3" /><path d="M12 12l0 9" /></svg>
+                Lancer l'import
+              </button>
+              
+              <div id="progress-section" class="mt-3" style="display:none;">
+                <div class="progress">
+                  <div id="progress-bar" class="progress-bar progress-bar-indeterminate bg-primary"></div>
+                        </div>
+                <div id="progress-log" class="mt-2 text-secondary small"></div>
+                    </div>
+                    
+                      </div>
+                    </div>
+                    
+          <!-- Historique imports -->
+          <div class="card mt-3">
+                <div class="card-header">
+              <h3 class="card-title">Derniers imports</h3>
+            </div>
+              <div class="table-responsive">
+              <table class="table table-vcenter card-table">
+                  <thead>
+                    <tr>
+                    <th>Fichier</th>
+                    <th>Date paie</th>
+                    <th>Lignes</th>
+                    <th>Status</th>
+                    <th>Date import</th>
+                    </tr>
+                  </thead>
+                <tbody id="imports-table">
+                  <tr><td colspan="5" class="text-center">Chargement...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container"></div>
+  
+  <script>
+    let bridge = null;
+    let selectedFile = null;
+    
+    // Initialiser QWebChannel
+      new QWebChannel(qt.webChannelTransport, function(channel) {
+      bridge = channel.objects.AppBridge || channel.objects.bridge;
+      console.log('✅ Bridge connecté');
+      loadImportHistory();
+    });
+    
+    // Gestion fichier
+    document.getElementById('file-input').addEventListener('change', function(e) {
+      if (e.target.files.length > 0) {
+        selectedFile = e.target.files[0];
+        document.getElementById('file-info').textContent = `📄 ${selectedFile.name} (${formatBytes(selectedFile.size)})`;
+        document.getElementById('file-preview').style.display = 'block';
+        
+        // Activer bouton si date renseignée
+        const payDate = document.getElementById('pay-date').value;
+        document.getElementById('btn-import').disabled = !payDate;
+      }
+    });
+    
+    document.getElementById('pay-date').addEventListener('change', function() {
+      const hasFile = selectedFile != null;
+      const hasDate = this.value != '';
+      document.getElementById('btn-import').disabled = !(hasFile && hasDate);
+    });
+    
+    async function startImport() {
+      if (!selectedFile) {
+        showToast('Erreur', 'Sélectionnez un fichier', 'danger');
+        return;
+      }
+      
+      const payDate = document.getElementById('pay-date').value;
+      if (!payDate) {
+        showToast('Erreur', 'Indiquez la date de paie', 'danger');
+        return;
+      }
+      
+      // Désactiver bouton
+      document.getElementById('btn-import').disabled = true;
+      document.getElementById('progress-section').style.display = 'block';
+      
+      try {
+        // Lire fichier en Base64 pour passage via WebChannel
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+          const fileContent = e.target.result.split(',')[1]; // Base64
+          const applySignCorrection = document.getElementById('apply-sign-correction').checked;
+          
+          // Appeler bridge Python avec option de correction des signes
+          const result = await bridge.confirm_import(fileContent, selectedFile.name, applySignCorrection);
+          const data = JSON.parse(result);
+          
+          if (data.success) {
+            showToast('Import réussi', `${data.rows_inserted || 0} lignes importées`, 'success');
+            
+            // Rafraîchir historique
+            setTimeout(() => {
+              loadImportHistory();
+              document.getElementById('progress-section').style.display = 'none';
+              document.getElementById('btn-import').disabled = false;
+              document.getElementById('file-input').value = '';
+              selectedFile = null;
+              document.getElementById('file-preview').style.display = 'none';
+            }, 2000);
+          } else {
+            // Afficher le message d'erreur utilisateur (déjà traduit par le backend)
+            const errorMsg = data.message || 'Import échoué';
+            const solution = data.solution ? `\n\nSolution : ${data.solution}` : '';
+            showToast('Erreur', errorMsg + solution, 'danger');
+            document.getElementById('progress-section').style.display = 'none';
+            document.getElementById('btn-import').disabled = false;
+          }
+        };
+        
+        reader.onerror = function() {
+          showToast('Erreur', 'Impossible de lire le fichier. Vérifiez que le fichier n\'est pas corrompu.', 'danger');
+          document.getElementById('progress-section').style.display = 'none';
+          document.getElementById('btn-import').disabled = false;
+        };
+        
+        reader.readAsDataURL(selectedFile);
+        
+      } catch (e) {
+        console.error('Erreur import:', e);
+        showToast('Erreur', 'Une erreur inattendue s\'est produite. Vérifiez la console pour plus de détails.', 'danger');
+        document.getElementById('progress-section').style.display = 'none';
+        document.getElementById('btn-import').disabled = false;
+      }
+    }
+    
+    async function loadImportHistory() {
+      if (!bridge) return;
+      
+      try {
+        // Charger via PostgreSQL
+        const historyJson = await bridge.get_table(0, 10, JSON.stringify({source: 'import_batches'}));
+        const history = JSON.parse(historyJson);
+        
+        const tbody = document.getElementById('imports-table');
+        if (history.rows && history.rows.length > 0) {
+          tbody.innerHTML = history.rows.map(row => `
+            <tr>
+              <td>${row.file_name || 'N/A'}</td>
+              <td>${row.pay_date || 'N/A'}</td>
+              <td>${row.rows_count || 0}</td>
+              <td><span class="badge ${row.status === 'processed' ? 'bg-success' : 'bg-danger'}">${row.status}</span></td>
+              <td>${row.created_at || 'N/A'}</td>
+        </tr>
+      `).join('');
+      } else {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Aucun import récent</td></tr>';
+        }
+      } catch (e) {
+        console.error('Erreur historique:', e);
+        document.getElementById('imports-table').innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Erreur chargement</td></tr>';
+      }
+    }
+    
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'Ko', 'Mo', 'Go'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    function showToast(title, message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        success: 'bg-success text-white',
+        danger: 'bg-danger text-white',
+        warning: 'bg-warning',
+        info: 'bg-info text-white'
+      };
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${colors[type]}`;
+      toast.setAttribute('role', 'alert');
+      toast.innerHTML = `
+        <div class="toast-header">
+          <strong class="me-auto">${title}</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+          <div class="toast-body">${message}</div>
+      `;
+      
+      container.appendChild(toast);
+      const bsToast = new bootstrap.Toast(toast);
+      bsToast.show();
+      
+      setTimeout(() => toast.remove(), 5000);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Script pour trouver les fichiers Excel dans la base et analyser leurs colonnes
+"""
+
+import sys
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.insert(0, parent_dir)
+
+try:
+    from app.providers.postgres_provider import PostgresProvider
+
+    provider = PostgresProvider()
+
+    if not provider.repo:
+        print("❌ Impossible de se connecter à la base de données")
+        sys.exit(1)
+
+    print("\n" + "=" * 80)
+    print("  RECHERCHE DES FICHIERS EXCEL IMPORTÉS")
+    print("=" * 80 + "\n")
+
+    # Trouver les fichiers source dans la base
+    sql_files = """
+        SELECT DISTINCT source_file, COUNT(*) as nb_lignes
+        FROM paie.stg_paie_transactions
+        GROUP BY source_file
+        ORDER BY source_file
+    """
+    result_files = provider.repo.run_query(sql_files)
+
+    if result_files and isinstance(result_files, list):
+        print(f"📁 Fichiers trouvés dans la base: {len(result_files)}")
+        print("-" * 80)
+        for row in result_files:
+            print(f"  • {row[0]} ({row[1]} lignes)")
+        print()
+
+        # Analyser les données du premier fichier pour voir les colonnes disponibles
+        if len(result_files) > 0:
+            first_file = result_files[0][0]
+            print(f"📊 ANALYSE DU FICHIER: {first_file}")
+            print("-" * 80)
+
+            # Vérifier les colonnes raw disponibles
+            sql_sample = """
+                SELECT 
+                    categorie_emploi_raw,
+                    titre_emploi_raw,
+                    categorie_emploi,
+                    titre_emploi,
+                    nom_prenom_raw,
+                    matricule_raw
+                FROM paie.stg_paie_transactions
+                WHERE source_file = %(file)s
+                AND (categorie_emploi_raw IS NOT NULL OR titre_emploi_raw IS NOT NULL)
+                LIMIT 10
+            """
+            result_sample = provider.repo.run_query(sql_sample, {"file": first_file})
+
+            if result_sample and isinstance(result_sample, list):
+                print(f"  Échantillon avec données raw (premières lignes):")
+                for i, row in enumerate(result_sample[:5], 1):
+                    print(f"  {i}. Cat_raw={repr(row[0])}, Titre_raw={repr(row[1])}")
+                    print(
+                        f"     Cat_norm={repr(row[2])}, Titre_norm={repr(row[3])}, Nom={row[4]}"
+                    )
+                print()
+
+            # Compter les valeurs distinctes dans les colonnes raw
+            sql_cat_raw = """
+                SELECT DISTINCT categorie_emploi_raw, COUNT(*) as nb
+                FROM paie.stg_paie_transactions
+                WHERE source_file = %(file)s
+                AND categorie_emploi_raw IS NOT NULL AND TRIM(categorie_emploi_raw) != ''
+                GROUP BY categorie_emploi_raw
+                ORDER BY nb DESC
+            """
+            result_cat_raw = provider.repo.run_query(sql_cat_raw, {"file": first_file})
+
+            if (
+                result_cat_raw
+                and isinstance(result_cat_raw, list)
+                and len(result_cat_raw) > 0
+            ):
+                print(f"  Catégories d'emploi (RAW) trouvées: {len(result_cat_raw)}")
+                for row in result_cat_raw:
+                    print(f"    • {row[0]}: {row[1]} occurrences")
+            else:
+                print(
+                    "  WARN: Aucune catégorie d'emploi non vide trouvée dans les colonnes RAW"
+                )
+            print()
+
+            sql_title_raw = """
+                SELECT DISTINCT titre_emploi_raw, COUNT(*) as nb
+                FROM paie.stg_paie_transactions
+                WHERE source_file = %(file)s
+                AND titre_emploi_raw IS NOT NULL AND TRIM(titre_emploi_raw) != ''
+                GROUP BY titre_emploi_raw
+                ORDER BY nb DESC
+            """
+            result_title_raw = provider.repo.run_query(
+                sql_title_raw, {"file": first_file}
+            )
+
+            if (
+                result_title_raw
+                and isinstance(result_title_raw, list)
+                and len(result_title_raw) > 0
+            ):
+                print(f"  Titres d'emploi (RAW) trouvés: {len(result_title_raw)}")
+                for row in result_title_raw:
+                    print(f"    • {row[0]}: {row[1]} occurrences")
+            else:
+                print(
+                    "  WARN: Aucun titre d'emploi non vide trouvé dans les colonnes RAW"
+                )
+            print()
+
+    print("=" * 80)
+    print("  ✅ Analyse terminée")
+    print("=" * 80 + "\n")
+
+except Exception as e:
+    print(f"❌ Erreur: {e}")
+    import traceback
+
+    traceback.print_exc()
+    sys.exit(1)

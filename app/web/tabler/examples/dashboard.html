@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Dashboard - Tabler</title>
+    <!-- CSS files -->
+    <link href="../dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="../dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="page">
+      <!-- Navbar -->
+      <header class="navbar navbar-expand-md navbar-light d-print-none">
+        <div class="container-xl">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
+            <a href=".">
+              PayrollAnalyzer - Tabler Demo
+            </a>
+          </h1>
+          <div class="navbar-nav flex-row order-md-last">
+            <div class="nav-item d-none d-md-flex me-3">
+              <div class="btn-list">
+                <a href="https://github.com/tabler/tabler" class="btn" target="_blank" rel="noreferrer">
+                  Source code
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="page-wrapper">
+        <!-- Page header -->
+        <div class="page-header d-print-none">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <h2 class="page-title">
+                  Dashboard
+                </h2>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <!-- Row of cards -->
+            <div class="row row-deck row-cards">
+              <!-- Card 1: Total Employees -->
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Total Employés</div>
+                      <div class="ms-auto lh-1">
+                        <div class="dropdown">
+                          <a class="dropdown-toggle text-muted" href="#" data-bs-toggle="dropdown" aria-expanded="false">Dernier mois</a>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="h1 mb-3">2,450</div>
+                    <div class="d-flex mb-2">
+                      <div>+5% de croissance</div>
+                      <div class="ms-auto">
+                        <span class="text-green d-inline-flex align-items-center lh-1">
+                          +5%
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="3 17 9 11 13 15 21 7" /><polyline points="14 7 21 7 21 14" /></svg>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card 2: Salaire Brut -->
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Salaire Brut</div>
+                    </div>
+                    <div class="h1 mb-3">1,254,890 $</div>
+                    <div class="d-flex mb-2">
+                      <div>Total mensuel</div>
+                      <div class="ms-auto">
+                        <span class="text-green d-inline-flex align-items-center lh-1">
+                          +2.3%
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="3 17 9 11 13 15 21 7" /><polyline points="14 7 21 7 21 14" /></svg>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card 3: Transactions -->
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Transactions</div>
+                    </div>
+                    <div class="h1 mb-3">15,423</div>
+                    <div class="d-flex mb-2">
+                      <div>Ce mois</div>
+                      <div class="ms-auto">
+                        <span class="text-red d-inline-flex align-items-center lh-1">
+                          -1.2%
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="3 7 9 13 13 9 21 17" /><polyline points="21 10 21 17 14 17" /></svg>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card 4: Périodes -->
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Périodes de Paie</div>
+                    </div>
+                    <div class="h1 mb-3">24</div>
+                    <div class="d-flex mb-2">
+                      <div>Périodes actives</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Second row - Larger cards -->
+            <div class="row row-deck row-cards mt-3">
+              <!-- Chart Card -->
+              <div class="col-12 col-lg-8">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Évolution des Salaires</h3>
+                  </div>
+                  <div class="card-body">
+                    <div id="chart-demo-line" style="min-height: 250px;"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Stats Card -->
+              <div class="col-12 col-lg-4">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Statistiques</h3>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <div class="text-muted mb-1">Taux de traitement</div>
+                      <div class="progress progress-sm">
+                        <div class="progress-bar bg-primary" style="width: 92%" role="progressbar" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100">
+                          <span class="visually-hidden">92% Complete</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <div class="text-muted mb-1">Exactitude</div>
+                      <div class="progress progress-sm">
+                        <div class="progress-bar bg-success" style="width: 98%" role="progressbar" aria-valuenow="98" aria-valuemin="0" aria-valuemax="100">
+                          <span class="visually-hidden">98% Complete</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <div class="text-muted mb-1">Alertes</div>
+                      <div class="progress progress-sm">
+                        <div class="progress-bar bg-warning" style="width: 12%" role="progressbar" aria-valuenow="12" aria-valuemin="0" aria-valuemax="100">
+                          <span class="visually-hidden">12% Complete</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Third row - Table -->
+            <div class="row row-deck row-cards mt-3">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Employés Récents</h3>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table card-table table-vcenter">
+                      <thead>
+                        <tr>
+                          <th>Matricule</th>
+                          <th>Nom</th>
+                          <th>Département</th>
+                          <th>Salaire</th>
+                          <th>Statut</th>
+                          <th class="w-1"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span class="text-muted">EMP001</span></td>
+                          <td>Jean Dupont</td>
+                          <td>Finance</td>
+                          <td>$65,000</td>
+                          <td><span class="badge bg-success me-1"></span> Actif</td>
+                          <td>
+                            <a href="#">Détails</a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><span class="text-muted">EMP002</span></td>
+                          <td>Marie Martin</td>
+                          <td>Ressources Humaines</td>
+                          <td>$58,000</td>
+                          <td><span class="badge bg-success me-1"></span> Actif</td>
+                          <td>
+                            <a href="#">Détails</a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><span class="text-muted">EMP003</span></td>
+                          <td>Pierre Dubois</td>
+                          <td>IT</td>
+                          <td>$72,000</td>
+                          <td><span class="badge bg-success me-1"></span> Actif</td>
+                          <td>
+                            <a href="#">Détails</a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><span class="text-muted">EMP004</span></td>
+                          <td>Sophie Bernard</td>
+                          <td>Marketing</td>
+                          <td>$61,000</td>
+                          <td><span class="badge bg-warning me-1"></span> En congé</td>
+                          <td>
+                            <a href="#">Détails</a>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer class="footer footer-transparent d-print-none">
+          <div class="container-xl">
+            <div class="row text-center align-items-center flex-row-reverse">
+              <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+                <ul class="list-inline list-inline-dots mb-0">
+                  <li class="list-inline-item">
+                    PayrollAnalyzer - Tabler Demo (Offline)
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+    <!-- Libs JS -->
+    <!-- Tabler Core -->
+    <script src="../dist/js/tabler.min.js"></script>
+    <script src="../app_bridge.js"></script>
+  </body>
+</html>
+

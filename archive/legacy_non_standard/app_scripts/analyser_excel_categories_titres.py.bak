@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Script pour analyser le fichier Excel et compter catégories/titres d'emploi
+"""
+
+import sys
+import os
+import pandas as pd
+from pathlib import Path
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.insert(0, parent_dir)
+
+try:
+    excel_file = Path("Classeur1.xlsx")
+
+    if not excel_file.exists():
+        print(f"❌ Fichier introuvable: {excel_file}")
+        sys.exit(1)
+
+    print("\n" + "=" * 80)
+    print("  ANALYSE DU FICHIER EXCEL: Classeur1.xlsx")
+    print("=" * 80 + "\n")
+
+    # Lire le fichier Excel
+    print("📖 Lecture du fichier Excel...")
+    df = pd.read_excel(excel_file, engine="openpyxl")
+    print(f"  ✓ {len(df)} lignes, {len(df.columns)} colonnes")
+    print()
+
+    # Afficher toutes les colonnes
+    print("📋 COLONNES DISPONIBLES:")
+    print("-" * 80)
+    for i, col in enumerate(df.columns, 1):
+        print(f"  {i:2d}. {col}")
+    print()
+
+    # Chercher les colonnes de catégorie et titre d'emploi
+    print("🔍 RECHERCHE DES COLONNES CATÉGORIE ET TITRE D'EMPLOI")
+    print("-" * 80)
+
+    # Chercher les colonnes qui contiennent "categorie" ou "catégorie"
+    cat_cols = [
+        col
+        for col in df.columns
+        if "categorie" in str(col).lower() or "catégorie" in str(col).lower()
+    ]
+    if "emploi" in str(col).lower() or "emploi" in str(col).lower():
+        cat_cols = [col for col in cat_cols if "emploi" in str(col).lower()]
+
+    # Chercher les colonnes qui contiennent "titre"
+    title_cols = [col for col in df.columns if "titre" in str(col).lower()]
+    if title_cols:
+        title_cols = [col for col in title_cols if "emploi" in str(col).lower()]
+
+    print(f"  Colonnes catégorie trouvées: {cat_cols}")
+    print(f"  Colonnes titre trouvées: {title_cols}")
+    print()
+
+    # Si pas trouvé exactement, chercher avec des patterns plus larges
+    if not cat_cols:
+        # Chercher toutes les colonnes qui pourraient contenir catégorie
+        all_cols_lower = [str(col).lower() for col in df.columns]
+        potential_cat = [
+            col
+            for col in df.columns
+            if any(
+                word in str(col).lower()
+                for word in ["categorie", "catégorie", "category"]
+            )
+        ]
+        print(f"  Colonnes potentielles catégorie: {potential_cat}")
+        cat_cols = potential_cat
+
+    if not title_cols:
+        potential_title = [col for col in df.columns if "titre" in str(col).lower()]
+        print(f"  Colonnes potentielles titre: {potential_title}")
+        title_cols = potential_title
+
+    print()
+
+    # Analyser les valeurs dans ces colonnes
+    if cat_cols:
+        cat_col = cat_cols[0]
+        print(f"📊 ANALYSE DE LA COLONNE: {cat_col}")
+        print("-" * 80)
+
+        # Compter les valeurs non nulles
+        non_null = df[cat_col].notna().sum()
+        print(f"  Valeurs non nulles: {non_null} / {len(df)}")
+
+        # Compter les valeurs distinctes
+        unique_vals = df[cat_col].dropna().unique()
+        print(f"  Valeurs distinctes: {len(unique_vals)}")
+
+        # Compter par valeur
+        value_counts = df[cat_col].value_counts()
+        print(f"\n  Répartition par catégorie:")
+        for val, count in value_counts.head(20).items():
+            pct = (count / len(df) * 100) if len(df) > 0 else 0
+            print(f"    • {val}: {count} ({pct:.1f}%)")
+
+        if len(value_counts) > 20:
+            print(f"    ... et {len(value_counts) - 20} autres catégories")
+        print()
+
+    if title_cols:
+        title_col = title_cols[0]
+        print(f"📊 ANALYSE DE LA COLONNE: {title_col}")
+        print("-" * 80)
+
+        # Compter les valeurs non nulles
+        non_null = df[title_col].notna().sum()
+        print(f"  Valeurs non nulles: {non_null} / {len(df)}")
+
+        # Compter les valeurs distinctes
+        unique_vals = df[title_col].dropna().unique()
+        print(f"  Valeurs distinctes: {len(unique_vals)}")
+
+        # Compter par valeur
+        value_counts = df[title_col].value_counts()
+        print(f"\n  Répartition par titre:")
+        for val, count in value_counts.head(20).items():
+            pct = (count / len(df) * 100) if len(df) > 0 else 0
+            print(f"    • {val}: {count} ({pct:.1f}%)")
+
+        if len(value_counts) > 20:
+            print(f"    ... et {len(value_counts) - 20} autres titres")
+        print()
+
+    # Afficher un échantillon de données
+    print("📋 ÉCHANTILLON DE DONNÉES (5 premières lignes):")
+    print("-" * 80)
+    sample_cols = []
+    if cat_cols:
+        sample_cols.append(cat_cols[0])
+    if title_cols:
+        sample_cols.append(title_cols[0])
+    if "matricule" in df.columns:
+        sample_cols.append("matricule")
+    if "employé" in df.columns or "employe" in df.columns:
+        emp_col = "employé" if "employé" in df.columns else "employe"
+        sample_cols.append(emp_col)
+
+    if sample_cols:
+        print(df[sample_cols].head(5).to_string())
+    else:
+        print(df.head(5).to_string())
+    print()
+
+    print("=" * 80)
+    print("  ✅ Analyse terminée")
+    print("=" * 80 + "\n")
+
+    # Retourner les informations pour le script suivant
+    if cat_cols and title_cols:
+        print("📝 RÉSUMÉ:")
+        print(f"  Colonne catégorie: {cat_cols[0]}")
+        print(f"  Colonne titre: {title_cols[0]}")
+        print(f"  Catégories distinctes: {df[cat_cols[0]].nunique()}")
+        print(f"  Titres distincts: {df[title_cols[0]].nunique()}")
+
+except Exception as e:
+    print(f"❌ Erreur: {e}")
+    import traceback
+
+    traceback.print_exc()
+    sys.exit(1)

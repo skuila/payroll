@@ -1,0 +1,276 @@
+================================================================================
+RAPPORT DE SCAN - CONNEXIONS NON STANDARDISÉES
+================================================================================
+
+📊 STATISTIQUES:
+   • Fichiers avec violations: 57
+   • Total de violations: 259
+
+📋 VIOLATIONS PAR TYPE:
+
+  psycopg_connect: 52 occurrences dans 45 fichiers
+  os_getenv_payroll: 155 occurrences dans 42 fichiers
+  os_getenv_database: 24 occurrences dans 24 fichiers
+  create_engine: 6 occurrences dans 5 fichiers
+  os_getenv_pgpassword: 22 occurrences dans 17 fichiers
+
+================================================================================
+DÉTAILS PAR FICHIER
+================================================================================
+
+📄 _cleanup_report/check_db_conn.py
+   • psycopg_connect: lignes 69
+   • os_getenv_payroll: lignes 17, 18, 32
+   • os_getenv_database: lignes 32
+   • os_getenv_pgpassword: lignes 17
+
+📄 _cleanup_report/list_paie_views.py
+   • psycopg_connect: lignes 8
+
+📄 _cleanup_report/query_kpi_db.py
+   • psycopg_connect: lignes 179
+   • os_getenv_payroll: lignes 24, 25, 27
+   • os_getenv_database: lignes 27
+   • os_getenv_pgpassword: lignes 24
+
+📄 agent/knowledge_index.py
+   • os_getenv_payroll: lignes 21
+   • os_getenv_database: lignes 21
+
+📄 alembic/env.py
+   • os_getenv_database: lignes 52
+
+📄 analyser_code_paie_pour_categories.py
+   • psycopg_connect: lignes 29
+
+📄 archive/logic/db_optimizer.py
+   • os_getenv_payroll: lignes 27
+   • os_getenv_database: lignes 27
+
+📄 archive/scripts/tests/test_views_ok.py
+   • psycopg_connect: lignes 48
+   • os_getenv_payroll: lignes 20
+   • os_getenv_database: lignes 20
+
+📄 calc_net.py
+   • psycopg_connect: lignes 10
+
+📄 config/config_manager.py
+   • os_getenv_payroll: lignes 20, 21, 22, 23, 24, 25, 26
+
+📄 config/connection_standard.py
+   • psycopg_connect: lignes 263
+   • os_getenv_payroll: lignes 75, 78, 90, 91, 92, 93, 94, 296, 297, 298, 299, 300, 302
+   • os_getenv_pgpassword: lignes 78, 94, 301
+
+📄 config/settings.py
+   • os_getenv_payroll: lignes 56, 57, 129, 132
+   • os_getenv_database: lignes 129
+   • os_getenv_pgpassword: lignes 56, 122, 132
+
+📄 config_manager_backup_20251110_005646.py
+   • psycopg_connect: lignes 110
+   • os_getenv_payroll: lignes 85, 96, 100, 101, 102, 103
+   • os_getenv_database: lignes 96
+
+📄 connect_check.py
+   • psycopg_connect: lignes 12
+
+📄 corriger_types_colonnes_complet.py
+   • psycopg_connect: lignes 29
+   • os_getenv_payroll: lignes 25, 26
+
+📄 corriger_types_complet_final.py
+   • psycopg_connect: lignes 29
+   • os_getenv_payroll: lignes 24, 25
+
+📄 corriger_types_montants_execute.py
+   • psycopg_connect: lignes 22
+   • os_getenv_payroll: lignes 19, 20
+
+📄 count_columns.py
+   • psycopg_connect: lignes 15
+
+📄 export_employees_json.py
+   • psycopg_connect: lignes 42
+   • os_getenv_payroll: lignes 7
+   • os_getenv_database: lignes 7
+
+📄 get_db_overview.py
+   • psycopg_connect: lignes 19
+
+📄 inspect_view.py
+   • create_engine: lignes 85
+   • os_getenv_payroll: lignes 15, 27, 28, 29, 30, 31
+   • os_getenv_database: lignes 15
+   • os_getenv_pgpassword: lignes 28
+
+📄 launch_debug.py
+   • psycopg_connect: lignes 45
+   • os_getenv_payroll: lignes 33
+
+📄 launch_payroll.py
+   • psycopg_connect: lignes 87
+   • os_getenv_payroll: lignes 30, 31, 32, 33, 34, 35, 36, 38
+
+📄 lister_toutes_colonnes_table.py
+   • psycopg_connect: lignes 35
+   • os_getenv_payroll: lignes 20, 22, 23, 24, 25, 26
+
+📄 logic/audit.py
+   • os_getenv_payroll: lignes 109
+   • os_getenv_database: lignes 109
+
+📄 migration/backup_database.py
+   • os_getenv_payroll: lignes 13, 98
+
+📄 payroll_app_qt_Version4.py
+   • psycopg_connect: lignes 825
+
+📄 providers/postgres_provider.py
+   • psycopg_connect: lignes 162
+   • os_getenv_payroll: lignes 146, 153, 157
+   • os_getenv_database: lignes 146
+   • os_getenv_pgpassword: lignes 157
+
+📄 run_validate.py
+   • psycopg_connect: lignes 21, 104, 121, 129, 135
+   • os_getenv_payroll: lignes 8
+   • os_getenv_database: lignes 8
+
+📄 run_verify_datatables_employees.py
+   • psycopg_connect: lignes 59
+   • os_getenv_payroll: lignes 55
+   • os_getenv_database: lignes 55
+
+📄 scripts/_run_single_view_create.py
+   • psycopg_connect: lignes 37
+
+📄 scripts/admin_setup_kpi_views.py
+   • psycopg_connect: lignes 31
+   • os_getenv_payroll: lignes 17
+
+📄 scripts/apply_harmonization.py
+   • psycopg_connect: lignes 34
+   • os_getenv_payroll: lignes 20, 21
+   • os_getenv_pgpassword: lignes 20
+
+📄 scripts/apply_sql_file_postgres.py
+   • psycopg_connect: lignes 30
+
+📄 scripts/check_existing_views.py
+   • psycopg_connect: lignes 34
+   • os_getenv_payroll: lignes 19, 20
+   • os_getenv_pgpassword: lignes 19
+
+📄 scripts/check_status_constraint.py
+   • psycopg_connect: lignes 13
+   • os_getenv_payroll: lignes 7, 8, 9, 10, 11
+   • os_getenv_pgpassword: lignes 11
+
+📄 scripts/check_table_structure.py
+   • psycopg_connect: lignes 41
+   • os_getenv_payroll: lignes 19, 20, 25, 26, 27, 28, 29
+   • os_getenv_database: lignes 25
+   • os_getenv_pgpassword: lignes 19
+
+📄 scripts/create_simple_kpi_views.py
+   • psycopg_connect: lignes 41
+   • os_getenv_payroll: lignes 19, 20, 25, 26, 27, 28, 29
+   • os_getenv_database: lignes 25
+   • os_getenv_pgpassword: lignes 19
+
+📄 scripts/create_view_direct.py
+   • psycopg_connect: lignes 40
+
+📄 scripts/dump_analytics_figures.py
+   • create_engine: lignes 37
+   • os_getenv_payroll: lignes 10, 22, 23, 24, 25, 26
+   • os_getenv_database: lignes 10
+   • os_getenv_pgpassword: lignes 23
+
+📄 scripts/import_excel_to_staging.py
+   • psycopg_connect: lignes 164
+
+📄 scripts/mettre_a_jour_categories_titres_postgres.py
+   • psycopg_connect: lignes 75, 133
+
+📄 scripts/refactor_connections.py
+   • psycopg_connect: lignes 8, 149
+   • create_engine: lignes 9, 150
+   • os_getenv_payroll: lignes 151
+
+📄 scripts/reset_db_passwords.py
+   • psycopg_connect: lignes 28, 31
+   • os_getenv_payroll: lignes 13, 18, 19, 20, 21
+   • os_getenv_pgpassword: lignes 13, 18
+
+📄 scripts/setup_schema_permissions.py
+   • psycopg_connect: lignes 41
+   • os_getenv_payroll: lignes 19, 20, 25, 26, 27, 28, 29
+   • os_getenv_database: lignes 25
+   • os_getenv_pgpassword: lignes 19
+
+📄 scripts/smoke_db_conn.py
+   • psycopg_connect: lignes 15
+
+📄 scripts/test_analytics_views.py
+   • create_engine: lignes 39
+   • os_getenv_payroll: lignes 11, 23, 25, 26, 27, 28
+   • os_getenv_database: lignes 11
+   • os_getenv_pgpassword: lignes 25
+
+📄 scripts/verification_coherence_colonnes.py
+   • psycopg_connect: lignes 74
+   • os_getenv_payroll: lignes 14, 15, 16, 17, 18
+   • os_getenv_database: lignes 14
+
+📄 scripts/verification_coherence_complete.py
+   • psycopg_connect: lignes 67
+   • os_getenv_payroll: lignes 14, 15, 16, 17, 18
+   • os_getenv_database: lignes 14
+
+📄 scripts/verify_kpi_columns.py
+   • psycopg_connect: lignes 146
+   • os_getenv_payroll: lignes 20, 21, 26, 27, 28, 29, 30
+   • os_getenv_database: lignes 26
+   • os_getenv_pgpassword: lignes 20
+
+📄 services/etl_paie.py
+   • psycopg_connect: lignes 152
+   • os_getenv_payroll: lignes 994
+
+📄 services/schema_editor.py
+   • os_getenv_payroll: lignes 146
+
+📄 show_columns.py
+   • psycopg_connect: lignes 19
+
+📄 test_app_simple.py
+   • psycopg_connect: lignes 24
+   • os_getenv_payroll: lignes 16, 23
+   • os_getenv_pgpassword: lignes 17
+
+📄 tests/legacy/providers/hybrid_provider.py
+   • psycopg_connect: lignes 66
+   • os_getenv_payroll: lignes 43, 59
+   • os_getenv_database: lignes 44
+
+📄 tmp_check_employees.py
+   • create_engine: lignes 34
+   • os_getenv_payroll: lignes 11, 23, 24, 25, 26, 27
+   • os_getenv_database: lignes 11
+
+📄 trouver_table_source_reelle.py
+   • psycopg_connect: lignes 23
+   • os_getenv_payroll: lignes 20, 21
+
+================================================================================
+ACTIONS RECOMMANDÉES
+================================================================================
+
+1. Refactoriser les fichiers listés ci-dessus
+2. Remplacer psycopg.connect() par get_connection_pool()
+3. Remplacer create_engine() par get_connection_pool()
+4. Remplacer os.getenv('PAYROLL_*') par get_dsn()
+5. Tester chaque fichier modifié

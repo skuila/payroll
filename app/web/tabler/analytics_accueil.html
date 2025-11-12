@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Analyse - Accueil / KPIs</title>
+    <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/responsive.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/fixedHeader.bootstrap5.min.css" rel="stylesheet"/>
+    <style>
+      :root { --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+      body { font-feature-settings: "cv03","cv04","cv11"; background-color: #f5f7fb; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark">
+            <a href="./index.html">PayrollAnalyzer</a>
+          </h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./assistant.html"><span class="nav-link-title">Assistant IA</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./periods.html"><span class="nav-link-title">Périodes</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./data-viewer.html"><span class="nav-link-title">Visualisation de données</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./period-report.html"><span class="nav-link-title">Rapport période</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./period-report.html"><span class="nav-link-title">Rapport période</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+
+      <div class="page-wrapper">
+        <div class="page-header d-print-none sticky-top bg-white border-bottom" id="page-header">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <h2 class="page-title">Analyse - Accueil / KPIs</h2>
+                <div class="text-muted mt-1">Aperçu global par date de paie (période exacte)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-body">
+          <div class="container mt-4">
+            <!-- KPIs -->
+            <div class="row row-deck">
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="subheader">Masse salariale (total)</div>
+                    <div class="h2" id="kpi-masse">-</div>
+                    <div class="progress progress-sm">
+                      <div class="progress-bar" id="kpi-masse-progress" style="width: 0%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="subheader">Gains</div>
+                    <div class="h2" id="kpi-gains">-</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="subheader">Déductions</div>
+                    <div class="h2" id="kpi-deductions">-</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="subheader">Part employeur</div>
+                    <div class="h2" id="kpi-part-employeur">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="row mt-3">
+              <div class="col-md-7">
+                <div class="card">
+                  <div class="card-header"><h3 class="card-title">Tendance masse (montant_combine)</h3></div>
+                  <div class="card-body">
+                    <div id="chart-tendance" style="height: 280px;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <div class="card">
+                  <div class="card-header"><h3 class="card-title">Gains / Déductions / Part employeur</h3></div>
+                  <div class="card-body">
+                    <div id="chart-stack" style="height: 280px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="card mt-3">
+              <div class="card-header"><h3 class="card-title">Top variations par catégorie</h3></div>
+              <div class="table-responsive">
+                <table id="tbl-variations" class="table table-bordered table-hover w-100">
+                  <thead>
+                    <tr>
+                      <th>Catégorie</th>
+                      <th>Total combine</th>
+                      <th>Var. % m/m</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="./app_bridge.js"></script>
+    <script src="./dist/libs/datatables/loader.js"></script>
+    <script src="./js/datatables-helper.js"></script>
+    <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
+    <script src="./js/charts-helper.js"></script>
+    <script src="./js/analytics-helpers.js"></script>
+    <script src="./dist/js/tabler.min.js"></script>
+    <script>
+      (function(){
+        // Chargement minimal: on attend un service ultérieur (SQL/API) pour remplir réellement
+        document.addEventListener('DOMContentLoaded', function(){
+          // KPIs placeholders
+          document.getElementById('kpi-masse').textContent = '—';
+          document.getElementById('kpi-gains').textContent = '—';
+          document.getElementById('kpi-deductions').textContent = '—';
+          document.getElementById('kpi-part-employeur').textContent = '—';
+
+          // Charts placeholders
+          try {
+            const ch1 = ChartsHelper.mount('#chart-tendance', 'line', {
+              series: [{name:'Total (montant_combine)', data: []}],
+              xaxis: { type: 'category' }
+            });
+            const ch2 = ChartsHelper.mount('#chart-stack', 'bar', {
+              series: [
+                {name:'Gains', data: []},
+                {name:'Déductions', data: []},
+                {name:'Part employeur', data: []},
+              ],
+              xaxis: { categories: [] },
+              plotOptions: { bar: { stacked: true } }
+            });
+          } catch(e) { console.warn(e); }
+
+          // Table placeholder
+          DataTablesHelper.init('#tbl-variations', [], [
+            { title: 'Catégorie', data: 0 },
+            { title: 'Total combine', data: 1, className: 'text-end',
+              render: window.DataTablesHelper.formatCurrency },
+            { title: 'Var. % m/m', data: 2, className: 'text-end' }
+          ]);
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+

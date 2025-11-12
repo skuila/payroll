@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Galerie de graphiques - ApexCharts</title>
+    <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+    <style>
+      .chart-card { cursor: pointer; transition: all 0.2s; }
+      .chart-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+      .chart-card.selected { border: 2px solid var(--tblr-primary); }
+      .chart-preview { height: 140px; margin-bottom: 0.75rem; }
+      .family-section { margin-bottom: 2rem; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark"><a href="./index.html">PayrollAnalyzer</a></h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./analytics_masse.html"><span class="nav-link-title">Analyse</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      <div class="page-wrapper">
+        <div class="page-header d-print-none sticky-top bg-white border-bottom">
+          <div class="container-xl">
+            <div class="row align-items-center">
+              <div class="col">
+                <h2 class="page-title">Galerie de graphiques ApexCharts</h2>
+                <div class="text-muted mt-1">Choisissez le type de graphique pour vos analyses (75+ variantes)</div>
+              </div>
+              <div class="col-auto">
+                <a href="./analytics_masse.html" class="btn btn-primary">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 11l-4 4l4 4m-4 -4h11a4 4 0 0 0 0 -8h-1" /></svg>
+                  Retour à l'analyse
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="page-body">
+          <div class="container-xl">
+            <!-- Navigation rapide par famille -->
+            <div class="card mb-3">
+              <div class="card-body">
+                <div class="d-flex flex-wrap gap-2" id="family-nav">
+                  <!-- Généré dynamiquement -->
+                </div>
+              </div>
+            </div>
+            
+            <!-- Galerie des graphiques -->
+            <div id="chart-gallery">
+              <!-- Généré dynamiquement par famille -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./dist/js/tabler.min.js"></script>
+    <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script>
+      (function(){
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageId = urlParams.get('page') || 'masse';
+        const chartId = urlParams.get('chart') || 'main';
+        
+        document.addEventListener('DOMContentLoaded', function(){
+          renderFamilyNav();
+          renderGallery();
+        });
+        
+        function renderFamilyNav(){
+          const nav = document.getElementById('family-nav');
+          Object.keys(APEX_CHART_CATALOG).forEach(key => {
+            const family = APEX_CHART_CATALOG[key];
+            const btn = document.createElement('a');
+            btn.href = '#family-' + key;
+            btn.className = 'btn btn-sm btn-outline-primary';
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">${family.icon}</svg> ${family.family} (${family.variants.length})`;
+            nav.appendChild(btn);
+          });
+        }
+        
+        function renderGallery(){
+          const gallery = document.getElementById('chart-gallery');
+          
+          Object.keys(APEX_CHART_CATALOG).forEach(key => {
+            const family = APEX_CHART_CATALOG[key];
+            
+            // Section famille
+            const section = document.createElement('div');
+            section.className = 'family-section';
+            section.id = 'family-' + key;
+            section.innerHTML = `
+              <h3 class="mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">${family.icon}</svg>
+                ${family.family}
+              </h3>
+            `;
+            
+            const row = document.createElement('div');
+            row.className = 'row g-3';
+            
+            family.variants.forEach(variant => {
+              const col = document.createElement('div');
+              col.className = 'col-md-4 col-lg-3';
+              col.innerHTML = `
+                <div class="card chart-card" data-variant-id="${variant.id}">
+                  <div class="card-body">
+                    <div class="chart-preview" id="preview-${variant.id}"></div>
+                    <h4 class="card-title">${variant.name}</h4>
+                    <p class="text-muted small mb-3">${variant.desc}</p>
+                    <button class="btn btn-primary btn-sm w-100 btn-use-chart" data-variant-id="${variant.id}">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
+                      Utiliser ce graphique
+                    </button>
+                  </div>
+                </div>
+              `;
+              row.appendChild(col);
+              
+              // Rendre l'aperçu après insertion dans le DOM
+              setTimeout(() => {
+                ChartSwitcher.renderPreview('#preview-' + variant.id, variant.id);
+              }, 100);
+            });
+            
+            section.appendChild(row);
+            gallery.appendChild(section);
+          });
+          
+          // Gérer les clics sur "Utiliser ce graphique"
+          document.querySelectorAll('.btn-use-chart').forEach(btn => {
+            btn.addEventListener('click', function(){
+              const variantId = this.getAttribute('data-variant-id');
+              ChartSwitcher.saveChoice(pageId, chartId, variantId);
+              
+              // Feedback visuel
+              this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon text-success" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M5 12l5 5l10 -10" /></svg> Enregistré!';
+              this.classList.add('btn-success');
+              this.classList.remove('btn-primary');
+              
+              // Rediriger après 1s
+              setTimeout(() => {
+                window.location.href = `./analytics_masse.html?page=${pageId}&chart=${chartId}`;
+              }, 1000);
+            });
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>
+
+
+
+

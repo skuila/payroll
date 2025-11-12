@@ -1,0 +1,279 @@
+schema,routine,arguments,return_type,language,security
+core,compute_employee_key,"p_matricule text, p_nom text",character varying,plpgsql,SECURITY INVOKER
+core,immutable_unaccent,text,text,plpgsql,SECURITY INVOKER
+core,update_timestamp,,trigger,plpgsql,SECURITY INVOKER
+core,update_updated_at_column,,trigger,plpgsql,SECURITY INVOKER
+payroll,auto_calc_period_seq,,trigger,plpgsql,SECURITY INVOKER
+payroll,check_pay_date_consistency,,trigger,plpgsql,SECURITY INVOKER
+payroll,check_transaction_pay_date,,trigger,plpgsql,SECURITY INVOKER
+payroll,ensure_period,p_date date,uuid,plpgsql,SECURITY INVOKER
+payroll,get_stats_nouveaux_date,p_pay_date date,"TABLE(batch_id integer, pay_date date, filename character varying, total_employes bigint, nouveaux_employes bigint, anciens_employes bigint, max_precedent integer, max_actuel integer, date_precedente date, liste_nouveaux character varying)",plpgsql,SECURITY INVOKER
+public,armor,bytea,text,c,SECURITY INVOKER
+public,armor,"bytea, text[], text[]",text,c,SECURITY INVOKER
+public,cash_dist,"money, money",money,c,SECURITY INVOKER
+public,crypt,"text, text",text,c,SECURITY INVOKER
+public,date_dist,"date, date",integer,c,SECURITY INVOKER
+public,dearmor,text,bytea,c,SECURITY INVOKER
+public,decrypt,"bytea, bytea, text",bytea,c,SECURITY INVOKER
+public,decrypt_iv,"bytea, bytea, bytea, text",bytea,c,SECURITY INVOKER
+public,digest,"text, text",bytea,c,SECURITY INVOKER
+public,digest,"bytea, text",bytea,c,SECURITY INVOKER
+public,encrypt,"bytea, bytea, text",bytea,c,SECURITY INVOKER
+public,encrypt_iv,"bytea, bytea, bytea, text",bytea,c,SECURITY INVOKER
+public,float4_dist,"real, real",real,c,SECURITY INVOKER
+public,float8_dist,"double precision, double precision",double precision,c,SECURITY INVOKER
+public,gbt_bit_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_bit_consistent,"internal, bit, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_bit_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_bit_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_bit_same,"gbtreekey_var, gbtreekey_var, internal",internal,c,SECURITY INVOKER
+public,gbt_bit_union,"internal, internal",gbtreekey_var,c,SECURITY INVOKER
+public,gbt_bool_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_bool_consistent,"internal, boolean, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_bool_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_bool_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_bool_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_bool_same,"gbtreekey2, gbtreekey2, internal",internal,c,SECURITY INVOKER
+public,gbt_bool_union,"internal, internal",gbtreekey2,c,SECURITY INVOKER
+public,gbt_bpchar_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_bpchar_consistent,"internal, character, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_bytea_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_bytea_consistent,"internal, bytea, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_bytea_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_bytea_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_bytea_same,"gbtreekey_var, gbtreekey_var, internal",internal,c,SECURITY INVOKER
+public,gbt_bytea_union,"internal, internal",gbtreekey_var,c,SECURITY INVOKER
+public,gbt_cash_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_cash_consistent,"internal, money, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_cash_distance,"internal, money, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_cash_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_cash_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_cash_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_cash_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_cash_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_date_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_date_consistent,"internal, date, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_date_distance,"internal, date, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_date_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_date_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_date_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_date_same,"gbtreekey8, gbtreekey8, internal",internal,c,SECURITY INVOKER
+public,gbt_date_union,"internal, internal",gbtreekey8,c,SECURITY INVOKER
+public,gbt_decompress,internal,internal,c,SECURITY INVOKER
+public,gbt_enum_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_enum_consistent,"internal, anyenum, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_enum_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_enum_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_enum_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_enum_same,"gbtreekey8, gbtreekey8, internal",internal,c,SECURITY INVOKER
+public,gbt_enum_union,"internal, internal",gbtreekey8,c,SECURITY INVOKER
+public,gbt_float4_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_float4_consistent,"internal, real, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_float4_distance,"internal, real, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_float4_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_float4_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_float4_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_float4_same,"gbtreekey8, gbtreekey8, internal",internal,c,SECURITY INVOKER
+public,gbt_float4_union,"internal, internal",gbtreekey8,c,SECURITY INVOKER
+public,gbt_float8_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_float8_consistent,"internal, double precision, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_float8_distance,"internal, double precision, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_float8_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_float8_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_float8_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_float8_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_float8_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_inet_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_inet_consistent,"internal, inet, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_inet_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_inet_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_inet_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_inet_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_int2_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_int2_consistent,"internal, smallint, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_int2_distance,"internal, smallint, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_int2_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_int2_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_int2_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_int2_same,"gbtreekey4, gbtreekey4, internal",internal,c,SECURITY INVOKER
+public,gbt_int2_union,"internal, internal",gbtreekey4,c,SECURITY INVOKER
+public,gbt_int4_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_int4_consistent,"internal, integer, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_int4_distance,"internal, integer, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_int4_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_int4_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_int4_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_int4_same,"gbtreekey8, gbtreekey8, internal",internal,c,SECURITY INVOKER
+public,gbt_int4_union,"internal, internal",gbtreekey8,c,SECURITY INVOKER
+public,gbt_int8_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_int8_consistent,"internal, bigint, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_int8_distance,"internal, bigint, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_int8_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_int8_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_int8_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_int8_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_int8_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_intv_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_intv_consistent,"internal, interval, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_intv_decompress,internal,internal,c,SECURITY INVOKER
+public,gbt_intv_distance,"internal, interval, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_intv_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_intv_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_intv_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_intv_same,"gbtreekey32, gbtreekey32, internal",internal,c,SECURITY INVOKER
+public,gbt_intv_union,"internal, internal",gbtreekey32,c,SECURITY INVOKER
+public,gbt_macad8_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_macad8_consistent,"internal, macaddr8, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_macad8_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_macad8_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_macad8_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_macad8_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_macad8_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_macad_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_macad_consistent,"internal, macaddr, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_macad_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_macad_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_macad_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_macad_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_macad_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_numeric_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_numeric_consistent,"internal, numeric, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_numeric_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_numeric_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_numeric_same,"gbtreekey_var, gbtreekey_var, internal",internal,c,SECURITY INVOKER
+public,gbt_numeric_union,"internal, internal",gbtreekey_var,c,SECURITY INVOKER
+public,gbt_oid_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_oid_consistent,"internal, oid, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_oid_distance,"internal, oid, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_oid_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_oid_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_oid_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_oid_same,"gbtreekey8, gbtreekey8, internal",internal,c,SECURITY INVOKER
+public,gbt_oid_union,"internal, internal",gbtreekey8,c,SECURITY INVOKER
+public,gbt_text_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_text_consistent,"internal, text, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_text_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_text_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_text_same,"gbtreekey_var, gbtreekey_var, internal",internal,c,SECURITY INVOKER
+public,gbt_text_union,"internal, internal",gbtreekey_var,c,SECURITY INVOKER
+public,gbt_time_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_time_consistent,"internal, time without time zone, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_time_distance,"internal, time without time zone, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_time_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_time_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_time_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_time_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_time_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_timetz_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_timetz_consistent,"internal, time with time zone, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_ts_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_ts_consistent,"internal, timestamp without time zone, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_ts_distance,"internal, timestamp without time zone, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_ts_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_ts_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_ts_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_ts_same,"gbtreekey16, gbtreekey16, internal",internal,c,SECURITY INVOKER
+public,gbt_ts_union,"internal, internal",gbtreekey16,c,SECURITY INVOKER
+public,gbt_tstz_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_tstz_consistent,"internal, timestamp with time zone, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_tstz_distance,"internal, timestamp with time zone, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gbt_uuid_compress,internal,internal,c,SECURITY INVOKER
+public,gbt_uuid_consistent,"internal, uuid, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gbt_uuid_fetch,internal,internal,c,SECURITY INVOKER
+public,gbt_uuid_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gbt_uuid_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gbt_uuid_same,"gbtreekey32, gbtreekey32, internal",internal,c,SECURITY INVOKER
+public,gbt_uuid_union,"internal, internal",gbtreekey32,c,SECURITY INVOKER
+public,gbt_var_decompress,internal,internal,c,SECURITY INVOKER
+public,gbt_var_fetch,internal,internal,c,SECURITY INVOKER
+public,gbtreekey16_in,cstring,gbtreekey16,c,SECURITY INVOKER
+public,gbtreekey16_out,gbtreekey16,cstring,c,SECURITY INVOKER
+public,gbtreekey2_in,cstring,gbtreekey2,c,SECURITY INVOKER
+public,gbtreekey2_out,gbtreekey2,cstring,c,SECURITY INVOKER
+public,gbtreekey32_in,cstring,gbtreekey32,c,SECURITY INVOKER
+public,gbtreekey32_out,gbtreekey32,cstring,c,SECURITY INVOKER
+public,gbtreekey4_in,cstring,gbtreekey4,c,SECURITY INVOKER
+public,gbtreekey4_out,gbtreekey4,cstring,c,SECURITY INVOKER
+public,gbtreekey8_in,cstring,gbtreekey8,c,SECURITY INVOKER
+public,gbtreekey8_out,gbtreekey8,cstring,c,SECURITY INVOKER
+public,gbtreekey_var_in,cstring,gbtreekey_var,c,SECURITY INVOKER
+public,gbtreekey_var_out,gbtreekey_var,cstring,c,SECURITY INVOKER
+public,gen_random_bytes,integer,bytea,c,SECURITY INVOKER
+public,gen_random_uuid,,uuid,c,SECURITY INVOKER
+public,gen_salt,"text, integer",text,c,SECURITY INVOKER
+public,gen_salt,text,text,c,SECURITY INVOKER
+public,gin_extract_query_trgm,"text, internal, smallint, internal, internal, internal, internal",internal,c,SECURITY INVOKER
+public,gin_extract_value_trgm,"text, internal",internal,c,SECURITY INVOKER
+public,gin_trgm_consistent,"internal, smallint, text, integer, internal, internal, internal, internal",boolean,c,SECURITY INVOKER
+public,gin_trgm_triconsistent,"internal, smallint, text, integer, internal, internal, internal","""char""",c,SECURITY INVOKER
+public,gtrgm_compress,internal,internal,c,SECURITY INVOKER
+public,gtrgm_consistent,"internal, text, smallint, oid, internal",boolean,c,SECURITY INVOKER
+public,gtrgm_decompress,internal,internal,c,SECURITY INVOKER
+public,gtrgm_distance,"internal, text, smallint, oid, internal",double precision,c,SECURITY INVOKER
+public,gtrgm_in,cstring,gtrgm,c,SECURITY INVOKER
+public,gtrgm_options,internal,void,c,SECURITY INVOKER
+public,gtrgm_out,gtrgm,cstring,c,SECURITY INVOKER
+public,gtrgm_penalty,"internal, internal, internal",internal,c,SECURITY INVOKER
+public,gtrgm_picksplit,"internal, internal",internal,c,SECURITY INVOKER
+public,gtrgm_same,"gtrgm, gtrgm, internal",internal,c,SECURITY INVOKER
+public,gtrgm_union,"internal, internal",gtrgm,c,SECURITY INVOKER
+public,hmac,"bytea, bytea, text",bytea,c,SECURITY INVOKER
+public,hmac,"text, text, text",bytea,c,SECURITY INVOKER
+public,int2_dist,"smallint, smallint",smallint,c,SECURITY INVOKER
+public,int4_dist,"integer, integer",integer,c,SECURITY INVOKER
+public,int8_dist,"bigint, bigint",bigint,c,SECURITY INVOKER
+public,interval_dist,"interval, interval",interval,c,SECURITY INVOKER
+public,oid_dist,"oid, oid",oid,c,SECURITY INVOKER
+public,pgp_armor_headers,"text, OUT key text, OUT value text",SETOF record,c,SECURITY INVOKER
+public,pgp_key_id,bytea,text,c,SECURITY INVOKER
+public,pgp_pub_decrypt,"bytea, bytea, text",text,c,SECURITY INVOKER
+public,pgp_pub_decrypt,"bytea, bytea",text,c,SECURITY INVOKER
+public,pgp_pub_decrypt,"bytea, bytea, text, text",text,c,SECURITY INVOKER
+public,pgp_pub_decrypt_bytea,"bytea, bytea, text",bytea,c,SECURITY INVOKER
+public,pgp_pub_decrypt_bytea,"bytea, bytea",bytea,c,SECURITY INVOKER
+public,pgp_pub_decrypt_bytea,"bytea, bytea, text, text",bytea,c,SECURITY INVOKER
+public,pgp_pub_encrypt,"text, bytea",bytea,c,SECURITY INVOKER
+public,pgp_pub_encrypt,"text, bytea, text",bytea,c,SECURITY INVOKER
+public,pgp_pub_encrypt_bytea,"bytea, bytea, text",bytea,c,SECURITY INVOKER
+public,pgp_pub_encrypt_bytea,"bytea, bytea",bytea,c,SECURITY INVOKER
+public,pgp_sym_decrypt,"bytea, text",text,c,SECURITY INVOKER
+public,pgp_sym_decrypt,"bytea, text, text",text,c,SECURITY INVOKER
+public,pgp_sym_decrypt_bytea,"bytea, text, text",bytea,c,SECURITY INVOKER
+public,pgp_sym_decrypt_bytea,"bytea, text",bytea,c,SECURITY INVOKER
+public,pgp_sym_encrypt,"text, text, text",bytea,c,SECURITY INVOKER
+public,pgp_sym_encrypt,"text, text",bytea,c,SECURITY INVOKER
+public,pgp_sym_encrypt_bytea,"bytea, text",bytea,c,SECURITY INVOKER
+public,pgp_sym_encrypt_bytea,"bytea, text, text",bytea,c,SECURITY INVOKER
+public,set_limit,real,real,c,SECURITY INVOKER
+public,show_limit,,real,c,SECURITY INVOKER
+public,show_trgm,text,text[],c,SECURITY INVOKER
+public,similarity,"text, text",real,c,SECURITY INVOKER
+public,similarity_dist,"text, text",real,c,SECURITY INVOKER
+public,similarity_op,"text, text",boolean,c,SECURITY INVOKER
+public,strict_word_similarity,"text, text",real,c,SECURITY INVOKER
+public,strict_word_similarity_commutator_op,"text, text",boolean,c,SECURITY INVOKER
+public,strict_word_similarity_dist_commutator_op,"text, text",real,c,SECURITY INVOKER
+public,strict_word_similarity_dist_op,"text, text",real,c,SECURITY INVOKER
+public,strict_word_similarity_op,"text, text",boolean,c,SECURITY INVOKER
+public,time_dist,"time without time zone, time without time zone",interval,c,SECURITY INVOKER
+public,ts_dist,"timestamp without time zone, timestamp without time zone",interval,c,SECURITY INVOKER
+public,tstz_dist,"timestamp with time zone, timestamp with time zone",interval,c,SECURITY INVOKER
+public,unaccent,text,text,c,SECURITY INVOKER
+public,unaccent,"regdictionary, text",text,c,SECURITY INVOKER
+public,unaccent_init,internal,internal,c,SECURITY INVOKER
+public,unaccent_lexize,"internal, internal, internal, internal",internal,c,SECURITY INVOKER
+public,uuid_generate_v1,,uuid,c,SECURITY INVOKER
+public,uuid_generate_v1mc,,uuid,c,SECURITY INVOKER
+public,uuid_generate_v3,"namespace uuid, name text",uuid,c,SECURITY INVOKER
+public,uuid_generate_v4,,uuid,c,SECURITY INVOKER
+public,uuid_generate_v5,"namespace uuid, name text",uuid,c,SECURITY INVOKER
+public,uuid_nil,,uuid,c,SECURITY INVOKER
+public,uuid_ns_dns,,uuid,c,SECURITY INVOKER
+public,uuid_ns_oid,,uuid,c,SECURITY INVOKER
+public,uuid_ns_url,,uuid,c,SECURITY INVOKER
+public,uuid_ns_x500,,uuid,c,SECURITY INVOKER
+public,word_similarity,"text, text",real,c,SECURITY INVOKER
+public,word_similarity_commutator_op,"text, text",boolean,c,SECURITY INVOKER
+public,word_similarity_dist_commutator_op,"text, text",real,c,SECURITY INVOKER
+public,word_similarity_dist_op,"text, text",real,c,SECURITY INVOKER
+public,word_similarity_op,"text, text",boolean,c,SECURITY INVOKER

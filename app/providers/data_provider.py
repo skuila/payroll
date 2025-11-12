@@ -1,0 +1,64 @@
+# providers/data_provider.py
+"""Interface abstraite pour les providers de données de paie"""
+
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional
+
+
+class AbstractDataProvider(ABC):
+    """
+    Interface pour l'accès aux données de paie.
+
+    Implémentations:
+    - PostgresProvider: Accès PostgreSQL avec pool de connexions
+    - SqliteProvider: Accès SQLite (fallback lecture seule)
+    """
+
+    @abstractmethod
+    def get_kpis(self, period: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Retourne les KPI pour une période donnée.
+
+        Args:
+            period: Période au format YYYY-MM (ex: "2024-03"), None = période actuelle
+
+        Returns:
+            Dict avec clés:
+            - masse_salariale (float): Total des salaires bruts
+            - nb_employes (int): Nombre d'employés distincts
+            - deductions (float): Total des déductions (négatif)
+            - net_moyen (float): Salaire net moyen
+            - period (str): Période effective
+        """
+        pass
+
+    @abstractmethod
+    def get_table(
+        self, offset: int = 0, limit: int = 50, filters: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """
+        Retourne les données de paie paginées.
+
+        Args:
+            offset: Décalage pour pagination (0-based)
+            limit: Nombre maximum de lignes à retourner (défaut: 50, max: 100)
+            filters: Filtres optionnels (dict avec clés: period, matricule, categorie)
+
+        Returns:
+            Dict avec clés:
+            - rows (List[Dict]): Liste des lignes avec colonnes:
+              * matricule (str)
+              * nom (str)
+              * date_paie (str) format YYYY-MM-DD
+              * categorie (str)
+              * montant (float)
+            - total (int): Nombre total de lignes (pour pagination)
+            - offset (int): Offset effectif
+            - limit (int): Limit effectif
+        """
+        pass
+
+    @abstractmethod
+    def close(self):
+        """Ferme les connexions et libère les ressources"""
+        pass

@@ -1,0 +1,236 @@
+"""
+Validation complète de la chaîne Import → BD → Visualisation
+Vérifie la cohérence des noms de colonnes à chaque étape.
+"""
+import os
+import sys
+import json
+import re
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+print("="*80)
+print("VALIDATION DE LA CHAÎNE DE NOMS DE COLONNES")
+print("="*80)
+
+# ============================================================================
+# ÉTAPE 1: Colonnes attendues du fichier Excel
+# ============================================================================
+print("\n[ÉTAPE 1] Colonnes attendues du fichier Excel")
+print("-" * 80)
+
+EXPECTED_EXCEL_HEADERS = [
+    'N de ligne',
+    "Categorie d'emploi",
+    'code emploi',
+    "titre d'emploi",
+    'date de paie',
+    'matricule',
+    'employé',
+    'categorie de paie',
+    'code de paie',
+    'desc code de paie',
+    'poste Budgetaire',
+    'desc poste Budgétaire',
+    'montant ',  # AVEC espace final
+    'part employeur',
+    'Mnt/Cmb'
+]
+
+print(f"✓ {len(EXPECTED_EXCEL_HEADERS)} colonnes attendues:")
+for i, h in enumerate(EXPECTED_EXCEL_HEADERS, 1):
+    print(f"  {i:2d}. '{h}'")
+
+# ============================================================================
+# ÉTAPE 2: Mapping attendu (Excel → BD normalisée)
+# ============================================================================
+print("\n[ÉTAPE 2] Mapping Excel → BD (normalisée)")
+print("-" * 80)
+
+EXPECTED_MAPPING = {
+    'N de ligne': 'numero_ligne',
+    "Categorie d'emploi": 'categorie_emploi',
+    'code emploi': 'code_emploi',
+    "titre d'emploi": 'titre_emploi',
+    'date de paie': 'date_paie',
+    'matricule': 'matricule',
+    'employé': 'nom_employe',
+    'categorie de paie': 'categorie_paie',
+    'code de paie': 'code_paie',
+    'desc code de paie': 'description_code_paie',
+    'poste Budgetaire': 'poste_budgetaire',
+    'desc poste Budgétaire': 'description_poste_budgetaire',
+    'montant ': 'montant_employe',
+    'part employeur': 'part_employeur',
+    'Mnt/Cmb': 'montant_combine'
+}
+
+print("Mapping complet:")
+for excel, db in EXPECTED_MAPPING.items():
+    print(f"  '{excel}' → {db}")
+
+# ============================================================================
+# ÉTAPE 3: Colonnes réelles en BD
+# ============================================================================
+print("\n[ÉTAPE 3] Colonnes réelles dans payroll.imported_payroll_master")
+print("-" * 80)
+
+try:
+    from providers.postgres_provider import PostgresProvider
+    from services.schema_editor import get_schema_editor
+    
+    provider = PostgresProvider()
+    if not provider or not provider.repo:
+        print("[ERROR] Connexion BD indisponible (définissez PGPASSWORD)")
+        sys.exit(2)
+    
+    se = get_schema_editor(provider)
+    cols = se.get_table_columns('payroll', 'imported_payroll_master')
+    
+    db_columns = [c['name'] for c in cols]
+    print(f"✓ {len(db_columns)} colonnes trouvées:")
+    for i, col in enumerate(db_columns, 1):
+        print(f"  {i:2d}. {col}")
+    
+except Exception as e:
+    print(f"[ERROR] Impossible de lire les colonnes BD: {e}")
+    db_columns = []
+
+# ============================================================================
+# ÉTAPE 4: Vérifier import_service_complete.py
+# ============================================================================
+print("\n[ÉTAPE 4] Vérification du mapping dans import_service_complete.py")
+print("-" * 80)
+
+import_service_path = os.path.join(ROOT, 'services', 'import_service_complete.py')
+with open(import_service_path, 'r', encoding='utf-8') as f:
+    import_service_code = f.read()
+
+# Chercher le column_mapping
+mapping_match = re.search(r'column_mapping\s*=\s*\{([^}]+)\}', import_service_code, re.DOTALL)
+if mapping_match:
+    print("✓ column_mapping trouvé dans import_service_complete.py")
+    mapping_content = mapping_match.group(1)
+    # Extraire les paires clé-valeur
+    pairs = re.findall(r"'([^']+)':\s*'([^']+)'", mapping_content)
+    print(f"  {len(pairs)} entrées dans le mapping:")
+    for src, dst in pairs[:5]:
+        print(f"    '{src}' → '{dst}'")
+    if len(pairs) > 5:
+        print(f"    ... et {len(pairs) - 5} autres")
+else:
+    print("⚠️ column_mapping non trouvé")
+
+# Chercher le SQL INSERT
+insert_match = re.search(r'INSERT INTO payroll\.imported_payroll_master\s*\(([^)]+)\)', import_service_code, re.DOTALL)
+if insert_match:
+    insert_cols_raw = insert_match.group(1)
+    # Extraire noms de colonnes (ignorer les espaces et retours à la ligne)
+    insert_cols = [c.strip().strip('"') for c in insert_cols_raw.split(',')]
+    print(f"\n✓ SQL INSERT trouvé avec {len(insert_cols)} colonnes:")
+    for i, col in enumerate(insert_cols[:10], 1):
+        print(f"    {i:2d}. {col}")
+    if len(insert_cols) > 10:
+        print(f"    ... et {len(insert_cols) - 10} autres")
+    
+    # VÉRIFIER INCOHÉRENCE: colonnes INSERT vs colonnes BD
+    if db_columns:
+        print("\n  [ANALYSE] Comparaison SQL INSERT vs colonnes BD réelles:")
+        missing_in_insert = set(db_columns) - set(insert_cols) - {'id', 'imported_at'}  # ignorer auto
+        extra_in_insert = set(insert_cols) - set(db_columns)
+        
+        if missing_in_insert:
+            print(f"  ⚠️ Colonnes BD absentes du INSERT: {missing_in_insert}")
+        if extra_in_insert:
+            print(f"  ❌ Colonnes INSERT qui n'existent PAS en BD: {extra_in_insert}")
+            print("     → ERREUR CRITIQUE: L'INSERT échouera!")
+        if not missing_in_insert and not extra_in_insert:
+            print("  ✓ Cohérence parfaite entre INSERT et BD")
+else:
+    print("⚠️ SQL INSERT non trouvé")
+
+# ============================================================================
+# ÉTAPE 5: Vérifier payroll_app_qt_Version4.py (import UI)
+# ============================================================================
+print("\n[ÉTAPE 5] Vérification de payroll_app_qt_Version4.py (import UI)")
+print("-" * 80)
+
+qt_app_path = os.path.join(ROOT, 'payroll_app_qt_Version4.py')
+with open(qt_app_path, 'r', encoding='utf-8') as f:
+    qt_app_code = f.read()
+
+# Chercher le col_map
+col_map_matches = re.findall(r"col_map\['(\w+)'\]", qt_app_code)
+if col_map_matches:
+    print(f"✓ col_map trouvé avec {len(set(col_map_matches))} clés:")
+    for key in sorted(set(col_map_matches))[:10]:
+        print(f"    - {key}")
+else:
+    print("⚠️ col_map non trouvé (ou syntaxe différente)")
+
+# ============================================================================
+# ÉTAPE 6: Vérifier employees.html (visualisation)
+# ============================================================================
+print("\n[ÉTAPE 6] Vérification de employees.html (visualisation)")
+print("-" * 80)
+
+employees_html_path = os.path.join(ROOT, 'web', 'tabler', 'employees.html')
+if os.path.exists(employees_html_path):
+    with open(employees_html_path, 'r', encoding='utf-8') as f:
+        employees_html = f.read()
+    
+    # Chercher les colonnes SQL dans les requêtes
+    sql_cols = re.findall(r'COALESCE\([^,]+,\s*\'[^\']*\'\)\s+AS\s+(\w+)', employees_html)
+    if sql_cols:
+        print(f"✓ Colonnes SQL trouvées dans employees.html:")
+        for col in sql_cols[:10]:
+            print(f"    - {col}")
+    else:
+        print("⚠️ Aucune colonne SQL AS trouvée")
+else:
+    print("⚠️ employees.html non trouvé")
+
+# ============================================================================
+# RÉSUMÉ ET RECOMMANDATIONS
+# ============================================================================
+print("\n" + "="*80)
+print("RÉSUMÉ ET RECOMMANDATIONS")
+print("="*80)
+
+issues_found = []
+
+# Vérifier cohérence mapping
+if db_columns:
+    mapped_targets = set(EXPECTED_MAPPING.values())
+    db_set = set(db_columns) - {'id', 'source_file', 'source_row_number', 'imported_at'}
+    
+    missing = mapped_targets - db_set
+    if missing:
+        issues_found.append(f"Colonnes mappées mais absentes en BD: {missing}")
+    
+    extra = db_set - mapped_targets
+    if extra:
+        issues_found.append(f"Colonnes BD non mappées depuis Excel: {extra}")
+
+# Vérifier INSERT
+if insert_match and db_columns:
+    if extra_in_insert:
+        issues_found.append(f"CRITIQUE: INSERT utilise des colonnes inexistantes: {extra_in_insert}")
+
+if issues_found:
+    print("\n❌ PROBLÈMES DÉTECTÉS:")
+    for i, issue in enumerate(issues_found, 1):
+        print(f"  {i}. {issue}")
+    print("\nRECOMMANDATIONS:")
+    print("  1. Corriger import_service_complete.py pour utiliser noms normalisés")
+    print("  2. Vérifier que payroll_app_qt_Version4.py mappe correctement")
+    print("  3. S'assurer que les requêtes SQL utilisent les noms normalisés")
+else:
+    print("\n✓ AUCUN PROBLÈME MAJEUR DÉTECTÉ")
+    print("  La chaîne de noms de colonnes semble cohérente.")
+
+print("\n" + "="*80)
+print("Validation terminée")
+print("="*80)

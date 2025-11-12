@@ -1,0 +1,49 @@
+mapping_codes_paie:
+  - code: '101'
+    libelle: 'Salaire régulier'
+    categorie: 'Gains'
+    imposable: true
+    cotisation: false
+  - code: '105'
+    libelle: 'Heures supplémentaires'
+    categorie: 'Gains'
+    imposable: true
+    cotisation: false
+  - code: '106'
+    libelle: 'Prime'
+    categorie: 'Gains'
+    imposable: true
+    cotisation: false
+  - code: '450'
+    libelle: 'RRQ employé'
+    categorie: 'Deductions_legales'
+    imposable: false
+    cotisation: true
+  - code: '522'
+    libelle: 'Impôt fédéral'
+    categorie: 'Deductions_legales'
+    imposable: false
+    cotisation: false
+  - code: '523'
+    libelle: 'Impôt provincial'
+    categorie: 'Deductions_legales'
+    imposable: false
+    cotisation: false
+  - code: '701'
+    libelle: 'Assurance collective employé'
+    categorie: 'Deductions_legales'
+    imposable: false
+    cotisation: true
+  - code: '801'
+    libelle: 'RRQ employeur'
+    categorie: 'Assurances'
+    imposable: false
+    cotisation: true
+
+kpi_list:
+  - key: 'net_a_payer'
+    description: 'Net à payer (somme montant)'
+  - key: 'gains_brut'
+    description: 'Gains bruts (somme montants positifs)'
+  - key: 'deductions_net'
+    description: 'Déductions nettes (somme montants négatifs)'

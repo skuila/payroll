@@ -1,0 +1,140 @@
+# Configuration Détecteur Schema FR-CA (Offline, Value-First)
+# =============================================================
+# Détection automatique des colonnes par analyse des valeurs (français canadien)
+# Support inversion colonnes (ex: montant ↔ poste_budgetaire)
+
+# Poids scoring (total = 1.0)
+weights:
+  value_patterns: 0.55    # Poids analyse valeurs (prioritaire)
+  header: 0.25            # Poids en-tête colonne
+  statistics: 0.15        # Poids statistiques (longueur, variété)
+  position: 0.05          # Poids position colonne
+
+# Seuils confiance
+thresholds:
+  accept: 0.70            # Score minimum pour accepter sans warning
+  warn: 0.50              # Score minimum (sinon warning)
+
+# Lexique en-têtes (français/anglais)
+headers_lexicon:
+  date:
+    - "date"
+    - "date paie"
+    - "date de paie"
+    - "période"
+    - "date période"
+    - "payment date"
+    - "pay date"
+  
+  montant:
+    - "montant"
+    - "montant brut"
+    - "montant net"
+    - "déduction"
+    - "amount"
+    - "total"
+    - "salaire"
+    - "salary"
+  
+  matricule:
+    - "matricule"
+    - "no employé"
+    - "id employé"
+    - "id"
+    - "numéro"
+    - "employee id"
+    - "emp id"
+    - "numero"
+  
+  nom_prenom:
+    - "nom prénom"
+    - "nom, prénom"
+    - "employé"
+    - "salarié"
+    - "fullname"
+    - "name"
+    - "nom et prénom"
+    - "nom prenom"
+  
+  code_paie:
+    - "code paie"
+    - "code de paie"
+    - "rubrique"
+    - "pay code"
+    - "code"
+  
+  poste_budgetaire:
+    - "poste budgétaire"
+    - "poste budgetaire"
+    - "budget"
+    - "gl"
+    - "compte budgétaire"
+    - "compte budgetaire"
+    - "g/l"
+    - "ledger"
+    - "gl account"
+  
+  description_poste:
+    - "description poste"
+    - "libellé poste"
+    - "libelle poste"
+    - "intitulé"
+    - "intitule"
+    - "description"
+    - "label"
+    - "poste description"
+  
+  type_paie:
+    - "type de paie"
+    - "catégorie"
+    - "categorie"
+    - "type"
+    - "gains/déductions"
+    - "gains/deductions"
+    - "pay type"
+
+# Patterns regex pour détection valeurs
+patterns:
+  # Code paie: lettres+chiffres 2-8 caractères
+  code_paie: "^[A-Za-z]\\w{1,7}([\\-_]\\w{1,6})?$"
+  
+  # Matricule: chiffres uniquement 3-10 digits
+  matricule_digits: "^\\d{3,10}$"
+  
+  # Poste budgétaire (plusieurs formats possibles)
+  poste_budgetaire:
+    - "^\\d{2,5}(-\\d{2,5}){0,3}$"          # Format: 123-456-789
+    - "^[A-Z]{2,6}\\d{1,6}$"                 # Format: ABC123
+    - "^\\d{3}\\s?\\d{2}\\s?\\d{3}$"        # Format: 123 45 678
+    - "^\\d{4,8}$"                           # Format: simple numérique
+  
+  # Nom/prénom: présence virgule ou 2+ mots
+  name_has_comma: ","
+  name_words_min: 2
+
+# Hints position (ordre typique colonnes)
+position_hints:
+  likely_order:
+    - "date"
+    - "matricule"
+    - "nom_prenom"
+    - "code_paie"
+    - "poste_budgetaire"
+    - "description_poste"
+    - "type_paie"
+    - "montant"
+
+# Taille échantillon pour analyse
+sample_size: 200
+
+# Options avancées
+options:
+  # Tolérance détection faible (force quand même un choix)
+  force_best_guess: true
+  
+  # Log détaillé scoring
+  verbose_scoring: false
+  
+  # Détection multi-montants (gains + déductions séparés)
+  detect_multiple_amounts: false
+

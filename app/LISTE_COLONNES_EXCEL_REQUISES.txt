@@ -1,0 +1,83 @@
+================================================================================
+LISTE DES 15 COLONNES REQUISES DANS LE FICHIER EXCEL
+================================================================================
+
+Le fichier Excel doit contenir EXACTEMENT ces 15 colonnes, avec les noms EXACTS
+(accents, espaces, majuscules/minuscules préservés):
+
+1.  N de ligne
+2.  Categorie d'emploi
+3.  code emploi
+4.  titre d'emploi
+5.  date de paie
+6.  matricule
+7.  employé
+8.  categorie de paie
+9.  code de paie
+10. desc code de paie
+11. poste Budgetaire
+12. desc poste Budgétaire
+13. montant 
+    (IMPORTANT: avec un espace en fin de nom - "montant " avec espace)
+14. part employeur
+15. Mnt/Cmb
+
+================================================================================
+NOTES IMPORTANTES:
+================================================================================
+
+✓ Les noms de colonnes doivent être EXACTEMENT identiques (respecter les accents,
+  les espaces, les majuscules/minuscules)
+
+✓ La colonne "montant " a un ESPACE en fin de nom (ne pas oublier!)
+
+✓ La colonne "desc poste Budgétaire" a un accent sur le "é" de Budgétaire
+
+✓ La colonne "employé" a un accent sur le "é"
+
+✓ La colonne "Categorie d'emploi" a une apostrophe et pas d'accent sur "e"
+
+✓ Respecter les majuscules/minuscules:
+  - "N de ligne" (N majuscule)
+  - "Categorie d'emploi" (C majuscule)
+  - "code emploi" (c minuscule)
+  - "poste Budgetaire" (B majuscule)
+
+================================================================================
+MAPPING VERS COLONNES NORMALISÉES (pour référence technique):
+================================================================================
+
+Les colonnes Excel ci-dessus sont automatiquement mappées vers des colonnes
+normalisées dans la base de données:
+
+Excel                    →    Base de données (normalisée)
+───────────────────────────────────────────────────────────
+N de ligne               →    numero_ligne
+Categorie d'emploi       →    categorie_emploi
+code emploi              →    code_emploi
+titre d'emploi           →    titre_emploi
+date de paie             →    date_paie
+matricule                →    matricule
+employé                  →    nom_employe
+categorie de paie        →    categorie_paie
+code de paie             →    code_paie
+desc code de paie        →    description_code_paie
+poste Budgetaire         →    poste_budgetaire
+desc poste Budgétaire    →    description_poste_budgetaire
+montant                  →    montant_employe
+part employeur           →    part_employeur
+Mnt/Cmb                  →    montant_combine
+
+Ce mapping est fait automatiquement par le script d'import.
+
+================================================================================
+
+
+
+
+
+
+
+
+
+
