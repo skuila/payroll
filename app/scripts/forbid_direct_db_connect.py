@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]  # app/scripts/ -> app/ -> project root
 
 WHITELIST = {
     ROOT / "app" / "config" / "connection_standard.py",
