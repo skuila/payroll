@@ -8,6 +8,7 @@ Script de test autonome (fonctionne sans dépendre d'autres scripts):
 import sys
 from datetime import date, datetime
 
+
 try:
     from app.config.connection_standard import get_connection, get_dsn, mask_dsn
 except ImportError:  # pragma: no cover

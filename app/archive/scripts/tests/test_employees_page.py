@@ -11,6 +11,7 @@ parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
 
 from app.providers.postgres_provider import PostgresProvider
+from datetime import datetime
 
 
 def test_employees_page():

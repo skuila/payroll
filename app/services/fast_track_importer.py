@@ -10,6 +10,7 @@ from datetime import date
 from decimal import Decimal
 
 from .locale_fr_ca import parse_date_fr_ca, parse_number_fr_ca
+from datetime import datetime
 
 
 # ========== MAPPING EXACT (15 colonnes) ==========

@@ -3,21 +3,21 @@
 """Diagnostic complet des charts/KPI non fonctionnels"""
 import sys
 import io
+import json
+import os
+import requests
 
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-"""Outils de diagnostic sans dépendances HTTP (API supprimée)."""
-import json
-import os
+session = requests.Session()
 
 print("=" * 70)
 print("DIAGNOSTIC - CHARTS/KPI NON FONCTIONNELS")
 print("=" * 70)
 print("")
 
-# Authentification
-# session HTTP supprimée
+# Authentification HTTP
 response = session.post(
     "http://localhost:8088/api/v1/security/login",
     json={"username": "admin", "password": "admin", "provider": "db", "refresh": True},
@@ -261,6 +261,7 @@ print("-" * 70)
 
 sys.path.insert(0, ".")
 from app.services.data_repo import DataRepository
+
 
 try:
     # Build DSN from environment to avoid hard-coded credentials in the repo.

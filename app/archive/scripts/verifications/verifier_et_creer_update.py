@@ -6,6 +6,8 @@ Script pour vérifier où sont les données et créer le script SQL de mise à j
 
 import sys
 import os
+from pathlib import Path
+
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(script_dir)
