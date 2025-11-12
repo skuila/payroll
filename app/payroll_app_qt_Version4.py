@@ -959,8 +959,13 @@ class AppBridge(QObject):
             )
             count_transactions = result_trans[0][0] if result_trans else 0
 
-            sql_count_emp = "SELECT COUNT(*) FROM core.employees"
-            result_emp = self.provider.repo.run_query(sql_count_emp, {})
+            # Compter UNIQUEMENT les employés liés à cette période
+            sql_count_emp = """
+                SELECT COUNT(DISTINCT employee_id) 
+                FROM payroll.payroll_transactions 
+                WHERE pay_date = %(pay_date)s
+            """
+            result_emp = self.provider.repo.run_query(sql_count_emp, {"pay_date": pay_date})
             count_employees = result_emp[0][0] if result_emp else 0
 
             print(
@@ -991,17 +996,25 @@ class AppBridge(QObject):
             except Exception as audit_error:
                 print(f"  ⚠️ Audit non disponible: {audit_error}")
 
-            # 2. Supprimer les transactions
+            # 2. Supprimer UNIQUEMENT les employés associés à cette période
+            # IMPORTANT: Faire AVANT de supprimer les transactions !
+            sql_delete_emp = """
+                DELETE FROM core.employees 
+                WHERE employee_id IN (
+                    SELECT DISTINCT employee_id 
+                    FROM payroll.payroll_transactions 
+                    WHERE pay_date = %(pay_date)s
+                )
+            """
+            self.provider.repo.run_query(sql_delete_emp, {"pay_date": pay_date})
+            print(f"  ✅ {count_employees} employés supprimés (liés à cette période uniquement)")
+
+            # 3. Supprimer les transactions
             sql_delete_trans = (
                 "DELETE FROM payroll.payroll_transactions WHERE pay_date = %(pay_date)s"
             )
             self.provider.repo.run_query(sql_delete_trans, {"pay_date": pay_date})
             print(f"  ✅ {count_transactions} transactions supprimées")
-
-            # 3. Supprimer les employés
-            sql_delete_emp = "DELETE FROM core.employees"
-            self.provider.repo.run_query(sql_delete_emp, {})
-            print(f"  ✅ {count_employees} employés supprimés")
 
             # 4. Supprimer la période de pay_periods
             sql_delete_period = (

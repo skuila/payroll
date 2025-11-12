@@ -7,7 +7,7 @@ import io
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-# requests n'est plus utilisé (suppression API)
+# Imports
 import json
 import requests
 

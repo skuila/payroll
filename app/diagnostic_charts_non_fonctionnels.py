@@ -17,8 +17,7 @@ print("DIAGNOSTIC - CHARTS/KPI NON FONCTIONNELS")
 print("=" * 70)
 print("")
 
-# Authentification
-# session HTTP supprimée
+# Authentification HTTP
 response = session.post(
     "http://localhost:8088/api/v1/security/login",
     json={"username": "admin", "password": "admin", "provider": "db", "refresh": True},
