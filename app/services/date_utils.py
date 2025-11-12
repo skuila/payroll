@@ -14,6 +14,8 @@ Fonctions:
 import pandas as pd
 from typing import Tuple, Optional
 import logging
+from datetime import datetime
+
 
 logger = logging.getLogger(__name__)
 
