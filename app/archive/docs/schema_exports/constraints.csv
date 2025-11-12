@@ -1,0 +1,50 @@
+schema,table,constraint,type,definition
+core,budget_posts,budget_posts_pkey,PRIMARY KEY,PRIMARY KEY (budget_post_id)
+core,budget_posts,uq_budget_posts_code,UNIQUE,UNIQUE (code)
+core,employee_job_history,employee_job_history_pkey,PRIMARY KEY,PRIMARY KEY (history_id)
+core,employee_job_history,excl_employee_job_history_no_overlap,EXCLUDE,"EXCLUDE USING gist (employee_id WITH =, daterange(date_debut, COALESCE(date_fin, 'infinity'::date), '[]'::text) WITH &&)"
+core,employees,employees_statut_check,CHECK,"CHECK (((statut)::text = ANY ((ARRAY['actif'::character varying, 'inactif'::character varying, 'suspendu'::character varying])::text[])))"
+core,employees,employees_pkey,PRIMARY KEY,PRIMARY KEY (employee_id)
+core,employees,employees_employee_key_key,UNIQUE,UNIQUE (employee_key)
+core,job_categories,job_categories_pkey,PRIMARY KEY,PRIMARY KEY (category_id)
+core,job_categories,uq_job_categories_nom,UNIQUE,UNIQUE (nom)
+core,job_codes,job_codes_pkey,PRIMARY KEY,PRIMARY KEY (code_id)
+core,job_codes,uq_job_codes_code,UNIQUE,UNIQUE (code)
+core,pay_codes,pay_codes_pkey,PRIMARY KEY,PRIMARY KEY (pay_code)
+payroll,budget_posts,budget_posts_pkey,PRIMARY KEY,PRIMARY KEY (post_id)
+payroll,budget_posts,budget_posts_code_key,UNIQUE,UNIQUE (code)
+payroll,import_batches,import_batches_status_check,CHECK,"CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'processing'::character varying, 'completed'::character varying, 'failed'::character varying, 'rolled_back'::character varying])::text[])))"
+payroll,import_batches,import_batches_pkey,PRIMARY KEY,PRIMARY KEY (batch_id)
+payroll,import_batches,import_batches_batch_uuid_key,UNIQUE,UNIQUE (batch_uuid)
+payroll,import_log,import_log_alert_type_check,CHECK,"CHECK ((alert_type = ANY (ARRAY['conversion_failed'::text, 'null_value'::text, 'out_of_range'::text, 'format_error'::text, 'constraint_violation'::text])))"
+payroll,import_log,import_log_pkey,PRIMARY KEY,PRIMARY KEY (log_id)
+payroll,import_runs,import_runs_import_mode_check,CHECK,"CHECK ((import_mode = ANY (ARRAY['fast_track'::text, 'detection'::text, 'manual'::text])))"
+payroll,import_runs,import_runs_status_check,CHECK,"CHECK ((status = ANY (ARRAY['running'::text, 'completed'::text, 'failed'::text, 'cancelled'::text])))"
+payroll,import_runs,import_runs_pkey,PRIMARY KEY,PRIMARY KEY (run_id)
+payroll,imported_payroll_master,imported_payroll_master_pkey,PRIMARY KEY,PRIMARY KEY (id)
+payroll,kpi_snapshot,kpi_snapshot_pkey,PRIMARY KEY,PRIMARY KEY (period)
+payroll,pay_periods,ck_pay_periods_pay_day,CHECK,CHECK (((pay_day >= 1) AND (pay_day <= 31)))
+payroll,pay_periods,ck_pay_periods_period_seq,CHECK,CHECK (((period_seq_in_year >= 1) AND (period_seq_in_year <= 53)))
+payroll,pay_periods,ck_pay_periods_pay_month,CHECK,CHECK (((pay_month >= 1) AND (pay_month <= 12)))
+payroll,pay_periods,pay_periods_pkey,PRIMARY KEY,PRIMARY KEY (period_id)
+payroll,pay_periods,uq_pay_periods_year_seq,UNIQUE,"UNIQUE (pay_year, period_seq_in_year)"
+payroll,pay_periods,uq_pay_periods_date,UNIQUE,UNIQUE (pay_date)
+payroll,payroll_transactions,payroll_transactions_amount_cents_check,CHECK,CHECK ((amount_cents <> 0))
+payroll,payroll_transactions,pk_payroll_transactions,PRIMARY KEY,"PRIMARY KEY (transaction_id, pay_date)"
+payroll,payroll_transactions_2024,payroll_transactions_amount_cents_check,CHECK,CHECK ((amount_cents <> 0))
+payroll,payroll_transactions_2024,payroll_transactions_2024_pkey,PRIMARY KEY,"PRIMARY KEY (transaction_id, pay_date)"
+payroll,payroll_transactions_2025,payroll_transactions_amount_cents_check,CHECK,CHECK ((amount_cents <> 0))
+payroll,payroll_transactions_2025,payroll_transactions_2025_pkey,PRIMARY KEY,"PRIMARY KEY (transaction_id, pay_date)"
+payroll,payroll_transactions_2026,payroll_transactions_amount_cents_check,CHECK,CHECK ((amount_cents <> 0))
+payroll,payroll_transactions_2026,payroll_transactions_2026_pkey,PRIMARY KEY,"PRIMARY KEY (transaction_id, pay_date)"
+public,alembic_version,alembic_version_pkc,PRIMARY KEY,PRIMARY KEY (version_num)
+reference,budget_posts,budget_posts_pkey,PRIMARY KEY,PRIMARY KEY (post_id)
+reference,budget_posts,budget_posts_code_key,UNIQUE,UNIQUE (code)
+reference,pay_code_mappings,pay_code_mappings_pkey,PRIMARY KEY,PRIMARY KEY (mapping_id)
+reference,pay_codes,pay_codes_pay_code_type_check,CHECK,"CHECK (((pay_code_type)::text = ANY ((ARRAY['earning'::character varying, 'deduction'::character varying, 'tax'::character varying, 'benefit'::character varying, 'other'::character varying])::text[])))"
+reference,pay_codes,pay_codes_pkey,PRIMARY KEY,PRIMARY KEY (pay_code_id)
+reference,pay_codes,pay_codes_pay_code_key,UNIQUE,UNIQUE (pay_code)
+reference,sign_policies,ck_sign_policies_employer_sign,CHECK,"CHECK ((employer_sign = ANY (ARRAY['-1'::integer, 1])))"
+reference,sign_policies,ck_sign_policies_employee_sign,CHECK,"CHECK ((employee_sign = ANY (ARRAY['-1'::integer, 1])))"
+reference,sign_policies,sign_policies_pkey,PRIMARY KEY,PRIMARY KEY (policy_id)
+reference,sign_policies,uq_sign_policies_pay_code,UNIQUE,UNIQUE (pay_code)

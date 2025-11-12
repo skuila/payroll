@@ -1,0 +1,533 @@
+# ============================================================================
+# MAPPING DES EN-TÊTES EXCEL/CSV → SCHÉMA CANONIQUE
+# ============================================================================
+# Description:
+#   Configuration pour mapper les colonnes sources (Excel/CSV) vers le schéma
+#   de données canonique (paie.stg_paie_transactions)
+#
+# Usage:
+#   Utilisé par services/etl_paie.py lors de l'import
+#   Permet de gérer des variations dans les noms de colonnes
+#
+# Format:
+#   champ_cible: [liste_variantes_sources]
+# ============================================================================
+
+version: "1.0"
+derniere_mise_a_jour: "2025-10-21"
+
+# ============================================================================
+# MAPPINGS PRINCIPAUX
+# ============================================================================
+
+mappings:
+  # ==========================================================================
+  # Date de paie
+  # ==========================================================================
+  date_paie:
+    variantes:
+      - "date de paie"
+      - "date paie"
+      - "date_paie"
+      - "date de paye"
+      - "date_paye"
+      - "payment date"
+      - "pay date"
+      - "date"
+      - "période"
+      - "mois"
+    type: "date"
+    obligatoire: true
+    format_attendu: "YYYY-MM-DD ou serial Excel"
+    exemple: "2025-10-15"
+  
+  # ==========================================================================
+  # Matricule employé
+  # ==========================================================================
+  matricule:
+    variantes:
+      - "matricule"
+      - "matricule "  # Avec espace trailing (Excel)
+      - "no employé"
+      - "no employe"
+      - "numéro employé"
+      - "numero employe"
+      - "n° employé"
+      - "n° employe"
+      - "# employé"
+      - "# employe"
+      - "employee id"
+      - "emp id"
+      - "id"
+      - "id employé"
+      - "id employe"
+      - "employee number"
+      - "employee no"
+      - "emp no"
+      - "code employé"
+      - "code employe"
+    type: "string"
+    obligatoire: true
+    normalisation:
+      - "Trim espaces"
+      - "Retirer zéros en tête si numérique"
+    exemple: "12345"
+  
+  # ==========================================================================
+  # Nom prénom
+  # ==========================================================================
+  nom_prenom:
+    variantes:
+      - "employé"
+      - "employé "  # Avec espace trailing
+      - "employe"
+      - "nom_prenom"
+      - "nom_prenom "
+      - "nom, prénom"
+      - "nom prenom"
+      - "nom prénom"
+      - "nom et prenom"
+      - "nom et prénom"
+      - "nom, prenom"
+      - "fullname"
+      - "name"
+      - "employee name"
+      - "nom complet"
+      - "nom employé"
+      - "nom employe"
+      - "salarié"
+      - "salarie"
+      - "personne"
+      - "employee"
+      - "employe "
+      - "nom de l'employé"
+      - "nom de l employé"
+    type: "string"
+    obligatoire: true
+    normalisation:
+      - "Trim espaces"
+      - "Normaliser accents (unidecode)"
+    exemple: "Tremblay, Jean"
+  
+  # ==========================================================================
+  # Code emploi (métier)
+  # ==========================================================================
+  code_emploi:
+    variantes:
+      - "code emploi"
+      - "code_emploi"
+      - "job code"
+      - "position code"
+      - "code poste"
+    type: "string"
+    obligatoire: false
+    exemple: "CADRE01"
+  
+  # ==========================================================================
+  # Titre emploi
+  # ==========================================================================
+  titre_emploi:
+    variantes:
+      - "titre d'emploi"
+      - "titre emploi"
+      - "titre d emploi"
+      - "titre_emploi"
+      - "job title"
+      - "position"
+      - "poste"
+    type: "string"
+    obligatoire: false
+    exemple: "Analyste senior"
+  
+  # ==========================================================================
+  # Catégorie emploi
+  # ==========================================================================
+  categorie_emploi:
+    variantes:
+      - "categorie d'emploi"
+      - "categorie emploi"
+      - "catégorie d'emploi"
+      - "catégorie emploi"
+      - "categorie d emploi"
+      - "job category"
+      - "employee category"
+    type: "string"
+    obligatoire: false
+    exemple: "Cadre"
+  
+  # ==========================================================================
+  # Code de paie
+  # ==========================================================================
+  code_paie:
+    variantes:
+      - "categorie de paie"
+      - "categorie de paie "  # Avec espace trailing
+      - "catégorie de paie"
+      - "catégorie de paie "
+      - "categorie paie"
+      - "catégorie paie"
+      - "code de paie"
+      - "code paie"
+      - "code_paie"
+      - "code"
+      - "rubrique"
+      - "rubrique paie"
+      - "type paie"
+      - "type de paie"
+      - "pay code"
+      - "earning code"
+      - "deduction code"
+      - "earnings"
+      - "deductions"
+      - "paie"
+    type: "string"
+    obligatoire: true
+    normalisation:
+      - "Trim espaces"
+      - "Uppercase"
+    mapping_valeurs:
+      # Si le fichier Excel utilise des libellés au lieu de codes
+      "Salaire de base": "SAL_BASE"
+      "Salaire régulier": "SAL_REG"
+      "Heures supplémentaires": "H_SUPP"
+      "RRQ": "RRQ"
+      "Assurance-emploi": "AE"
+      "RQAP": "RQAP"
+      "Impôt fédéral": "IMPOT_FED"
+      "Impôt provincial": "IMPOT_PROV"
+    exemple: "SAL_BASE"
+  
+  # ==========================================================================
+  # Libellé code de paie
+  # ==========================================================================
+  libelle_paie:
+    variantes:
+      - "desc code de paie"
+      - "desc code de paie "  # Avec espace trailing
+      - "description code paie"
+      - "libelle code paie"
+      - "libellé code paie"
+      - "pay code description"
+      - "description"
+    type: "string"
+    obligatoire: false
+    exemple: "Salaire de base"
+  
+  # ==========================================================================
+  # Poste budgétaire
+  # ==========================================================================
+  poste_budgetaire:
+    variantes:
+      - "poste budgetaire"
+      - "poste budgétaire"
+      - "poste budgetaire "  # Avec espace trailing
+      - "budget"
+      - "gl"
+      - "g/l"
+      - "general ledger"
+      - "compte budgetaire"
+      - "compte budgétaire"
+      - "gl account"
+      - "account"
+    type: "string"
+    obligatoire: false
+    normalisation:
+      - "Trim espaces"
+      - "Format: XXX-XXXX-XXXX si applicable"
+    exemple: "123-4567-890"
+  
+  # ==========================================================================
+  # Libellé poste budgétaire
+  # ==========================================================================
+  libelle_poste:
+    variantes:
+      - "desc poste budgetaire"
+      - "desc poste budgétaire"
+      - "desc poste budgetaire "  # Avec espace trailing
+      - "description poste"
+      - "libelle poste"
+      - "account description"
+    type: "string"
+    obligatoire: false
+    exemple: "Direction générale - Salaires"
+  
+  # ==========================================================================
+  # Montant employé
+  # ==========================================================================
+  montant:
+    variantes:
+      - "montant"
+      - "montant "  # Avec espace trailing
+      - "montant_employe"
+      - "montant_employé"
+      - "montant employe"
+      - "montant employé"
+      - "montant net"
+      - "net"
+      - "net à payer"
+      - "net a payer"
+      - "amount"
+      - "employee amount"
+      - "pay amount"
+      - "salaire"
+      - "salary"
+      - "paie"
+      - "pay"
+      - "valeur"
+      - "value"
+      - "total"
+    type: "decimal"
+    obligatoire: true
+    normalisation:
+      - "Retirer $ et CAD"
+      - "Retirer espaces (y compris insécables U+00A0, U+202F)"
+      - "Virgule → point décimal"
+      - "Parenthèses → négatif"
+    regles_signe:
+      - "Gains: >= 0"
+      - "Déductions: <= 0"
+    exemple: "2500.00 ou (125.50)"
+  
+  # ==========================================================================
+  # Part employeur
+  # ==========================================================================
+  part_employeur:
+    variantes:
+      - "part employeur"
+      - "part employeur "  # Avec espace trailing
+      - "montant employeur"
+      - "employer amount"
+      - "employer contribution"
+      - "cotisation employeur"
+    type: "decimal"
+    obligatoire: false
+    default: "0.00"
+    normalisation:
+      - "Retirer $ et CAD"
+      - "Retirer espaces"
+      - "Virgule → point décimal"
+    regles_signe:
+      - "Toujours >= 0"
+    exemple: "75.50"
+
+# ============================================================================
+# RÈGLES DE DÉTECTION AUTOMATIQUE
+# ============================================================================
+# Si aucune variante exacte ne match, utiliser la détection heuristique
+# ============================================================================
+
+detection_heuristique:
+  enabled: true
+  
+  strategies:
+    # Détection par patterns de valeurs
+    - type: "value_pattern"
+      description: "Analyser le contenu des colonnes pour déduire le type"
+      seuils:
+        confidence_min: 0.70
+        sample_size: 100  # Analyser 100 premières lignes
+    
+    # Détection par position
+    - type: "position"
+      description: "Ordre typique des colonnes"
+      ordre_attendu:
+        1: "date_paie"
+        2: "matricule"
+        3: "nom_prenom"
+        4: "code_paie"
+        5: "poste_budgetaire"
+        6: "montant"
+        7: "part_employeur"
+  
+  patterns_valeurs:
+    date:
+      - regex: '^\d{4}-\d{2}-\d{2}$'  # YYYY-MM-DD
+      - regex: '^\d{2}/\d{2}/\d{4}$'  # DD/MM/YYYY
+      - type: "serial_excel"  # Nombre entre 40000-50000
+    
+    matricule:
+      - regex: '^\d{3,10}$'  # Numérique 3-10 chiffres
+      - regex: '^[A-Z]{2,4}\d{3,6}$'  # Alphanumérique
+    
+    nom_prenom:
+      - contains: ","  # Format "Nom, Prénom"
+      - word_count: ">= 2"
+    
+    code_paie:
+      - regex: '^[A-Z_]{2,20}$'  # Lettres majuscules + underscore
+      - length: "2-20"
+    
+    poste_budgetaire:
+      - regex: '^\d{2,5}(-\d{2,5}){0,3}$'  # Format XXX-XXXX-XXX
+      - regex: '^[A-Z]{2,6}\d{1,6}$'  # Format ABC123
+    
+    montant:
+      - has_decimal: true
+      - can_be_negative: true
+      - symbols: ["$", "CA", "(", ")"]
+
+# ============================================================================
+# GESTION DES ERREURS
+# ============================================================================
+
+gestion_erreurs:
+  colonne_manquante:
+    obligatoire: "STOP - Impossible de continuer"
+    optionnelle: "WARNING - Utiliser valeur par défaut"
+  
+  valeur_invalide:
+    date: "REJECT ligne"
+    montant: "REJECT ligne"
+    matricule: "REJECT ligne si vide, sinon générer ID"
+  
+  doublons:
+    cle_metier: "SKIP (déjà importé)"
+  
+  encodage:
+    fichier_non_utf8: "Tenter conversion depuis Windows-1252"
+    caracteres_invalides: "Remplacer par '?'"
+
+# ============================================================================
+# TRANSFORMATIONS POST-MAPPING
+# ============================================================================
+
+transformations:
+  matricule:
+    - trim
+    - upper
+    - remove_leading_zeros_if_numeric
+  
+  nom_prenom:
+    - trim
+    - normalize_accents  # unidecode
+  
+  code_paie:
+    - trim
+    - upper
+    - lookup_mapping_valeurs  # Appliquer mapping_valeurs
+  
+  poste_budgetaire:
+    - trim
+    - format_segments  # Extraire segment_1, segment_2, etc.
+  
+  montant:
+    - remove_currency_symbols
+    - remove_spaces
+    - convert_comma_to_dot
+    - parse_parentheses_as_negative
+    - multiply_by_100  # Convertir en cents (BIGINT)
+  
+  part_employeur:
+    - remove_currency_symbols
+    - remove_spaces
+    - convert_comma_to_dot
+    - multiply_by_100
+
+# ============================================================================
+# VALIDATION POST-TRANSFORMATION
+# ============================================================================
+
+validations:
+  - champ: "date_paie"
+    regles:
+      - not_null
+      - is_valid_date
+      - date_in_range: "2000-01-01 à 2050-12-31"
+  
+  - champ: "matricule"
+    regles:
+      - not_null
+      - not_empty_after_trim
+      - max_length: 50
+  
+  - champ: "nom_prenom"
+    regles:
+      - not_null
+      - not_empty_after_trim
+  
+  - champ: "code_paie"
+    regles:
+      - not_null
+      - exists_in_catalog: "config/kpi_catalog.yml > mapping_codes_paie"
+  
+  - champ: "montant"
+    regles:
+      - not_null
+      - is_numeric
+      - check_sign_vs_category  # Gains >= 0, Déductions <= 0
+  
+  - champ: "part_employeur"
+    regles:
+      - is_numeric_or_null
+      - if_not_null_then: ">= 0"
+
+# ============================================================================
+# EXEMPLES DE FICHIERS SOURCES
+# ============================================================================
+
+exemples_fichiers:
+  - nom: "Classeur1.xlsx (format actuel)"
+    colonnes:
+      - "date de paie "
+      - "matricule "
+      - "employé "
+      - "categorie de paie "
+      - "poste Budgetaire "
+      - "montant "
+      - "part employeur "
+    notes: "Espaces trailing présents, accents, casse mixte"
+  
+  - nom: "Export_ADP.csv"
+    colonnes:
+      - "Pay Date"
+      - "Employee ID"
+      - "Employee Name"
+      - "Pay Code"
+      - "GL Account"
+      - "Amount"
+      - "Employer Amount"
+    notes: "Format anglais, sans accents"
+  
+  - nom: "Paie_2025.xlsx (simplifié)"
+    colonnes:
+      - "date_paie"
+      - "matricule"
+      - "nom_prenom"
+      - "code_paie"
+      - "montant"
+    notes: "Format minimal acceptable"
+
+# ============================================================================
+# LOGS ET DIAGNOSTICS
+# ============================================================================
+
+logging:
+  niveau: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  
+  messages:
+    mapping_reussi: "Colonne '{source}' → '{cible}' (confiance: {confidence}%)"
+    mapping_echoue: "Aucune variante trouvée pour '{cible}' (colonnes sources: {liste})"
+    detection_heuristique: "Détection par valeurs: '{source}' → '{cible}' (score: {score})"
+    transformation: "Transformation '{champ}': {nb_transformations} appliquées"
+    validation_echec: "Validation échouée pour '{champ}' ligne {row}: {erreur}"
+  
+  rapports:
+    generer_rapport_mapping: true
+    generer_rapport_rejets: true
+    sauvegarder_dans: "logs/etl/"
+    format: "JSON + TXT lisible"
+
+# ============================================================================
+# COMPATIBILITÉ VERSIONS
+# ============================================================================
+
+compatibilite:
+  versions_supportees:
+    - "1.0"
+  
+  deprecations:
+    # Aucune pour l'instant
+  
+  migrations:
+    # Si changement de format, ajouter ici
+

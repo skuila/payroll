@@ -1,0 +1,16 @@
+Chemin du fichier index : app/web/tabler/index.html
+
+Liens <link> détectés :
+- ./dist/css/tabler.min.css?1692870487
+- ./dist/css/tabler-vendors.min.css?1692870487
+
+Scripts <script> détectés :
+- ./dist/js/tabler.min.js?1692870487
+- ./dist/libs/apexcharts/dist/apexcharts.min.js
+- ./js/api-client.js
+- qrc:///qtwebchannel/qwebchannel.js
+
+Présence de Plotly : non détecté
+Framework CSS observé : Tabler (fichiers CSS locaux)
+
+IDs de divs contenant « graph » : aucun identifié

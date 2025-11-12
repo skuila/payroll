@@ -1,0 +1,19 @@
+﻿LANCEMENT UNIFIE DE L'APPLICATION PAYROLL
+============================================================
+[OK] PAYROLL_DB_USER = payroll_unified
+[OK] PAYROLL_DB_PASSWORD = (not set)
+[OK] PAYROLL_DB_HOST = localhost
+[OK] PAYROLL_DB_PORT = 5432
+[OK] PAYROLL_DB_NAME = payroll_db
+[OK] PAYROLL_DB_SUPERUSER = postgres
+[OK] PAYROLL_DB_SUPERUSER_PASSWORD = (not set)
+[OK] APP_ENV = development
+[OK] PAYROLL_FORCE_OFFLINE = 0
+[OK] USE_COPY = 0
+Variables d'environnement configurees
+Utilisation du role unifie: payroll_unified
+Connexion PostgreSQL securisee
+Lancement de l'application: C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\payroll_app_qt_Version4.py
+============================================================
+ERROR: Aucun DSN valide fourni (CLI --dsn ou PAYROLL_DSN manquant ou sans mot de passe).
+

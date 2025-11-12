@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Gestion des Données - PayrollAnalyzer</title>
+    <link href="./dist/css/tabler.min.css?1692870487" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css?1692870487" rel="stylesheet"/>
+    <style>
+      :root {
+        --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      body {
+        font-feature-settings: "cv03", "cv04", "cv11";
+        background-color: #f5f7fb;
+      }
+      .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #0054a6;
+      }
+      .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .action-card {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 1px solid #e6e7e9;
+      }
+      .action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #0054a6;
+      }
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+      }
+      .status-online { background-color: #2fb344; }
+      .status-offline { background-color: #d63939; }
+      .card { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    </style>
+  </head>
+  <body>
+    <script src="./dist/js/tabler.min.js?1692870487" defer></script>
+    
+    <script>
+      window.fmtCad = function(value) {
+        try {
+          return new Intl.NumberFormat('fr-CA', {
+            style: 'currency',
+            currency: 'CAD',
+            currencyDisplay: 'narrowSymbol',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }).format(value);
+        } catch (e) {
+          return String(value).replace('.', ',') + ' $';
+        }
+      };
+      
+      window.fmtDate = function(dateStr) {
+        try {
+          return new Intl.DateTimeFormat('fr-CA', { dateStyle: 'medium' }).format(new Date(dateStr));
+        } catch (e) {
+          return dateStr;
+        }
+      };
+    </script>
+    
+    <div class="page">
+      <!-- Sidebar -->
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark">
+            <a href="./index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-receipt" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2"></path>
+                <path d="M14 8h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5m2 0v1.5m0 -9v1.5"></path>
+              </svg>
+              PayrollAnalyzer
+            </a>
+          </h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+              <li class="nav-item active"><a class="nav-link" href="./database.html"><span class="nav-link-title">Gestion des données</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./assistant.html"><span class="nav-link-title">Assistant IA</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./data-viewer.html"><span class="nav-link-title">Visualiser</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Page content -->
+      <div class="page-wrapper">
+        <div class="page-header d-print-none">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <h2 class="page-title">Gestion des Données</h2>
+                <div class="text-secondary mt-1">Vue d'ensemble et maintenance</div>
+              </div>
+              <div class="col-auto ms-auto d-print-none">
+                <button class="btn btn-primary" onclick="refreshAll()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>
+                  Actualiser
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="page-body">
+          <div class="container-xl">
+            
+            <!-- Vue d'ensemble -->
+            <div class="row row-cards mb-3">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">État du système</h3>
+                    <div class="ms-auto">
+                      <span class="status-dot status-online" id="connection-indicator"></span>
+                      <span id="connection-status">Connecté</span>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-3">
+                        <div class="text-center">
+                          <div class="stat-number" id="stat-employees">-</div>
+                          <div class="stat-label">Employés actifs</div>
+                        </div>
+                      </div>
+                      <div class="col-md-3">
+                        <div class="text-center">
+                          <div class="stat-number" id="stat-periods">-</div>
+                          <div class="stat-label">Périodes de paie</div>
+                        </div>
+                      </div>
+                      <div class="col-md-3">
+                        <div class="text-center">
+                          <div class="stat-number" id="stat-transactions">-</div>
+                          <div class="stat-label">Transactions enregistrées</div>
+                        </div>
+                      </div>
+                      <div class="col-md-3">
+                        <div class="text-center">
+                          <div class="stat-number" id="stat-db-size">-</div>
+                          <div class="stat-label">Taille totale</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="row row-cards mb-3">
+              <div class="col-12">
+                <h3 class="mb-3">Actions de maintenance</h3>
+              </div>
+              
+              <div class="col-md-4">
+                <div class="card action-card" onclick="optimizeDatabase()">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="me-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg text-primary" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065zM9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg>
+                      </div>
+                      <div>
+                        <h4 class="mb-1">Optimiser les performances</h4>
+                        <p class="text-secondary mb-0 small">Actualiser les statistiques internes</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <div class="card action-card" onclick="viewPeriods()">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="me-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg text-info" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12zM16 3v4M8 3v4M4 11h16"/></svg>
+                      </div>
+                      <div>
+                        <h4 class="mb-1">Gérer les périodes</h4>
+                        <p class="text-secondary mb-0 small">Ajouter, modifier ou fermer une période</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <div class="card action-card" onclick="exportData()">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="me-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg text-success" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2M7 11l5 5l5 -5M12 4l0 12"/></svg>
+                      </div>
+                      <div>
+                        <h4 class="mb-1">Exporter les données</h4>
+                        <p class="text-secondary mb-0 small">Télécharger un rapport complet</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Actions de suppression -->
+            <div class="row row-cards mb-3">
+              <div class="col-12">
+                <div class="card border-danger">
+                  <div class="card-header bg-danger-lt">
+                    <h3 class="card-title text-danger">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+                      Zone Dangereuse - Suppression de Données
+                    </h3>
+                  </div>
+                  <div class="card-body">
+                    <div class="alert alert-warning mb-3">
+                      <strong>⚠️ Attention !</strong> Ces actions sont irréversibles. Assurez-vous d'avoir une sauvegarde avant de continuer.
+                    </div>
+                    
+                    <div class="row g-3">
+                      <!-- Supprimer par période -->
+                      <div class="col-md-6">
+                        <div class="card">
+                          <div class="card-body">
+                            <h4 class="card-title mb-3">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2 text-warning" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                              Supprimer TOUT
+                            </h4>
+                            <p class="text-secondary small mb-3">Supprime TOUT : période + transactions + employés (avec traçabilité)</p>
+                            
+                            <div class="mb-3">
+                              <label class="form-label">Sélectionner la période</label>
+                              <div class="input-group">
+                                <select class="form-select" id="period-select">
+                                  <option value="">Chargement des périodes...</option>
+                                </select>
+                                <button class="btn btn-outline-primary" onclick="loadPeriods()" title="Recharger les périodes">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <button class="btn btn-warning w-100" onclick="deletePeriod()">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                              SUPPRIMER TOUT
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Supprimer toutes les données -->
+                      <div class="col-md-6">
+                        <div class="card border-danger">
+                          <div class="card-body">
+                            <h4 class="card-title mb-3">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2 text-danger" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                              Vider toute la base
+                            </h4>
+                            <p class="text-secondary small mb-3">Supprime TOUTES les transactions et employés</p>
+                            
+                            <div class="alert alert-danger mb-3">
+                              <strong>⚠️ DANGER !</strong> Cette action supprimera :
+                              <ul class="mb-0 mt-2">
+                                <li>Toutes les transactions de paie</li>
+                                <li>Tous les employés</li>
+                              </ul>
+                            </div>
+                            
+                            <button class="btn btn-danger w-100" onclick="deleteAllData()">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                              VIDER TOUTE LA BASE
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Informations système -->
+            <div class="row row-cards">
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Informations de connexion</h3>
+                  </div>
+                  <div class="card-body">
+                    <div id="connection-info">
+                      <div class="text-center text-secondary py-3">Chargement...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Dernière activité</h3>
+                  </div>
+                  <div class="card-body">
+                    <div id="activity-log">
+                      <div class="text-center text-secondary py-3">Aucune activité récente</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Zone de logs -->
+            <div class="row row-cards mt-3">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Journal d'activité</h3>
+                    <div class="card-actions">
+                      <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()">Effacer</button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div id="logs-console" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 1rem; border-radius: 4px; font-family: monospace; font-size: 0.875rem;">
+                      <div class="text-secondary">Les événements apparaîtront ici...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Personnaliser les colonnes -->
+            <div class="row row-cards mt-3">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Personnaliser les colonnes</h3>
+                    <div class="card-actions">
+                      <button class="btn btn-sm btn-outline-primary" onclick="reloadTables()">Recharger les tables</button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-3">
+                        <label class="form-label">Schéma</label>
+                        <select id="schema-select" class="form-select" onchange="reloadTables()">
+                          <option value="public">public</option>
+                          <option value="core">core</option>
+                          <option value="payroll">payroll</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Table</label>
+                        <select id="table-select" class="form-select" onchange="loadTableColumns()">
+                          <option value="">-- choisir --</option>
+                        </select>
+                      </div>
+                      <div class="col-md-5">
+                        <label class="form-label">Colonnes actuelles</label>
+                        <div id="current-columns" style="max-height:120px; overflow:auto; border:1px solid #eee; padding:6px; background:#fafafa; font-size:12px; border-radius:4px;">
+                          <div class="text-secondary">Sélectionnez une table...</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr/>
+                    <div class="row g-4">
+                      <div class="col-md-6">
+                        <h4 class="mb-2">Ajouter une colonne</h4>
+                        <div class="row g-2">
+                          <div class="col-6">
+                            <input id="add-col-name" type="text" class="form-control" placeholder="Nom colonne" />
+                          </div>
+                          <div class="col-6">
+                            <select id="add-col-type" class="form-select">
+                              <option value="text">text</option>
+                              <option value="varchar(255)">varchar(255)</option>
+                              <option value="integer">integer</option>
+                              <option value="numeric(12,2)">numeric(12,2)</option>
+                              <option value="date">date</option>
+                              <option value="timestamp">timestamp</option>
+                              <option value="boolean">boolean</option>
+                            </select>
+                          </div>
+                          <div class="col-6">
+                            <label class="form-check form-switch">
+                              <input id="add-col-nullable" class="form-check-input" type="checkbox" checked>
+                              <span class="form-check-label">Nullable</span>
+                            </label>
+                          </div>
+                          <div class="col-6">
+                            <input id="add-col-default" type="text" class="form-control" placeholder="Valeur par défaut (optionnel)" />
+                          </div>
+                          <div class="col-12">
+                            <button class="btn btn-sm btn-primary" onclick="previewAddColumn()">Prévisualiser ajout</button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <h4 class="mb-2">Renommer une colonne</h4>
+                        <div class="row g-2">
+                          <div class="col-6">
+                            <select id="rename-old" class="form-select"></select>
+                          </div>
+                          <div class="col-6">
+                            <input id="rename-new" type="text" class="form-control" placeholder="Nouveau nom" />
+                          </div>
+                          <div class="col-12">
+                            <button class="btn btn-sm btn-warning" onclick="previewRenameColumn()">Prévisualiser renommage</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr/>
+                    <h4 class="mb-2">Prévisualisation</h4>
+                    <div id="schema-preview" style="min-height:60px; background:#1e293b; color:#fff; padding:8px; font-family:monospace; font-size:12px; border-radius:4px;">Aucune modification</div>
+                    <div class="mt-2">
+                      <button id="apply-schema-btn" class="btn btn-success disabled" onclick="applySchemaChange()">Appliquer les modifications</button>
+                    </div>
+                    <div class="small text-secondary mt-2">Les modifications sont désactivées en production.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- WebChannel -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+      let appBridge = null;
+      let schemaPreviewSQL = [];
+      
+      async function callBridge(methodName, ...args) {
+        if (!appBridge) throw new Error('AppBridge non disponible');
+        const resultJson = await Promise.resolve(appBridge[methodName](...args));
+        return JSON.parse(resultJson);
+      }
+      
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔄 Chargement page Gestion des Données');
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+          appBridge = channel.objects.AppBridge;
+          console.log('✅ Connexion établie');
+          
+          loadConnectionInfo();
+          loadDbStats();
+          loadPeriods();
+          reloadTables();
+        });
+      });
+      
+      async function loadConnectionInfo() {
+        try {
+          const info = await callBridge('get_connection_info');
+          
+          document.getElementById('connection-info').innerHTML = `
+            <table class="table table-sm">
+              <tr><td class="text-secondary">Statut</td><td><span class="badge ${info.status === 'connected' ? 'bg-success' : 'bg-danger'}">${info.status === 'connected' ? 'Connecté' : 'Déconnecté'}</span></td></tr>
+              <tr><td class="text-secondary">Serveur</td><td><code>${info.host || 'N/A'}:${info.port || 'N/A'}</code></td></tr>
+              <tr><td class="text-secondary">Base</td><td><code>${info.database || 'N/A'}</code></td></tr>
+              <tr><td class="text-secondary">Utilisateur</td><td><code>${info.user || 'N/A'}</code></td></tr>
+            </table>
+          `;
+          
+          const statusDot = document.getElementById('connection-indicator');
+          const statusText = document.getElementById('connection-status');
+          if (info.status === 'connected') {
+            statusDot.className = 'status-dot status-online';
+            statusText.textContent = 'Connecté';
+          } else {
+            statusDot.className = 'status-dot status-offline';
+            statusText.textContent = 'Déconnecté';
+          }
+          
+          log('info', 'Informations de connexion chargées');
+        } catch (error) {
+          log('error', 'Erreur chargement infos: ' + error);
+        }
+      }
+      
+      async function loadDbStats() {
+        try {
+          const stats = await callBridge('get_db_stats');
+          
+          document.getElementById('stat-employees').textContent = (stats.active_employees || 0).toLocaleString('fr-CA');
+          document.getElementById('stat-periods').textContent = stats.total_periods || '-';
+          document.getElementById('stat-transactions').textContent = (stats.total_transactions || 0).toLocaleString('fr-CA');
+          document.getElementById('stat-db-size').textContent = stats.db_size_mb ? `${stats.db_size_mb} MB` : '-';
+          
+          log('success', 'Statistiques chargées');
+        } catch (error) {
+          log('error', 'Erreur chargement stats: ' + error);
+        }
+      }
+      
+      async function optimizeDatabase() {
+        if (!confirm('Optimiser le système maintenant?\n\nCette opération peut prendre quelques secondes.')) return;
+        
+        log('info', 'Optimisation en cours...');
+        try {
+          const result = await callBridge('run_analyze');
+          if (result.success) {
+            alert('✅ Optimisation terminée avec succès');
+            log('success', 'Optimisation terminée');
+          } else {
+            alert('❌ Erreur: ' + result.message);
+            log('error', result.message);
+          }
+        } catch (error) {
+          alert('❌ Erreur: ' + error);
+          log('error', 'Erreur optimisation: ' + error);
+        }
+      }
+      
+      function viewPeriods() {
+        window.location.href = './periods.html';
+      }
+      
+      async function exportData() {
+        log('info', 'Export des données...');
+        alert('Fonction d\'export à venir...\n\nCette fonctionnalité sera disponible dans une prochaine mise à jour.');
+      }
+      
+      async function refreshAll() {
+        log('info', 'Actualisation...');
+        await loadConnectionInfo();
+        await loadDbStats();
+        await reloadTables();
+        await loadPeriods();
+        log('success', 'Actualisation terminée');
+      }
+      
+      // ======== Suppression de données ========
+      async function loadPeriods() {
+        try {
+          console.log('🔄 Chargement des périodes...');
+          console.log('🔍 appBridge disponible?', appBridge ? 'OUI' : 'NON');
+          
+          if (!appBridge) {
+            console.error('❌ appBridge non disponible!');
+            alert('❌ Erreur: AppBridge non connecté. Rechargez la page.');
+            return;
+          }
+          
+          console.log('📞 Appel de get_periods...');
+          const result = await callBridge('get_periods');
+          console.log('📊 Résultat get_periods:', result);
+          console.log('📊 Type de result:', typeof result);
+          console.log('📊 result.success:', result.success);
+          console.log('📊 result.periods:', result.periods);
+          
+          const select = document.getElementById('period-select');
+          if (!select) {
+            console.error('❌ Element period-select introuvable');
+            return;
+          }
+          
+          select.innerHTML = '<option value="">-- Sélectionner une période --</option>';
+          
+          if (result.success && result.periods && result.periods.length > 0) {
+            console.log(`✅ ${result.periods.length} périodes trouvées`);
+            result.periods.forEach(period => {
+              const option = document.createElement('option');
+              option.value = period.period_id;
+              option.textContent = `${period.pay_date} (${period.count} transactions, ${period.status})`;
+              select.appendChild(option);
+            });
+            log('success', `${result.periods.length} périodes chargées`);
+          } else {
+            console.warn('⚠️ Aucune période trouvée');
+            console.warn('  result.success:', result.success);
+            console.warn('  result.periods:', result.periods);
+            console.warn('  result.error:', result.error);
+            select.innerHTML = '<option value="">Aucune période trouvée</option>';
+            log('warning', 'Aucune période disponible');
+          }
+        } catch (error) {
+          console.error('❌ Erreur chargement périodes:', error);
+          console.error('❌ Stack:', error.stack);
+          log('error', 'Erreur chargement périodes: ' + error);
+          const select = document.getElementById('period-select');
+          if (select) {
+            select.innerHTML = '<option value="">Erreur de chargement</option>';
+          }
+        }
+      }
+      
+      async function deletePeriod() {
+        const select = document.getElementById('period-select');
+        const period_id = select.value;
+        
+        if (!period_id) {
+          alert('⚠️ Veuillez sélectionner une période');
+          return;
+        }
+        
+        const selectedText = select.options[select.selectedIndex].text;
+        
+        if (!confirm(`⚠️⚠️⚠️ ATTENTION - SUPPRESSION TOTALE ⚠️⚠️⚠️\n\nCette action va supprimer:\n• La période: ${selectedText}\n• TOUTES les transactions\n• TOUS les employés\n\nCette action est IRRÉVERSIBLE !\n\nÊtes-vous ABSOLUMENT sûr ?`)) {
+          return;
+        }
+        
+        // Double confirmation
+        if (!confirm(`⚠️ DERNIÈRE CONFIRMATION\n\nVous allez TOUT supprimer:\n${selectedText}\n+ Toutes les transactions\n+ Tous les employés\n\nConfirmez ?`)) {
+          return;
+        }
+        
+        log('warning', `Suppression TOTALE de ${selectedText}...`);
+        
+        try {
+          const result = await callBridge('delete_period', period_id);
+          
+          if (result.success) {
+            alert(`✅ Suppression TOTALE réussie\n\nPériode: ${result.pay_date}\nTransactions: ${result.deleted_count}\nEmployés: ${result.employees_deleted}\n\nToutes les données ont été supprimées.`);
+            log('success', `TOUT supprimé: ${result.pay_date}, ${result.deleted_count} transactions, ${result.employees_deleted} employés`);
+            await refreshAll();
+          } else {
+            alert(`❌ Erreur lors de la suppression:\n${result.error}`);
+            log('error', `Erreur suppression: ${result.error}`);
+          }
+        } catch (error) {
+          alert(`❌ Erreur: ${error}`);
+          log('error', `Erreur suppression: ${error}`);
+        }
+      }
+      
+      async function deleteAllData() {
+        if (!confirm('⚠️⚠️⚠️ DANGER - SUPPRESSION TOTALE ⚠️⚠️⚠️\n\nCette action va supprimer:\n• TOUTES les transactions de paie\n• TOUS les employés\n\nCette action est IRRÉVERSIBLE !\n\nÊtes-vous ABSOLUMENT sûr ?')) {
+          return;
+        }
+        
+        // Double confirmation avec saisie
+        const confirmation = prompt('⚠️ CONFIRMATION FINALE\n\nPour confirmer, tapez exactement:\nSUPPRIMER TOUT\n\n(en majuscules)');
+        
+        // Nettoyer la saisie (enlever espaces avant/après)
+        const cleaned = confirmation ? confirmation.trim().toUpperCase() : '';
+        
+        console.log('Confirmation reçue:', confirmation);
+        console.log('Confirmation nettoyée:', cleaned);
+        
+        if (cleaned !== 'SUPPRIMER TOUT') {
+          alert(`❌ Confirmation incorrecte.\n\nVous avez tapé: "${confirmation}"\nAttendu: "SUPPRIMER TOUT"\n\nOpération annulée.`);
+          return;
+        }
+        
+        log('warning', 'Suppression de toutes les données...');
+        
+        try {
+          const result = await callBridge('delete_all_data');
+          
+          if (result.success) {
+            alert(`✅ Base de données vidée avec succès\n\nTransactions supprimées: ${result.transactions_deleted}\nEmployés supprimés: ${result.employees_deleted}`);
+            log('success', `Base vidée: ${result.transactions_deleted} transactions, ${result.employees_deleted} employés`);
+            await refreshAll();
+          } else {
+            alert(`❌ Erreur lors de la suppression:\n${result.error}`);
+            log('error', `Erreur suppression totale: ${result.error}`);
+          }
+        } catch (error) {
+          alert(`❌ Erreur: ${error}`);
+          log('error', `Erreur suppression totale: ${error}`);
+        }
+      }
+
+      // ======== Schema Editor JS ========
+      async function reloadTables() {
+        try {
+          const schema = document.getElementById('schema-select')?.value || 'public';
+          const res = await callBridge('list_tables', schema);
+          const sel = document.getElementById('table-select');
+          if (!sel) return;
+          sel.innerHTML = '<option value="">-- choisir --</option>';
+          if (res.success) {
+            (res.tables || []).forEach(t => {
+              const opt = document.createElement('option');
+              opt.value = t; opt.textContent = t; sel.appendChild(opt);
+            });
+          }
+        } catch (e) {
+          log('error', 'Erreur chargement tables: ' + e);
+        }
+      }
+
+      async function loadTableColumns() {
+        const schema = document.getElementById('schema-select')?.value || 'public';
+        const table = document.getElementById('table-select')?.value || '';
+        schemaPreviewSQL = [];
+        updatePreview();
+        if (!table) {
+          document.getElementById('current-columns').innerHTML = '<div class="text-secondary">Sélectionnez une table...</div>';
+          document.getElementById('rename-old').innerHTML = '';
+          return;
+        }
+        try {
+          const res = await callBridge('get_table_schema', schema, table);
+          if (!res.success) throw new Error(res.message || 'Erreur');
+          const cols = res.columns || [];
+          // List display
+          const listHtml = cols.map(c => `<div><code>${c.name}</code> <span class="text-secondary">(${c.type}${c.nullable ? '' : ', NOT NULL'}${c.default ? ', default=' + c.default : ''})</span></div>`).join('');
+          document.getElementById('current-columns').innerHTML = listHtml || '<div class="text-secondary">Aucune colonne</div>';
+          // Old names for rename
+          const sel = document.getElementById('rename-old');
+          sel.innerHTML = '';
+          cols.forEach(c => { const o = document.createElement('option'); o.value = c.name; o.textContent = c.name; sel.appendChild(o); });
+        } catch (e) {
+          log('error', 'Erreur chargement colonnes: ' + e);
+        }
+      }
+
+      function updatePreview() {
+        const preview = document.getElementById('schema-preview');
+        const btn = document.getElementById('apply-schema-btn');
+        if (!schemaPreviewSQL || schemaPreviewSQL.length === 0) {
+          preview.textContent = 'Aucune modification';
+          btn.classList.add('disabled');
+        } else {
+          preview.textContent = schemaPreviewSQL.join('\n');
+          btn.classList.remove('disabled');
+        }
+      }
+
+      async function previewAddColumn() {
+        try {
+          const schema = document.getElementById('schema-select')?.value || 'public';
+          const table = document.getElementById('table-select')?.value || '';
+          const name = document.getElementById('add-col-name')?.value?.trim();
+          const type = document.getElementById('add-col-type')?.value;
+          const nullable = document.getElementById('add-col-nullable')?.checked;
+          const def = document.getElementById('add-col-default')?.value?.trim();
+          if (!table || !name) { alert('Sélectionnez une table et entrez un nom de colonne.'); return; }
+          const payload = { action: 'add_column', schema, table, column_name: name, data_type: type, nullable, default: def || null };
+          const res = await callBridge('preview_schema_change', JSON.stringify(payload));
+          if (!res.success) throw new Error(res.message || 'Erreur');
+          schemaPreviewSQL = [res.preview.sql];
+          updatePreview();
+        } catch (e) {
+          log('error', 'Erreur prévisualisation ajout: ' + e);
+        }
+      }
+
+      async function previewRenameColumn() {
+        try {
+          const schema = document.getElementById('schema-select')?.value || 'public';
+          const table = document.getElementById('table-select')?.value || '';
+          const oldn = document.getElementById('rename-old')?.value;
+          const newn = document.getElementById('rename-new')?.value?.trim();
+          if (!table || !oldn || !newn) { alert('Choisissez la colonne et le nouveau nom.'); return; }
+          const payload = { action: 'rename_column', schema, table, old_name: oldn, new_name: newn };
+          const res = await callBridge('preview_schema_change', JSON.stringify(payload));
+          if (!res.success) throw new Error(res.message || 'Erreur');
+          schemaPreviewSQL = [res.preview.sql];
+          updatePreview();
+        } catch (e) {
+          log('error', 'Erreur prévisualisation renommage: ' + e);
+        }
+      }
+
+      async function applySchemaChange() {
+        if (!schemaPreviewSQL || schemaPreviewSQL.length === 0) return;
+        if (!confirm('Appliquer la modification de schéma maintenant ?\n\nUn journal sera conservé.')) return;
+        try {
+          const res = await callBridge('apply_schema_change', JSON.stringify({ sql_list: schemaPreviewSQL }));
+          if (res.success) {
+            alert('✅ Modification appliquée');
+            log('success', 'Modification appliquée');
+            schemaPreviewSQL = [];
+            updatePreview();
+            await loadTableColumns();
+          } else {
+            if (res.prod_blocked) {
+              alert('🔒 Modification bloquée en production');
+            } else {
+              alert('❌ Erreur: ' + (res.message || 'Échec'));
+            }
+            log('error', res.message || 'Échec application');
+          }
+        } catch (e) {
+          alert('❌ Erreur: ' + e);
+          log('error', 'Erreur application: ' + e);
+        }
+      }
+      
+      function log(type, message) {
+        const logs = document.getElementById('logs-console');
+        if (!logs) return;
+        
+        const timestamp = new Date().toLocaleTimeString('fr-CA');
+        const emoji = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+        const color = { success: 'text-success', error: 'text-danger', warning: 'text-warning', info: 'text-info' };
+        
+        const logEntry = document.createElement('div');
+        logEntry.className = `${color[type] || 'text-secondary'} mb-1`;
+        logEntry.textContent = `${timestamp} ${emoji[type] || '•'} ${message}`;
+        
+        logs.appendChild(logEntry);
+        logs.scrollTop = logs.scrollHeight;
+      }
+      
+      function clearLogs() {
+        document.getElementById('logs-console').innerHTML = '<div class="text-secondary">Journal effacé</div>';
+      }
+    </script>
+  </body>
+</html>

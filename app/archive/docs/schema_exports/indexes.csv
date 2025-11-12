@@ -1,0 +1,93 @@
+schema,table,index,definition,size
+core,budget_posts,budget_posts_pkey,CREATE UNIQUE INDEX budget_posts_pkey ON core.budget_posts USING btree (budget_post_id),16 kB
+core,budget_posts,idx_budget_posts_active,CREATE INDEX idx_budget_posts_active ON core.budget_posts USING btree (active),16 kB
+core,budget_posts,uq_budget_posts_code,CREATE UNIQUE INDEX uq_budget_posts_code ON core.budget_posts USING btree (code),40 kB
+core,employee_job_history,employee_job_history_pkey,CREATE UNIQUE INDEX employee_job_history_pkey ON core.employee_job_history USING btree (history_id),8192 bytes
+core,employee_job_history,excl_employee_job_history_no_overlap,"CREATE INDEX excl_employee_job_history_no_overlap ON core.employee_job_history USING gist (employee_id, daterange(date_debut, COALESCE(date_fin, 'infinity'::date), '[]'::text))",8192 bytes
+core,employee_job_history,idx_emp_job_hist_code,CREATE INDEX idx_emp_job_hist_code ON core.employee_job_history USING btree (code_id),8192 bytes
+core,employee_job_history,idx_emp_job_hist_dates,"CREATE INDEX idx_emp_job_hist_dates ON core.employee_job_history USING btree (date_debut, date_fin)",8192 bytes
+core,employee_job_history,idx_emp_job_hist_employee,CREATE INDEX idx_emp_job_hist_employee ON core.employee_job_history USING btree (employee_id),8192 bytes
+core,employees,employees_employee_key_key,CREATE UNIQUE INDEX employees_employee_key_key ON core.employees USING btree (employee_key),16 kB
+core,employees,employees_pkey,CREATE UNIQUE INDEX employees_pkey ON core.employees USING btree (employee_id),16 kB
+core,employees,idx_employees_key,CREATE UNIQUE INDEX idx_employees_key ON core.employees USING btree (employee_key),16 kB
+core,employees,idx_employees_matricule,CREATE INDEX idx_employees_matricule ON core.employees USING btree (matricule_norm) WHERE (matricule_norm IS NOT NULL),16 kB
+core,employees,idx_employees_nom,"CREATE INDEX idx_employees_nom ON core.employees USING btree (nom_norm, prenom_norm)",40 kB
+core,employees,idx_employees_statut,CREATE INDEX idx_employees_statut ON core.employees USING btree (statut),16 kB
+core,job_categories,job_categories_pkey,CREATE UNIQUE INDEX job_categories_pkey ON core.job_categories USING btree (category_id),8192 bytes
+core,job_categories,uq_job_categories_nom,CREATE UNIQUE INDEX uq_job_categories_nom ON core.job_categories USING btree (nom),8192 bytes
+core,job_codes,idx_job_codes_category,CREATE INDEX idx_job_codes_category ON core.job_codes USING btree (category_id),8192 bytes
+core,job_codes,job_codes_pkey,CREATE UNIQUE INDEX job_codes_pkey ON core.job_codes USING btree (code_id),8192 bytes
+core,job_codes,uq_job_codes_code,CREATE UNIQUE INDEX uq_job_codes_code ON core.job_codes USING btree (code),8192 bytes
+core,pay_codes,idx_pay_codes_active,CREATE INDEX idx_pay_codes_active ON core.pay_codes USING btree (active),16 kB
+core,pay_codes,idx_pay_codes_category,CREATE INDEX idx_pay_codes_category ON core.pay_codes USING btree (category),16 kB
+core,pay_codes,pay_codes_pkey,CREATE UNIQUE INDEX pay_codes_pkey ON core.pay_codes USING btree (pay_code),16 kB
+payroll,budget_posts,budget_posts_code_key,CREATE UNIQUE INDEX budget_posts_code_key ON payroll.budget_posts USING btree (code),16 kB
+payroll,budget_posts,budget_posts_pkey,CREATE UNIQUE INDEX budget_posts_pkey ON payroll.budget_posts USING btree (post_id),16 kB
+payroll,import_batches,idx_batches_started,CREATE INDEX idx_batches_started ON payroll.import_batches USING btree (started_at DESC),16 kB
+payroll,import_batches,idx_batches_status,CREATE INDEX idx_batches_status ON payroll.import_batches USING btree (status),16 kB
+payroll,import_batches,import_batches_batch_uuid_key,CREATE UNIQUE INDEX import_batches_batch_uuid_key ON payroll.import_batches USING btree (batch_uuid),16 kB
+payroll,import_batches,import_batches_pkey,CREATE UNIQUE INDEX import_batches_pkey ON payroll.import_batches USING btree (batch_id),16 kB
+payroll,import_log,idx_import_log_alert_type,CREATE INDEX idx_import_log_alert_type ON payroll.import_log USING btree (alert_type),8192 bytes
+payroll,import_log,idx_import_log_run,CREATE INDEX idx_import_log_run ON payroll.import_log USING btree (run_id),8192 bytes
+payroll,import_log,import_log_pkey,CREATE UNIQUE INDEX import_log_pkey ON payroll.import_log USING btree (log_id),8192 bytes
+payroll,import_runs,idx_import_runs_file,CREATE INDEX idx_import_runs_file ON payroll.import_runs USING btree (source_file),8192 bytes
+payroll,import_runs,idx_import_runs_started,CREATE INDEX idx_import_runs_started ON payroll.import_runs USING btree (started_at DESC),8192 bytes
+payroll,import_runs,import_runs_pkey,CREATE UNIQUE INDEX import_runs_pkey ON payroll.import_runs USING btree (run_id),8192 bytes
+payroll,imported_payroll_master,idx_ipm_code_de_paie,"CREATE INDEX idx_ipm_code_de_paie ON payroll.imported_payroll_master USING btree (""code de paie "") WHERE (""code de paie "" IS NOT NULL)",224 kB
+payroll,imported_payroll_master,idx_ipm_date_de_paie,"CREATE INDEX idx_ipm_date_de_paie ON payroll.imported_payroll_master USING btree (""date de paie "")",184 kB
+payroll,imported_payroll_master,idx_ipm_employe,"CREATE INDEX idx_ipm_employe ON payroll.imported_payroll_master USING btree (""employé "") WHERE (""employé "" IS NOT NULL)",248 kB
+payroll,imported_payroll_master,idx_ipm_matricule,"CREATE INDEX idx_ipm_matricule ON payroll.imported_payroll_master USING btree (""matricule "") WHERE (""matricule "" IS NOT NULL)",232 kB
+payroll,imported_payroll_master,idx_ipm_source_file,CREATE INDEX idx_ipm_source_file ON payroll.imported_payroll_master USING btree (source_file),232 kB
+payroll,imported_payroll_master,idx_payroll_master_code,"CREATE INDEX idx_payroll_master_code ON payroll.imported_payroll_master USING btree (""code de paie "")",80 kB
+payroll,imported_payroll_master,idx_payroll_master_date_matricule,"CREATE INDEX idx_payroll_master_date_matricule ON payroll.imported_payroll_master USING btree (""date de paie "" DESC, ""matricule "", id)",344 kB
+payroll,imported_payroll_master,idx_payroll_master_employe_trgm,"CREATE INDEX idx_payroll_master_employe_trgm ON payroll.imported_payroll_master USING gin (""employé "" gin_trgm_ops)",336 kB
+payroll,imported_payroll_master,idx_payroll_master_matricule,"CREATE INDEX idx_payroll_master_matricule ON payroll.imported_payroll_master USING btree (""matricule "")",88 kB
+payroll,imported_payroll_master,idx_payroll_master_source,"CREATE INDEX idx_payroll_master_source ON payroll.imported_payroll_master USING btree (source_file, imported_at)",72 kB
+payroll,imported_payroll_master,imported_payroll_master_pkey,CREATE UNIQUE INDEX imported_payroll_master_pkey ON payroll.imported_payroll_master USING btree (id),536 kB
+payroll,kpi_snapshot,idx_kpi_snapshot_calculated,CREATE INDEX idx_kpi_snapshot_calculated ON payroll.kpi_snapshot USING btree (calculated_at),16 kB
+payroll,kpi_snapshot,kpi_snapshot_pkey,CREATE UNIQUE INDEX kpi_snapshot_pkey ON payroll.kpi_snapshot USING btree (period),16 kB
+payroll,pay_periods,idx_pay_periods_date,CREATE INDEX idx_pay_periods_date ON payroll.pay_periods USING btree (pay_date),16 kB
+payroll,pay_periods,idx_pay_periods_status,CREATE INDEX idx_pay_periods_status ON payroll.pay_periods USING btree (status),72 kB
+payroll,pay_periods,idx_pay_periods_year,CREATE INDEX idx_pay_periods_year ON payroll.pay_periods USING btree (pay_year),72 kB
+payroll,pay_periods,pay_periods_pkey,CREATE UNIQUE INDEX pay_periods_pkey ON payroll.pay_periods USING btree (period_id),296 kB
+payroll,pay_periods,uq_pay_periods_date,CREATE UNIQUE INDEX uq_pay_periods_date ON payroll.pay_periods USING btree (pay_date),16 kB
+payroll,pay_periods,uq_pay_periods_year_seq,"CREATE UNIQUE INDEX uq_pay_periods_year_seq ON payroll.pay_periods USING btree (pay_year, period_seq_in_year)",16 kB
+payroll,payroll_transactions,idx_payroll_code,CREATE INDEX idx_payroll_code ON ONLY payroll.payroll_transactions USING btree (pay_code),0 bytes
+payroll,payroll_transactions,idx_payroll_date,CREATE INDEX idx_payroll_date ON ONLY payroll.payroll_transactions USING btree (pay_date),0 bytes
+payroll,payroll_transactions,idx_payroll_employee,CREATE INDEX idx_payroll_employee ON ONLY payroll.payroll_transactions USING btree (employee_id),0 bytes
+payroll,payroll_transactions,idx_payroll_employee_date,"CREATE INDEX idx_payroll_employee_date ON ONLY payroll.payroll_transactions USING btree (employee_id, pay_date)",0 bytes
+payroll,payroll_transactions,idx_payroll_period,"CREATE INDEX idx_payroll_period ON ONLY payroll.payroll_transactions USING btree (pay_year, pay_month)",0 bytes
+payroll,payroll_transactions,pk_payroll_transactions,"CREATE UNIQUE INDEX pk_payroll_transactions ON ONLY payroll.payroll_transactions USING btree (transaction_id, pay_date)",0 bytes
+payroll,payroll_transactions_2024,payroll_transactions_2024_employee_id_idx,CREATE INDEX payroll_transactions_2024_employee_id_idx ON payroll.payroll_transactions_2024 USING btree (employee_id),8192 bytes
+payroll,payroll_transactions_2024,payroll_transactions_2024_employee_id_pay_date_idx,"CREATE INDEX payroll_transactions_2024_employee_id_pay_date_idx ON payroll.payroll_transactions_2024 USING btree (employee_id, pay_date)",8192 bytes
+payroll,payroll_transactions_2024,payroll_transactions_2024_pay_code_idx,CREATE INDEX payroll_transactions_2024_pay_code_idx ON payroll.payroll_transactions_2024 USING btree (pay_code),8192 bytes
+payroll,payroll_transactions_2024,payroll_transactions_2024_pay_date_idx,CREATE INDEX payroll_transactions_2024_pay_date_idx ON payroll.payroll_transactions_2024 USING btree (pay_date),8192 bytes
+payroll,payroll_transactions_2024,payroll_transactions_2024_pay_year_pay_month_idx,"CREATE INDEX payroll_transactions_2024_pay_year_pay_month_idx ON payroll.payroll_transactions_2024 USING btree (pay_year, pay_month)",8192 bytes
+payroll,payroll_transactions_2024,payroll_transactions_2024_pkey,"CREATE UNIQUE INDEX payroll_transactions_2024_pkey ON payroll.payroll_transactions_2024 USING btree (transaction_id, pay_date)",8192 bytes
+payroll,payroll_transactions_2025,payroll_transactions_2025_employee_id_idx,CREATE INDEX payroll_transactions_2025_employee_id_idx ON payroll.payroll_transactions_2025 USING btree (employee_id),56 kB
+payroll,payroll_transactions_2025,payroll_transactions_2025_employee_id_pay_date_idx,"CREATE INDEX payroll_transactions_2025_employee_id_pay_date_idx ON payroll.payroll_transactions_2025 USING btree (employee_id, pay_date)",56 kB
+payroll,payroll_transactions_2025,payroll_transactions_2025_pay_code_idx,CREATE INDEX payroll_transactions_2025_pay_code_idx ON payroll.payroll_transactions_2025 USING btree (pay_code),40 kB
+payroll,payroll_transactions_2025,payroll_transactions_2025_pay_date_idx,CREATE INDEX payroll_transactions_2025_pay_date_idx ON payroll.payroll_transactions_2025 USING btree (pay_date),40 kB
+payroll,payroll_transactions_2025,payroll_transactions_2025_pay_year_pay_month_idx,"CREATE INDEX payroll_transactions_2025_pay_year_pay_month_idx ON payroll.payroll_transactions_2025 USING btree (pay_year, pay_month)",40 kB
+payroll,payroll_transactions_2025,payroll_transactions_2025_pkey,"CREATE UNIQUE INDEX payroll_transactions_2025_pkey ON payroll.payroll_transactions_2025 USING btree (transaction_id, pay_date)",120 kB
+payroll,payroll_transactions_2026,payroll_transactions_2026_employee_id_idx,CREATE INDEX payroll_transactions_2026_employee_id_idx ON payroll.payroll_transactions_2026 USING btree (employee_id),8192 bytes
+payroll,payroll_transactions_2026,payroll_transactions_2026_employee_id_pay_date_idx,"CREATE INDEX payroll_transactions_2026_employee_id_pay_date_idx ON payroll.payroll_transactions_2026 USING btree (employee_id, pay_date)",8192 bytes
+payroll,payroll_transactions_2026,payroll_transactions_2026_pay_code_idx,CREATE INDEX payroll_transactions_2026_pay_code_idx ON payroll.payroll_transactions_2026 USING btree (pay_code),8192 bytes
+payroll,payroll_transactions_2026,payroll_transactions_2026_pay_date_idx,CREATE INDEX payroll_transactions_2026_pay_date_idx ON payroll.payroll_transactions_2026 USING btree (pay_date),8192 bytes
+payroll,payroll_transactions_2026,payroll_transactions_2026_pay_year_pay_month_idx,"CREATE INDEX payroll_transactions_2026_pay_year_pay_month_idx ON payroll.payroll_transactions_2026 USING btree (pay_year, pay_month)",8192 bytes
+payroll,payroll_transactions_2026,payroll_transactions_2026_pkey,"CREATE UNIQUE INDEX payroll_transactions_2026_pkey ON payroll.payroll_transactions_2026 USING btree (transaction_id, pay_date)",8192 bytes
+payroll,stg_imported_payroll,idx_stg_batch,CREATE INDEX idx_stg_batch ON payroll.stg_imported_payroll USING btree (import_batch_id),40 kB
+payroll,stg_imported_payroll,idx_stg_employee_key,CREATE INDEX idx_stg_employee_key ON payroll.stg_imported_payroll USING btree (employee_key),56 kB
+payroll,stg_imported_payroll,idx_stg_valid,CREATE INDEX idx_stg_valid ON payroll.stg_imported_payroll USING btree (is_valid),40 kB
+public,alembic_version,alembic_version_pkc,CREATE UNIQUE INDEX alembic_version_pkc ON public.alembic_version USING btree (version_num),16 kB
+reference,budget_posts,budget_posts_code_key,CREATE UNIQUE INDEX budget_posts_code_key ON reference.budget_posts USING btree (code),16 kB
+reference,budget_posts,budget_posts_pkey,CREATE UNIQUE INDEX budget_posts_pkey ON reference.budget_posts USING btree (post_id),16 kB
+reference,pay_code_mappings,idx_pay_code_mappings_pay_code,CREATE INDEX idx_pay_code_mappings_pay_code ON reference.pay_code_mappings USING btree (pay_code),8192 bytes
+reference,pay_code_mappings,idx_pay_code_mappings_source,CREATE INDEX idx_pay_code_mappings_source ON reference.pay_code_mappings USING btree (source_column_name),8192 bytes
+reference,pay_code_mappings,pay_code_mappings_pkey,CREATE UNIQUE INDEX pay_code_mappings_pkey ON reference.pay_code_mappings USING btree (mapping_id),8192 bytes
+reference,pay_codes,idx_pay_codes_active,CREATE INDEX idx_pay_codes_active ON reference.pay_codes USING btree (is_active),16 kB
+reference,pay_codes,idx_pay_codes_type,CREATE INDEX idx_pay_codes_type ON reference.pay_codes USING btree (pay_code_type),16 kB
+reference,pay_codes,pay_codes_pay_code_key,CREATE UNIQUE INDEX pay_codes_pay_code_key ON reference.pay_codes USING btree (pay_code),16 kB
+reference,pay_codes,pay_codes_pkey,CREATE UNIQUE INDEX pay_codes_pkey ON reference.pay_codes USING btree (pay_code_id),16 kB
+reference,sign_policies,sign_policies_pkey,CREATE UNIQUE INDEX sign_policies_pkey ON reference.sign_policies USING btree (policy_id),8192 bytes
+reference,sign_policies,uq_sign_policies_pay_code,CREATE UNIQUE INDEX uq_sign_policies_pay_code ON reference.sign_policies USING btree (pay_code),8192 bytes

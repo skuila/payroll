@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=67"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "payroll-analyzer"
+version = "0.0.1"
+description = "Application Payroll Analyzer"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Payroll Analyzer" }
+]
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+include = "app"
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["app"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+src = ["app", "tests"]
+fix = false
+exclude = ["archive/legacy_non_standard/**"]
+
+[tool.ruff.lint]
+per-file-ignores = {"app/ui/*.py" = ["E722", "F841", "E401"]}
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["app"]
+ignore_missing_imports = true

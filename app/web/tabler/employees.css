@@ -1,0 +1,170 @@
+/* Styles UI standardisés pour la page Employés */
+.kpi-card {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fff;
+}
+.kpi-title {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+.kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+.kpi-delta-up { color: #2fb344; }
+.kpi-delta-down { color: #d63939; }
+
+.table.card-table thead th {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.table.card-table tbody td {
+  vertical-align: middle;
+}
+.badge-status {
+  font-weight: 600;
+}
+.badge-status.actif { background-color: #2fb344; }
+.badge-status.inactif { background-color: #868e96; }
+.badge-status.termine { background-color: #d63939; }
+
+.toolbar .btn .icon { margin-right: 6px; }
+/**
+ * employees.css - Styles spécifiques page employés
+ * PayrollAnalyzer v2
+ */
+
+/* Sticky header */
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+
+/* Drawer personnalisations */
+.offcanvas {
+  width: 520px !important;
+}
+
+@media (max-width: 576px) {
+  .offcanvas {
+    width: 90% !important;
+  }
+}
+
+.offcanvas-body dl {
+  margin-bottom: 0;
+}
+
+.offcanvas-body dl dt {
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.offcanvas-body dl dd {
+  margin-bottom: 0.5rem;
+}
+
+/* Card status top (pour KPI) */
+.card-status-top {
+  height: 3px;
+  border-radius: 4px 4px 0 0;
+}
+
+/* Badges dans liste nouveaux */
+#list-new .badge {
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+}
+
+/* Table enhancements */
+.table-vcenter tbody tr {
+  vertical-align: middle;
+}
+
+.employee-link {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 500;
+}
+
+.employee-link:hover {
+  color: var(--tblr-primary);
+  text-decoration: underline;
+}
+
+/* Toast positioning */
+#toast-container {
+  min-width: 300px;
+}
+
+/* Focus visible pour accessibilité */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--tblr-primary);
+  outline-offset: 2px;
+}
+
+/* Skeleton loader smooth */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
+}
+
+/* Pagination disabled state */
+.page-item.disabled .page-link {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Badge contraste amélioré */
+.badge {
+  font-weight: 600;
+}
+
+/* Drawer transitions */
+.offcanvas {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Responsive table meta */
+#table-meta {
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .page-header .btn-list {
+    flex-wrap: wrap;
+  }
+  
+  .page-header .btn {
+    font-size: 0.875rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .navbar-vertical,
+  .page-header,
+  .btn,
+  .pagination,
+  #drawer {
+    display: none !important;
+  }
+  
+  .card {
+    break-inside: avoid;
+  }
+}
+

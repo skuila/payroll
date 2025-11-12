@@ -1,0 +1,28 @@
+{
+  "input_format": "no_header",
+  "locale": "FR",
+  "column_mapping_by_index": {
+    "4": "Titre d'emploi",
+    "6": "Matricule",
+    "7": "Nom et prénom",
+    "5": "Date de paie",
+    "8": "Catégorie de paie",
+    "9": "Code Paie",
+    "10": "Description",
+    "11": "Poste budgétaire",
+    "12": "Description budgétaire",
+    "13": "Montant Employé",
+    "14": "Montant Employeur",
+    "13.1": "Montant"
+  },
+  "column_mapping_by_name": {},
+  "net": {
+    "strategy": "sum_all",
+    "amount_column": "Montant",
+    "description": "Salaire net = somme simple de tous les montants (signes déjà corrects dans le fichier)"
+  },
+  "calc_rules": {
+    "description": "Plus de règles de calcul complexes - somme simple de tous les montants",
+    "note": "Les signes sont déjà corrects dans le fichier Excel (gains = positif, déductions = négatif)"
+  }
+}

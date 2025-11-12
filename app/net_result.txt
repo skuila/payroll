@@ -1,0 +1,2 @@
+Statut : ERREUR
+droit refusé pour la table payroll_transactions

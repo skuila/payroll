@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Analyse - Avantages sociaux</title>
+    <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/responsive.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/fixedHeader.bootstrap5.min.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark"><a href="./index.html">PayrollAnalyzer</a></h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      <div class="page-wrapper">
+        <div class="page-header d-print-none sticky-top bg-white border-bottom">
+          <div class="container-xl"><h2 class="page-title">Avantages sociaux / charges employeur</h2></div>
+        </div>
+        <div class="page-body">
+          <div class="container mt-4">
+            <div class="card mb-3">
+              <div class="card-header"><h3 class="card-title">Coûts par famille d’avantage</h3></div>
+              <div class="card-body"><div id="chart-ava" style="height:300px;"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Avantages (employeur vs employé)</h3></div>
+              <div class="table-responsive">
+                <table id="tbl-ava" class="table table-bordered table-hover w-100">
+                  <thead><tr><th>Code</th><th>Description</th><th>Part employeur</th><th>Retenu employé</th><th>Total combine</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./dist/libs/datatables/loader.js"></script>
+    <script src="./js/datatables-helper.js"></script>
+    <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
+    <script src="./js/charts-helper.js"></script>
+    <script src="./js/analytics-helpers.js"></script>
+    <script src="./dist/js/tabler.min.js"></script>
+    <script>
+      (function(){
+        document.addEventListener('DOMContentLoaded', function(){
+          ChartsHelper.mount('#chart-ava', 'bar', {
+            series: [],
+            xaxis: { categories: [] },
+            plotOptions: { bar: { stacked: true } }
+          });
+          DataTablesHelper.init('#tbl-ava', [], [
+            {title:'Code', data:0},
+            {title:'Description', data:1},
+            {title:'Part employeur', data:2, className:'text-end', render: DataTablesHelper.formatCurrency},
+            {title:'Retenu employé', data:3, className:'text-end', render: DataTablesHelper.formatCurrency},
+            {title:'Total combine', data:4, className:'text-end', render: DataTablesHelper.formatCurrency},
+          ], { order: [[2,'desc']] });
+        });
+      })();
+    </script>
+  </body>
+  </html>
+
+

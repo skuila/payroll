@@ -1,0 +1,80 @@
+Local analysis report
+Input file: app\scripts\Classeur1.xlsx
+
+Total lines: 4959
+Valid lines: 4959
+Rejected lines: 0
+
+Total net (file): 538402.22 
+Employees distincts (valid): 295
+Average net per employee: 1825.09
+
+Categories (counts):
+  Enseignant: 1511
+  Soutien: 1089
+  Professionnel: 168
+  Gestionnaire: 93
+
+By pay code:
+  101: count=363, total_net=692116.64
+  151: count=19, total_net=100188.47
+  105: count=65, total_net=33066.91
+  111: count=10, total_net=20128.42
+  699: count=1, total_net=15384.52
+  935: count=6, total_net=13557.20
+  600: count=1, total_net=11428.50
+  112: count=1, total_net=3164.83
+  450: count=51, total_net=2828.10
+  965: count=3, total_net=2234.14
+  921: count=6, total_net=1928.76
+  930: count=22, total_net=1776.48
+  933: count=2, total_net=1665.96
+  945: count=2, total_net=1367.24
+  107: count=2, total_net=1145.00
+  159: count=48, total_net=1100.23
+  451: count=15, total_net=942.21
+  914: count=1, total_net=661.73
+  581: count=6, total_net=578.85
+  946: count=1, total_net=485.10
+  926: count=1, total_net=430.62
+  201: count=1, total_net=101.34
+  106: count=1, total_net=53.88
+  580: count=2, total_net=49.63
+  803: count=255, total_net=0.00
+  806: count=256, total_net=0.00
+  807: count=258, total_net=0.00
+  808: count=258, total_net=0.00
+  520: count=1, total_net=-100.00
+  523: count=1, total_net=-164.00
+  906: count=1, total_net=-242.55
+  702: count=6, total_net=-304.69
+  504: count=2, total_net=-527.29
+  703: count=55, total_net=-879.36
+  522: count=8, total_net=-1499.21
+  705: count=44, total_net=-1612.75
+  704: count=32, total_net=-1612.84
+  901: count=7, total_net=-2480.52
+  913: count=1, total_net=-3956.04
+  802: count=202, total_net=-5389.52
+  701: count=135, total_net=-7791.38
+  805: count=246, total_net=-9258.35
+  804: count=258, total_net=-9352.58
+  902: count=4, total_net=-9720.34
+  801: count=201, total_net=-12460.33
+  Déductions légales: count=2098, total_net=-300630.79
+
+By period:
+  2025-08-28: count=4959, net=538402.22
+
+Top 10 employees by net:
+  666 | LE COURIAUT-BOLLET, VALÉRIE | count=22, net=15469.84
+  1727 | Fosse, Valérie | count=13, net=4255.68
+  1986 | Keroulle, Sandrine | count=11, net=3738.77
+  1969 | Tessier, Katryne | count=14, net=3678.47
+  2110 | Hemmerling, Gérard | count=13, net=3589.97
+  674 | Herdier, Isabelle | count=13, net=3589.97
+  2192 | De Turckheim, Aurélie | count=15, net=3477.72
+  2040 | Lavacry, Aurélie | count=18, net=3336.63
+  1228 | Guinard, Bruno | count=17, net=3287.42
+  575 | Lafitte, Gilles | count=18, net=3174.09
+CSV top employees written to: C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\_cleanup_report\top10_employees.csv

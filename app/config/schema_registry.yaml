@@ -1,0 +1,826 @@
+# ========================================
+# REGISTRE DES TYPES DE COLONNES
+# ========================================
+# Système flexible de détection automatique de colonnes
+# Éditable par l'utilisateur pour ajouter/modifier des règles
+
+# Métadonnées registre
+version: "1.0.0"
+locale: "fr-CA"
+last_updated: "2025-10-13"
+
+# Configuration UI
+ui:
+  allow_custom_types: true          # Utilisateur peut ajouter types personnalisés
+  show_confidence_bars: true        # Barres de confiance dans l'UI
+  sample_rows: 200                  # Nombre lignes pour analyse
+  enable_segment_detection: true    # Détection changements structure (segments)
+  min_confidence_accept: 0.70       # Seuil auto-accept
+  min_confidence_warn: 0.50         # Seuil warning
+
+# ========================================
+# TYPES DE COLONNES
+# ========================================
+
+types:
+  
+  # ---------- IDENTIFIANTS ----------
+  
+  matricule:
+    label: "Matricule / No Employé"
+    description: "Identifiant unique employé (numérique ou alphanumérique)"
+    visible: true
+    priority: 90
+    target_field: "matricule"
+    
+    detectors:
+      # Masque alphanumérique dominant
+      - kind: mask_dominance
+        allow: [A, '9', '-', '_']
+        min_len: 3
+        max_len: 20
+        coverage_min: 0.60
+        noise_max: 0.15
+        weight: 0.50
+      
+      # Ratio numérique pur (bonus si 100% chiffres)
+      - kind: all_numeric_ratio
+        min_ratio: 0.80
+        weight: 0.30
+      
+      # Pénalité si virgules présentes (conflit avec nom)
+      - kind: penalize_comma
+        penalty_per_comma: -0.40
+        weight: 0.20
+    
+    validators:
+      # Unicité forte attendue
+      - kind: uniqueness_hint
+        min_uniques_ratio: 0.30
+      
+      # Pas de valeurs constantes
+      - kind: reject_constant
+        max_const_ratio: 0.10
+    
+    transforms:
+      - kind: strip
+      - kind: collapse_spaces
+      - kind: to_upper
+  
+  # ---------- NOMS / PRÉNOMS ----------
+  
+  fullname:
+    label: "Nom complet (Nom, Prénom)"
+    description: "Nom et prénom dans une seule colonne"
+    visible: true
+    priority: 80
+    target_field: "nom_prenom"
+    
+    detectors:
+      # Présence de virgule (signature "Nom, Prénom")
+      - kind: contains_comma_ratio
+        min_ratio: 0.45
+        weight: 0.50
+      
+      # Texte alphabétique dominant
+      - kind: alpha_token_ratio
+        min_ratio: 0.80
+        weight: 0.30
+      
+      # Longueur moyenne élevée
+      - kind: avg_length_range
+        min_len: 10
+        max_len: 60
+        weight: 0.20
+    
+    validators:
+      # Haute entropie (noms variés)
+      - kind: high_entropy
+        min_entropy: 2.5
+      
+      # Pas de valeur constante
+      - kind: reject_constant
+        max_const_ratio: 0.10
+    
+    transforms:
+      - kind: strip
+      - kind: split_fullname
+        format: "Nom, Prénom"
+  
+  nom:
+    label: "Nom de famille"
+    description: "Nom de famille seul"
+    visible: true
+    priority: 70
+    target_field: "nom"
+    
+    detectors:
+      # Haute entropie alphabétique
+      - kind: high_entropy_alpha
+        min_entropy: 2.5
+        max_const_ratio: 0.25
+        weight: 0.50
+      
+      # Texte pur (pas de chiffres dominants)
+      - kind: alpha_only_ratio
+        min_ratio: 0.85
+        weight: 0.30
+      
+      # Longueur typique
+      - kind: avg_length_range
+        min_len: 3
+        max_len: 40
+        weight: 0.20
+    
+    validators:
+      - kind: reject_constant
+        max_const_ratio: 0.25
+    
+    transforms:
+      - kind: strip
+      - kind: title_case_keep_hyphen
+  
+  prenom:
+    label: "Prénom"
+    description: "Prénom seul"
+    visible: true
+    priority: 70
+    target_field: "prenom"
+    
+    detectors:
+      - kind: high_entropy_alpha
+        min_entropy: 2.5
+        max_const_ratio: 0.25
+        weight: 0.50
+      
+      - kind: alpha_only_ratio
+        min_ratio: 0.85
+        weight: 0.30
+      
+      - kind: avg_length_range
+        min_len: 2
+        max_len: 30
+        weight: 0.20
+    
+    validators:
+      - kind: reject_constant
+        max_const_ratio: 0.25
+    
+    transforms:
+      - kind: strip
+      - kind: title_case_keep_hyphen
+      - kind: drop_trailing_digit
+  
+  # ---------- DATES ----------
+  
+  date_paie:
+    label: "Date de paie"
+    description: "Date du paiement (YYYY-MM-DD, DD/MM/YYYY, serial Excel, etc.)"
+    visible: true
+    priority: 85
+    target_field: "pay_date"
+    
+    detectors:
+      # Ratio parsing réussi FR-CA
+      - kind: date_parse_ratio
+        fr_ca: true
+        excel_1900_1904: true
+        dayfirst: true
+        min_ratio: 0.70
+        weight: 0.70
+      
+      # Masque date
+      - kind: pattern_any
+        patterns: 
+          - "^\\d{4}-\\d{2}-\\d{2}$"
+          - "^\\d{1,2}/\\d{1,2}/\\d{4}$"
+          - "^\\d{5}$"  # Excel serial
+        weight: 0.30
+    
+    transforms:
+      - kind: to_iso_date
+        locale: fr-CA
+  
+  # ---------- MONTANTS ----------
+  
+  montant:
+    label: "Montant"
+    description: "Montant brut/net/déduction (format FR-CA)"
+    visible: true
+    priority: 85
+    target_field: "amount"
+    
+    detectors:
+      # Ratio parsing nombre FR-CA
+      - kind: number_parse_ratio
+        locale: fr-CA
+        allow_parentheses_neg: true
+        allow_trailing_minus: true
+        allow_currency_symbol: true
+        min_ratio: 0.70
+        weight: 0.70
+      
+      # Pattern montant
+      - kind: pattern_any
+        patterns:
+          - "^-?\\d+[,.]?\\d*$"
+          - "^\\(\\d+[,.]?\\d*\\)$"
+          - "^-?\\d{1,3}([ \\u202F]\\d{3})*[,.]\\d{2}$"
+        weight: 0.30
+    
+    transforms:
+      - kind: to_decimal
+        locale: fr-CA
+  
+  heures:
+    label: "Heures travaillées"
+    description: "Nombre d'heures (décimal)"
+    visible: true
+    priority: 55
+    target_field: "hours"
+    
+    detectors:
+      - kind: number_parse_ratio
+        locale: fr-CA
+        min_ratio: 0.60
+        weight: 0.60
+      
+      # Range typique heures (0-200)
+      - kind: number_range_hint
+        min_val: 0
+        max_val: 200
+        expected_ratio: 0.90
+        weight: 0.40
+    
+    transforms:
+      - kind: to_decimal
+        locale: fr-CA
+  
+  taux_horaire:
+    label: "Taux horaire"
+    description: "Taux horaire de rémunération"
+    visible: true
+    priority: 55
+    target_field: "hourly_rate"
+    
+    detectors:
+      - kind: number_parse_ratio
+        locale: fr-CA
+        min_ratio: 0.60
+        weight: 0.60
+      
+      # Range typique taux (10-150 $/h)
+      - kind: number_range_hint
+        min_val: 10
+        max_val: 150
+        expected_ratio: 0.85
+        weight: 0.40
+    
+    transforms:
+      - kind: to_decimal
+        locale: fr-CA
+  
+  part_employeur:
+    label: "Part employeur"
+    description: "Montant part employeur (format FR-CA)"
+    visible: true
+    priority: 75
+    target_field: "amount_employer"
+    
+    detectors:
+      # Ratio parsing nombre FR-CA (identique à montant)
+      - kind: number_parse_ratio
+        locale: fr-CA
+        allow_parentheses_neg: true
+        allow_trailing_minus: true
+        allow_currency_symbol: true
+        min_ratio: 0.70
+        weight: 0.70
+      
+      # Pattern montant (identique à montant)
+      - kind: pattern_any
+        patterns:
+          - "^-?\\d+[,.]?\\d*$"
+          - "^\\(\\d+[,.]?\\d*\\)$"
+          - "^-?\\d{1,3}([ \\u202F]\\d{3})*[,.]\\d{2}$"
+        weight: 0.30
+    
+    validators:
+      # Peut être constant (0.00 pour beaucoup d'employés)
+      - kind: reject_constant
+        max_const_ratio: 0.80
+    
+    transforms:
+      - kind: to_decimal
+        locale: fr-CA
+  
+  mnt_cmb:
+    label: "Montant combiné"
+    description: "Montant combiné (format FR-CA ou code compact)"
+    visible: true
+    priority: 70
+    target_field: "amount_combined"
+    
+    detectors:
+      # Détecteur numérique (comme montant)
+      - kind: number_parse_ratio
+        locale: fr-CA
+        allow_parentheses_neg: true
+        allow_trailing_minus: true
+        allow_currency_symbol: true
+        min_ratio: 0.60
+        weight: 0.50
+      
+      # Détecteur code compact (alphanum court)
+      - kind: pattern_any
+        patterns:
+          - "^[A-Z0-9]{2,12}$"           # Code compact
+          - "^[A-Z]{2,6}\\d{1,6}$"       # ABC123
+          - "^\\d{2,8}[A-Z]{1,3}$"       # 123ABC
+        weight: 0.30
+      
+      # Longueur moyenne courte (codes compacts)
+      - kind: avg_length_range
+        min_len: 2
+        max_len: 15
+        weight: 0.20
+    
+    validators:
+      # Peut être constant
+      - kind: reject_constant
+        max_const_ratio: 0.70
+    
+    transforms:
+      - kind: to_decimal
+        locale: fr-CA
+  
+  # ---------- CODES ----------
+  
+  code_paie:
+    label: "Code de paie"
+    description: "Code rubrique paie (SAL, BON, DED, etc.)"
+    visible: true
+    priority: 60
+    target_field: "pay_code"
+    
+    detectors:
+      # Patterns code alphanumérique court
+      - kind: pattern_any
+        patterns:
+          - "^[A-Z]\\d{2,}$"           # A123
+          - "^\\d{2,}[A-Z]{1,2}$"       # 123A
+          - "^[A-Z0-9]{2,8}$"           # SAL, BON123
+          - "^[A-Z]{2,5}$"              # SAL, DED
+        weight: 0.60
+      
+      # Cardinalité faible (peu de codes distincts)
+      - kind: low_cardinality_hint
+        max_uniques_ratio: 0.15
+        weight: 0.40
+    
+    transforms:
+      - kind: strip
+      - kind: to_upper
+  
+  poste_budgetaire:
+    label: "Poste budgétaire"
+    description: "Code GL / Compte budgétaire"
+    visible: true
+    priority: 60
+    target_field: "budget_post"
+    
+    detectors:
+      # Patterns postes budgétaires
+      - kind: pattern_any
+        patterns:
+          - "^\\d{2}\\.\\d{2}\\.\\d{2}$"      # 12.34.56
+          - "^\\d{2}-\\d{2}-\\d{2}$"          # 12-34-56
+          - "^[A-Z]{1}\\d{3,}$"                # A1234
+          - "^[\\w-]{3,15}$"                   # Générique
+        weight: 0.70
+      
+      # Cardinalité moyenne
+      - kind: cardinality_range
+        min_uniques_ratio: 0.05
+        max_uniques_ratio: 0.40
+        weight: 0.30
+    
+    transforms:
+      - kind: strip
+      - kind: to_upper
+  
+  # ---------- DESCRIPTIONS ----------
+  
+  description_poste:
+    label: "Description poste"
+    description: "Libellé descriptif du poste budgétaire"
+    visible: true
+    priority: 50
+    target_field: "budget_post_desc"
+    
+    detectors:
+      # Texte long
+      - kind: avg_length_range
+        min_len: 15
+        max_len: 200
+        weight: 0.50
+      
+      # Entropie moyenne-haute
+      - kind: entropy_range
+        min_entropy: 2.0
+        max_entropy: 5.0
+        weight: 0.30
+      
+      # Alphabétique dominant
+      - kind: alpha_ratio
+        min_ratio: 0.70
+        weight: 0.20
+    
+    transforms:
+      - kind: strip
+      - kind: sentence_case
+  
+  type_paie:
+    label: "Type de paie (Gains/Déductions)"
+    description: "Catégorie: Gains, Déductions, Avantages, etc."
+    visible: true
+    priority: 40
+    target_field: "pay_type"
+    
+    detectors:
+      # Cardinalité très faible (2-10 valeurs distinctes)
+      - kind: low_cardinality_hint
+        max_uniques_ratio: 0.05
+        weight: 0.60
+      
+      # Valeurs connues
+      - kind: value_in_set_fuzzy
+        values: ["Gains", "Déductions", "Deductions", "Avantages", "Benefits"]
+        min_match_ratio: 0.40
+        weight: 0.40
+    
+    transforms:
+      - kind: strip
+      - kind: title_case
+  
+  # ---------- ORGANISATION ----------
+  
+  service:
+    label: "Service"
+    description: "Service / Direction"
+    visible: true
+    priority: 40
+    target_field: "service"
+    
+    detectors:
+      - kind: medium_entropy_alpha
+        min_entropy: 2.0
+        max_entropy: 4.0
+        weight: 0.60
+      
+      - kind: cardinality_range
+        min_uniques_ratio: 0.02
+        max_uniques_ratio: 0.20
+        weight: 0.40
+    
+    transforms:
+      - kind: strip
+      - kind: title_case
+  
+  departement:
+    label: "Département"
+    description: "Département / Division"
+    visible: true
+    priority: 40
+    target_field: "department"
+    
+    detectors:
+      - kind: medium_entropy_alpha
+        min_entropy: 2.0
+        max_entropy: 4.0
+        weight: 0.60
+      
+      - kind: cardinality_range
+        min_uniques_ratio: 0.02
+        max_uniques_ratio: 0.20
+        weight: 0.40
+    
+    transforms:
+      - kind: strip
+      - kind: title_case
+  
+  # ---------- DIVERS ----------
+  
+  devise:
+    label: "Devise"
+    description: "Code devise (CAD, USD, EUR, etc.)"
+    visible: true
+    priority: 30
+    target_field: "currency"
+    
+    detectors:
+      # Ensemble fermé de valeurs
+      - kind: value_in_set
+        values: ["CAD", "USD", "EUR", "$", "C$", "CA$"]
+        case_insensitive: true
+        weight: 0.80
+      
+      # Cardinalité ultra-faible
+      - kind: low_cardinality_hint
+        max_uniques_ratio: 0.01
+        weight: 0.20
+    
+    transforms:
+      - kind: normalize_currency
+  
+  emploi:
+    label: "Titre d'emploi"
+    description: "Titre du poste occupé"
+    visible: true
+    priority: 45
+    target_field: "job_title"
+    
+    detectors:
+      - kind: medium_entropy_alpha
+        min_entropy: 2.5
+        max_entropy: 4.5
+        weight: 0.70
+      
+      - kind: avg_length_range
+        min_len: 10
+        max_len: 80
+        weight: 0.30
+    
+    transforms:
+      - kind: strip
+      - kind: title_case
+
+# ========================================
+# DÉTECTEURS DISPONIBLES (Référence)
+# ========================================
+
+detector_catalog:
+  
+  mask_dominance:
+    description: "Vérifie qu'un masque (A/9/-/_/.) domine les valeurs"
+    params:
+      - allow: "Liste caractères autorisés (A=lettre, 9=chiffre)"
+      - min_len: "Longueur minimale"
+      - max_len: "Longueur maximale"
+      - coverage_min: "% valeurs matchant le masque"
+      - noise_max: "% valeurs hors masque toléré"
+  
+  all_numeric_ratio:
+    description: "% valeurs 100% numériques"
+    params:
+      - min_ratio: "Ratio minimum"
+  
+  penalize_comma:
+    description: "Pénalise présence de virgules"
+    params:
+      - penalty_per_comma: "Score à soustraire par virgule détectée"
+  
+  contains_comma_ratio:
+    description: "% valeurs contenant une virgule"
+    params:
+      - min_ratio: "Ratio minimum"
+  
+  alpha_token_ratio:
+    description: "% tokens alphabétiques"
+    params:
+      - min_ratio: "Ratio minimum"
+  
+  high_entropy_alpha:
+    description: "Entropie élevée (valeurs variées)"
+    params:
+      - min_entropy: "Entropie Shannon minimale"
+      - max_const_ratio: "% maximum valeur la plus fréquente"
+  
+  date_parse_ratio:
+    description: "% valeurs parsables comme date"
+    params:
+      - fr_ca: "Format français canadien"
+      - excel_1900_1904: "Support serial Excel"
+      - min_ratio: "Ratio minimum"
+  
+  number_parse_ratio:
+    description: "% valeurs parsables comme nombre"
+    params:
+      - locale: "Locale (fr-CA, en-US, etc.)"
+      - allow_parentheses_neg: "Support notation (123) = -123"
+      - min_ratio: "Ratio minimum"
+  
+  pattern_any:
+    description: "Match au moins un pattern regex"
+    params:
+      - patterns: "Liste regex"
+  
+  value_in_set:
+    description: "Valeurs dans ensemble fermé"
+    params:
+      - values: "Liste valeurs attendues"
+      - case_insensitive: "Ignorer casse"
+  
+  low_cardinality_hint:
+    description: "Peu de valeurs distinctes"
+    params:
+      - max_uniques_ratio: "% max valeurs uniques"
+  
+  uniqueness_hint:
+    description: "Haute unicité"
+    params:
+      - min_uniques_ratio: "% min valeurs uniques"
+  
+  reject_constant:
+    description: "Rejette si valeur constante dominante"
+    params:
+      - max_const_ratio: "% max pour valeur la plus fréquente"
+  
+  avg_length_range:
+    description: "Longueur moyenne dans plage"
+    params:
+      - min_len: "Longueur min"
+      - max_len: "Longueur max"
+  
+  entropy_range:
+    description: "Entropie dans plage"
+    params:
+      - min_entropy: "Min"
+      - max_entropy: "Max"
+
+# ========================================
+# SYNONYMES EN-TÊTES (Header Matching)
+# ========================================
+
+header_synonyms:
+  
+  # Montants
+  montant:
+    - "montant"
+    - "montant brut"
+    - "montant net"
+    - "salaire"
+    - "amount"
+    - "salary"
+    - "total"
+  
+  part_employeur:
+    - "part employeur"
+    - "montant employeur"
+    - "employeur"
+    - "part employer"
+    - "employer amount"
+    - "employer part"
+  
+  mnt_cmb:
+    - "mnt/cmb"
+    - "montant cmb"
+    - "montant combiné"
+    - "combined amount"
+    - "cmb"
+    - "mnt comb"
+  
+  # Dates
+  date_paie:
+    - "date de paie"
+    - "date paie"
+    - "date"
+    - "période"
+    - "payment date"
+    - "pay date"
+  
+  # Identifiants
+  matricule:
+    - "matricule"
+    - "no employé"
+    - "id employé"
+    - "id"
+    - "numéro"
+    - "employee id"
+    - "emp id"
+    - "numero"
+  
+  # Noms
+  fullname:
+    - "nom prénom"
+    - "nom, prénom"
+    - "employé"
+    - "salarié"
+    - "fullname"
+    - "name"
+    - "nom et prénom"
+    - "nom prenom"
+  
+  # Codes
+  code_paie:
+    - "code paie"
+    - "code de paie"
+    - "rubrique"
+    - "pay code"
+    - "code"
+  
+  # Postes budgétaires
+  poste_budgetaire:
+    - "poste budgétaire"
+    - "poste budgetaire"
+    - "budget"
+    - "gl"
+    - "compte budgétaire"
+    - "compte budgetaire"
+    - "g/l"
+    - "ledger"
+    - "gl account"
+  
+  # Descriptions
+  description_poste:
+    - "description poste"
+    - "libellé poste"
+    - "libelle poste"
+    - "intitulé"
+    - "intitule"
+    - "description"
+    - "label"
+    - "poste description"
+  
+  # Types
+  type_paie:
+    - "type de paie"
+    - "catégorie"
+    - "categorie"
+    - "type"
+    - "gains/déductions"
+    - "gains/deductions"
+    - "pay type"
+
+# ========================================
+# TRANSFORMERS DISPONIBLES (Référence)
+# ========================================
+
+transformer_catalog:
+  
+  strip:
+    description: "Supprime espaces début/fin"
+  
+  collapse_spaces:
+    description: "Collapse espaces multiples"
+  
+  to_upper:
+    description: "Convertir en MAJUSCULES"
+  
+  to_lower:
+    description: "Convertir en minuscules"
+  
+  title_case:
+    description: "Majuscule première lettre mots"
+  
+  title_case_keep_hyphen:
+    description: "Title case en préservant tirets"
+  
+  sentence_case:
+    description: "Première lettre majuscule uniquement"
+  
+  drop_trailing_digit:
+    description: "Supprime chiffre final (Amin 6 → Amin)"
+  
+  split_fullname:
+    description: "Sépare 'Nom, Prénom' en nom et prenom"
+    params:
+      - format: "Format attendu"
+  
+  to_iso_date:
+    description: "Convertit en ISO YYYY-MM-DD"
+    params:
+      - locale: "Locale pour parsing"
+  
+  to_decimal:
+    description: "Convertit en Decimal"
+    params:
+      - locale: "Locale pour parsing nombres"
+  
+  normalize_currency:
+    description: "Normalise code devise ($ → CAD)"
+
+# ========================================
+# PROFILS (Templates pré-configurés)
+# ========================================
+
+profiles:
+  
+  standard_paie_fr_ca:
+    label: "Paie standard FR-CA"
+    description: "Import paie typique canadien français"
+    required_fields: ["matricule", "fullname", "date_paie", "montant"]
+    optional_fields: ["code_paie", "poste_budgetaire", "type_paie"]
+  
+  paie_detaillee:
+    label: "Paie détaillée"
+    description: "Avec nom/prénom séparés, service, département"
+    required_fields: ["matricule", "nom", "prenom", "date_paie", "montant"]
+    optional_fields: ["service", "departement", "code_paie", "emploi"]
+  
+  paie_heures:
+    label: "Paie avec heures"
+    description: "Heures × Taux horaire"
+    required_fields: ["matricule", "fullname", "date_paie", "heures", "taux_horaire"]
+    optional_fields: ["montant"]
+

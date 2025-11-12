@@ -1,0 +1,40 @@
+# scripts/apply_sql_file_postgres.py
+import sys
+import os
+from pathlib import Path
+import psycopg
+
+def get_superuser_dsn() -> str:
+    dsn = os.getenv('SUPERUSER_DSN')
+    if dsn:
+        return dsn
+    # Fallback DSN (fourni par l'utilisateur précédemment)
+    from config.config_manager import get_superuser_dsn
+    return get_superuser_dsn()
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python scripts/apply_sql_file_postgres.py <path/to/file.sql>")
+        sys.exit(1)
+    sql_path = Path(sys.argv[1])
+    if not sql_path.exists():
+        print(f"❌ Fichier introuvable: {sql_path}")
+        sys.exit(2)
+
+    raw_sql = sql_path.read_text(encoding='utf-8')
+    # Retirer les meta-commandes psql
+    sql = "\n".join(line for line in raw_sql.splitlines() if not line.lstrip().startswith('\\'))
+
+    dsn = get_superuser_dsn()
+    try:
+        with psycopg.connect(dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+            conn.commit()
+        print(f"✓ SQL (superuser) appliqué: {sql_path}")
+    except Exception as e:
+        print(f"❌ Erreur (superuser) application SQL: {e}")
+        raise
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,1 @@
+src_schema,src_table,src_column,tgt_schema,tgt_table,tgt_column,on_update,on_delete

@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Test DataTable - PayrollAnalyzer</title>
+    <!-- Tabler CSS local -->
+    <link href="./dist/css/tabler.min.css?1692870487" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css?1692870487" rel="stylesheet"/>
+    <!-- DataTables CSS local -->
+    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/responsive.bootstrap5.min.css" rel="stylesheet"/>
+    <style>
+      :root {
+        --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      body {
+        font-feature-settings: "cv03", "cv04", "cv11";
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <!-- Sidebar -->
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark">
+            <a href="./index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2"/><path d="M14 8h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5m2 0v1.5m0 -9v1.5"/></svg>
+              PayrollAnalyzer
+            </a>
+          </h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+              <li class="nav-item active"><a class="nav-link" href="./teste.html"><span class="nav-link-title">Test DataTable</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./assistant.html"><span class="nav-link-title">Assistant IA</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Page content -->
+      <div class="page-wrapper">
+        <!-- Header -->
+        <div class="page-header d-print-none sticky-top bg-white border-bottom">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <h2 class="page-title">Test DataTable Native</h2>
+                <div class="text-muted mt-1">Liste des employés avec salaires</div>
+              </div>
+              <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                  <div class="input-group" style="width: 260px;">
+                    <span class="input-group-text">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg>
+                    </span>
+                    <input type="date" class="form-control" id="pay-date" aria-label="Date de paie">
+                    <button class="btn btn-primary" id="btn-load">Afficher</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="page-body">
+          <div class="container-xl mt-4">
+            <!-- Tableau -->
+            <div class="card shadow-sm">
+              <div class="card-header">
+                <h3 class="card-title">Liste des employés</h3>
+              </div>
+              <div class="table-responsive">
+                <table id="tbl-teste" class="table table-bordered table-hover mb-0 w-100">
+                  <thead>
+                    <tr>
+                      <th>Nom</th>
+                      <th>Catégorie d'emploi</th>
+                      <th>Titre d'emploi</th>
+                      <th class="text-end">Salaire net ($)</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                  <tfoot>
+                    <tr>
+                      <th colspan="3" class="text-end">Total net:</th>
+                      <th class="text-end" id="total-cell"></th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div class="card-footer">
+                <div id="debug-info" class="small text-muted"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="./dist/libs/datatables/loader.js?v=20251107"></script>
+    <script src="./js/datatables-helper.js?v=20251108"></script>
+    <script src="./dist/js/tabler.min.js?1692870487"></script>
+    
+    <!-- Script principal -->
+    <script>
+      (function(){
+        console.log('[Teste] Script charge');
+        
+        const NF = new Intl.NumberFormat('fr-CA', { 
+          minimumFractionDigits: 2, 
+          maximumFractionDigits: 2 
+        });
+
+        // Fonction pour obtenir la derniere date de paie
+        async function getLastPayDate(){
+          try {
+            if (!window.appBridge || !window.appBridge.execute_sql) {
+              console.warn('[Teste] AppBridge non disponible');
+              return null;
+            }
+            const raw = await window.appBridge.execute_sql(
+              "SELECT MAX(pay_date)::text FROM payroll.payroll_transactions"
+            );
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            console.log('[Teste] Derniere date:', parsed);
+            return (parsed && parsed.rows && parsed.rows[0] && parsed.rows[0][0]) 
+              ? parsed.rows[0][0] 
+              : null;
+          } catch (e) { 
+            console.error('[Teste] Erreur getLastPayDate:', e);
+            return null;
+          }
+        }
+
+        // Fonction pour construire la requete SQL
+        function buildSql(){
+          const dateInput = document.getElementById('pay-date');
+          const d = (dateInput && dateInput.value) || new Date().toISOString().slice(0,10);
+          
+          const sql = `
+            WITH agg AS (
+              SELECT 
+                e.employee_id,
+                COALESCE(e.nom_complet, e.nom_norm || ', ' || COALESCE(e.prenom_norm, '')) AS nom,
+                COALESCE(e.matricule_norm, '') AS matricule,
+                COALESCE(SUM(t.amount_cents) / 100.0, 0.0) AS salaire_net
+              FROM payroll.payroll_transactions t
+              JOIN core.employees e ON e.employee_id = t.employee_id
+              WHERE t.pay_date = DATE '${d}'
+              GROUP BY e.employee_id, e.nom_complet, e.nom_norm, e.prenom_norm, e.matricule_norm
+            ),
+            stg AS (
+              SELECT
+                COALESCE(matricule::text, '') AS matricule,
+                MAX(categorie_emploi) AS categorie_emploi,
+                MAX(titre_emploi) AS titre_emploi
+              FROM paie.stg_paie_transactions
+              WHERE date_paie = DATE '${d}' AND is_valid = TRUE
+              GROUP BY COALESCE(matricule::text, '')
+            )
+            SELECT
+              agg.nom,
+              COALESCE(stg.categorie_emploi, '') AS categorie_emploi,
+              COALESCE(stg.titre_emploi, '') AS titre_emploi,
+              agg.salaire_net
+            FROM agg
+            LEFT JOIN stg ON stg.matricule = agg.matricule
+            ORDER BY agg.nom
+          `;
+          
+          console.log('[Teste] SQL pour date:', d);
+          return sql;
+        }
+
+        // Attendre le chargement de DataTables
+        async function waitForDataTables(timeout = 8000) {
+          const start = Date.now();
+          while (true) {
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
+              console.log('[Teste] DataTables disponible');
+              return true;
+            }
+            if (Date.now() - start > timeout) {
+              throw new Error('DataTables non charge apres attente');
+            }
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+        }
+
+        let dt;
+        
+        // Fonction pour charger le tableau
+        async function loadTable(){
+          console.log('[Teste] loadTable() appelee');
+          
+          try {
+            await waitForDataTables();
+          } catch(err) {
+            console.error('[Teste] DataTables absent:', err);
+            const dbg = document.getElementById('debug-info');
+            if (dbg) dbg.textContent = 'Erreur: DataTables non charge';
+            return;
+          }
+
+          const $ = window.jQuery;
+          if (dt && $.fn.DataTable.isDataTable('#tbl-teste')) {
+            console.log('[Teste] Rechargement table existante');
+            dt.ajax.reload(null, false);
+            return;
+          }
+          
+          console.log('[Teste] Initialisation DataTable');
+          dt = await window.DataTablesHelper.initWithAppBridge(
+            '#tbl-teste',
+            buildSql,
+            [
+              { title: 'Nom', data: 0 },
+              { title: "Categorie d'emploi", data: 1 },
+              { title: "Titre d'emploi", data: 2 },
+              { 
+                title: 'Salaire net ($)', 
+                data: 3, 
+                className: 'text-end', 
+                render: window.DataTablesHelper.formatCurrency 
+              }
+            ],
+            {
+              drawCallback: function(settings) {
+                try {
+                  const api = this.api();
+                  const dataRows = api.rows({search: 'applied'}).data().toArray();
+                  const rowsCount = dataRows.length;
+                  let sum = 0;
+                  dataRows.forEach(r => sum += Number(r[3] || 0));
+                  
+                  const dbg = document.getElementById('debug-info');
+                  if (dbg) {
+                    dbg.textContent = `${rowsCount} employes - Total: ${NF.format(sum)} $`;
+                  }
+                  console.log('[Teste] Affichage:', rowsCount, 'lignes, total:', sum);
+                } catch (e) {
+                  console.error('[Teste] Erreur drawCallback:', e);
+                }
+              },
+              footerCallback: function(row, data, start, end, display) {
+                const api = this.api();
+                const dataRows = api.rows({search: 'applied'}).data().toArray();
+                let totalNet = 0;
+                dataRows.forEach(row => {
+                  totalNet += Number(row[3] || 0);
+                });
+                $(api.column(3).footer()).html(
+                  `<strong>${window.DataTablesHelper.formatCurrency(totalNet)}</strong>`
+                );
+              },
+              buttons: ['excelHtml5', 'csvHtml5', 'pdfHtml5', 'print', 'pageLength']
+            }
+          );
+          
+          console.log('[Teste] DataTable initialisee avec succes');
+        }
+
+        // Initialisation au chargement de la page
+        document.addEventListener('DOMContentLoaded', async function(){
+          console.log('[Teste] DOMContentLoaded');
+          
+          if (typeof qt !== 'undefined' && qt.webChannelTransport) {
+            console.log('[Teste] QWebChannel disponible, connexion...');
+            new QWebChannel(qt.webChannelTransport, async function(channel){
+              window.appBridge = channel.objects.AppBridge;
+              console.log('[Teste] AppBridge connecte');
+              
+              const lastDate = await getLastPayDate();
+              const d = lastDate || new Date().toISOString().slice(0,10);
+              const inp = document.getElementById('pay-date');
+              if (inp) {
+                inp.value = d;
+                console.log('[Teste] Date initialisee:', d);
+              }
+              
+              await loadTable();
+            });
+          } else {
+            console.warn('[Teste] QWebChannel non disponible');
+            const dbg = document.getElementById('debug-info');
+            if (dbg) dbg.textContent = 'Application non connectee (QWebChannel manquant)';
+          }
+          
+          // Bouton charger
+          const btn = document.getElementById('btn-load');
+          if (btn) {
+            btn.addEventListener('click', function(){
+              console.log('[Teste] Bouton Afficher clique');
+              loadTable();
+            });
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
+

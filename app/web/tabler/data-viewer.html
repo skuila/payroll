@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Visualiseur de Données - PayrollAnalyzer</title>
+  <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+  <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+  <style>
+    .table-scrollable {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .sticky-header thead th {
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <script src="./dist/js/tabler.min.js"></script>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+      <div class="container-fluid">
+        <h1 class="navbar-brand"><a href="./index.html">PayrollAnalyzer</a></h1>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav pt-lg-3">
+            <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./periods.html"><span class="nav-link-title">Périodes</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
+            <li class="nav-item active"><a class="nav-link" href="./data-viewer.html"><span class="nav-link-title">Visualiser données</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Page content -->
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div class="container-xl">
+          <h2 class="page-title">Visualiseur de Données</h2>
+          <div class="page-subtitle">Toutes vos données de paie importées</div>
+        </div>
+      </div>
+      
+      <div class="page-body">
+        <div class="container-xl">
+          
+          <!-- Filtres -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <h3 class="card-title">Filtres</h3>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <label class="form-label">Matricule</label>
+                  <input type="text" class="form-control" id="filter-matricule" placeholder="Ex: 2093">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Employé</label>
+                  <input type="text" class="form-control" id="filter-employe" placeholder="Ex: Abdou">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Code de paie</label>
+                  <input type="text" class="form-control" id="filter-code" placeholder="Ex: 101">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Date de paie</label>
+                  <input type="date" class="form-control" id="filter-date">
+                </div>
+              </div>
+              <div class="mt-3">
+                <button class="btn btn-primary" onclick="loadData()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                  Rechercher
+                </button>
+                <button class="btn btn-secondary" onclick="resetFilters()">Réinitialiser</button>
+                <button class="btn btn-success" onclick="exportToExcel()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 11l5 5l5 -5" /><path d="M12 4l0 12" /></svg>
+                  Exporter Excel
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Statistiques rapides -->
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <div class="card">
+                <div class="card-body p-2 text-center">
+                  <div class="text-secondary small">Total lignes</div>
+                  <div class="h3 mb-0" id="stat-total">-</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card">
+                <div class="card-body p-2 text-center">
+                  <div class="text-secondary small">Employés</div>
+                  <div class="h3 mb-0" id="stat-employees-count">-</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card">
+                <div class="card-body p-2 text-center">
+                  <div class="text-secondary small">Total montants</div>
+                  <div class="h3 mb-0" id="stat-total-amount">-</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card">
+                <div class="card-body p-2 text-center">
+                  <div class="text-secondary small">Affichées</div>
+                  <div class="h3 mb-0" id="stat-displayed">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tableau de données -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Données de paie</h3>
+              <div class="card-actions">
+                <select class="form-select form-select-sm" id="rows-per-page" onchange="loadData()">
+                  <option value="50">50 lignes</option>
+                  <option value="100" selected>100 lignes</option>
+                  <option value="200">200 lignes</option>
+                  <option value="500">500 lignes</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-responsive table-scrollable">
+              <table class="table table-sm table-vcenter card-table sticky-header">
+                <thead>
+                  <tr>
+                    <th>Matricule</th>
+                    <th>Employé</th>
+                    <th>Date paie</th>
+                    <th>Code paie</th>
+                    <th>Description</th>
+                    <th>Poste budgétaire</th>
+                    <th class="text-end">Montant</th>
+                    <th class="text-end">Part employeur</th>
+                    <th>Catégorie</th>
+                  </tr>
+                </thead>
+                <tbody id="data-table-body">
+                  <tr><td colspan="9" class="text-center py-5">Cliquez sur "Rechercher" pour charger les données</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card-footer">
+              <div class="d-flex justify-content-between align-items-center">
+                <div id="pagination-info" class="text-secondary">-</div>
+                <nav aria-label="Page navigation">
+                  <ul class="pagination mb-0" id="pagination"></ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let bridge = null;
+    let currentPage = 0;
+    let totalRows = 0;
+    
+    // Protection XSS : Échapper les caractères HTML
+    function esc(s) {
+      if (s === null || s === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(s);
+      return div.innerHTML;
+    }
+    
+    // Initialiser QWebChannel
+    new QWebChannel(qt.webChannelTransport, function(channel) {
+      bridge = channel.objects.AppBridge || channel.objects.bridge;
+      console.log('✅ Bridge connecté');
+      loadStats();
+      // Précharger la première page
+      loadData(0);
+    });
+    
+    async function loadStats() {
+      if (!bridge) return;
+      
+      try {
+        const sql = `
+          SELECT 
+            COUNT(*) as total,
+            COUNT(DISTINCT matricule) as nb_employes,
+            COALESCE(SUM(montant), 0) as total_montants
+          FROM payroll.v_imported_payroll
+        `;
+        
+        const resultJson = await bridge.execute_sql(sql);
+        const result = JSON.parse(resultJson);
+        
+        if (result.rows && result.rows.length > 0) {
+          const row = result.rows[0];
+          document.getElementById('stat-total').textContent = row[0].toLocaleString('fr-CA');
+          document.getElementById('stat-employees-count').textContent = row[1].toLocaleString('fr-CA');
+          document.getElementById('stat-total-amount').textContent = formatMontant(row[2]);
+        }
+      } catch (e) {
+        console.error('Erreur loadStats:', e);
+      }
+    }
+    
+    async function loadData(page = 0) {
+      if (!bridge) {
+        console.warn('Bridge non disponible');
+        document.getElementById('data-table-body').innerHTML = '<tr><td colspan="9" class="text-center text-warning">Connexion à la base en cours...</td></tr>';
+        return;
+      }
+      
+      const rowsPerPage = parseInt(document.getElementById('rows-per-page').value);
+      const offset = page * rowsPerPage;
+      
+      // Construire l'objet filtres (sécurisé)
+      const payload = {
+        matricule: document.getElementById('filter-matricule').value || null,
+        employe: document.getElementById('filter-employe').value || null,
+        code: document.getElementById('filter-code').value || null,
+        date: document.getElementById('filter-date').value || null,
+        limit: rowsPerPage,
+        offset: offset
+      };
+      
+      try {
+        // Appel sécurisé avec paramètres
+        const resultJson = await bridge.search_payroll(JSON.stringify(payload));
+        const result = JSON.parse(resultJson);
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        totalRows = result.total || 0;
+        displayData(result.rows || [], page, rowsPerPage);
+        updatePagination(page, rowsPerPage);
+        
+      } catch (e) {
+        console.error('Erreur loadData:', e);
+        document.getElementById('data-table-body').innerHTML = '<tr><td colspan="9" class="text-center text-danger">Erreur chargement: ' + esc(e.message) + '</td></tr>';
+      }
+    }
+    
+    
+    // Fonction pour déterminer la classe du badge de catégorie
+    function badgeClass(cat) {
+      if (!cat) return 'bg-secondary-lt';
+      switch (cat.trim()) {
+        case 'Gains':       return 'bg-green-lt';
+        case 'Déductions':  return 'bg-red-lt';
+        case 'Assurances':  return 'bg-yellow-lt';
+        case 'Syndicats':   return 'bg-purple-lt';
+        case 'Retenues':    return 'bg-orange-lt';
+        default:            return 'bg-blue-lt';
+      }
+    }
+    
+    function displayData(rows, page, rowsPerPage) {
+      const tbody = document.getElementById('data-table-body');
+      
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-secondary py-4">Aucune donnée trouvée</td></tr>';
+        document.getElementById('stat-displayed').textContent = '0';
+        return;
+      }
+      
+      let html = '';
+      rows.forEach(row => {
+        const montant = row[6];
+        const partEmployeur = row[7];
+        const categorie = row[8];
+        const montantClass = montant < 0 ? 'text-danger' : 'text-success';
+        
+        html += `
+          <tr>
+            <td>${esc(row[0])}</td>
+            <td class="text-truncate" style="max-width: 200px;" title="${esc(row[1])}">${esc(row[1])}</td>
+            <td>${formatDate(row[2])}</td>
+            <td><span class="badge bg-blue-lt">${esc(row[3])}</span></td>
+            <td class="text-truncate" style="max-width: 250px;" title="${esc(row[4])}">${esc(row[4])}</td>
+            <td class="font-monospace small">${esc(row[5])}</td>
+            <td class="text-end ${montantClass}"><strong>${formatMontant(montant)}</strong></td>
+            <td class="text-end text-muted">${partEmployeur ? formatMontant(partEmployeur) : '-'}</td>
+            <td><span class="badge ${badgeClass(categorie)}">${esc(categorie)}</span></td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html;
+      document.getElementById('stat-displayed').textContent = rows.length;
+    }
+    
+    function updatePagination(currentPage, rowsPerPage) {
+      const totalPages = Math.ceil(totalRows / rowsPerPage);
+      const pagination = document.getElementById('pagination');
+      const info = document.getElementById('pagination-info');
+      
+      const start = currentPage * rowsPerPage + 1;
+      const end = Math.min((currentPage + 1) * rowsPerPage, totalRows);
+      
+      info.textContent = `Affichage ${start}-${end} sur ${totalRows.toLocaleString('fr-CA')} lignes`;
+      
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+      
+      let html = '';
+      
+      // Bouton Précédent
+      html += `<li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadData(${currentPage - 1}); return false;">Précédent</a>
+      </li>`;
+      
+      // Pages
+      const maxButtons = 5;
+      let startPage = Math.max(0, currentPage - 2);
+      let endPage = Math.min(totalPages, startPage + maxButtons);
+      
+      if (endPage - startPage < maxButtons) {
+        startPage = Math.max(0, endPage - maxButtons);
+      }
+      
+      for (let i = startPage; i < endPage; i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+          <a class="page-link" href="#" onclick="loadData(${i}); return false;">${i + 1}</a>
+        </li>`;
+      }
+      
+      // Bouton Suivant
+      html += `<li class="page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadData(${currentPage + 1}); return false;">Suivant</a>
+      </li>`;
+      
+      pagination.innerHTML = html;
+    }
+    
+    function resetFilters() {
+      document.getElementById('filter-matricule').value = '';
+      document.getElementById('filter-employe').value = '';
+      document.getElementById('filter-code').value = '';
+      document.getElementById('filter-date').value = '';
+      loadData(0);
+    }
+    
+    function exportToExcel() {
+      alert('📊 Export Excel à implémenter\n\nCette fonction exportera les données filtrées vers un fichier Excel.');
+    }
+    
+    function formatMontant(value) {
+      if (!value && value !== 0) return '-';
+      return new Intl.NumberFormat('fr-CA', {
+        style: 'currency',
+        currency: 'CAD',
+        currencyDisplay: 'narrowSymbol'
+      }).format(value);
+    }
+    
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      try {
+        return new Date(dateStr).toLocaleDateString('fr-CA');
+      } catch (e) {
+        return dateStr;
+      }
+    }
+  </script>
+</body>
+</html>
+

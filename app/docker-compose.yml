@@ -1,0 +1,8 @@
+# Docker Compose - Superset et Docker ont été supprimés
+# Ce fichier est maintenant vide. Vous pouvez le supprimer ou ajouter d'autres services si nécessaire.
+
+services:
+  # Aucun service configuré
+
+volumes:
+  # Aucun volume configuré

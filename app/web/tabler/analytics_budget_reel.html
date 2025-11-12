@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Analyse - Budget vs Réel</title>
+    <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/responsive.bootstrap5.min.css" rel="stylesheet"/>
+    <link href="./dist/libs/datatables/css/fixedHeader.bootstrap5.min.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark"><a href="./index.html">PayrollAnalyzer</a></h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      <div class="page-wrapper">
+        <div class="page-header d-print-none sticky-top bg-white border-bottom">
+          <div class="container-xl"><h2 class="page-title">Budget vs Réel</h2></div>
+        </div>
+        <div class="page-body">
+          <div class="container mt-4">
+            <div class="card mb-3">
+              <div class="card-header"><h3 class="card-title">Écarts par poste</h3></div>
+              <div class="card-body"><div id="chart-bud" style="height:300px;"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3 class="card-title">Tableau des écarts</h3></div>
+              <div class="table-responsive">
+                <table id="tbl-bud" class="table table-bordered table-hover w-100">
+                  <thead><tr><th>Poste</th><th>Budget</th><th>Réel</th><th>Écart</th><th>Écart %</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./dist/libs/datatables/loader.js"></script>
+    <script src="./js/datatables-helper.js"></script>
+    <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
+    <script src="./js/charts-helper.js"></script>
+    <script src="./js/analytics-helpers.js"></script>
+    <script src="./dist/js/tabler.min.js"></script>
+    <script>
+      (function(){
+        document.addEventListener('DOMContentLoaded', function(){
+          ChartsHelper.mount('#chart-bud', 'bar', {
+            series: [{name:'Écart (Réel - Budget)', data: []}],
+            xaxis: { categories: [] }
+          });
+          DataTablesHelper.init('#tbl-bud', [], [
+            {title:'Poste', data:0},
+            {title:'Budget', data:1, className:'text-end', render: DataTablesHelper.formatCurrency},
+            {title:'Réel', data:2, className:'text-end', render: DataTablesHelper.formatCurrency},
+            {title:'Écart', data:3, className:'text-end', render: DataTablesHelper.formatCurrency},
+            {title:'Écart %', data:4, className:'text-end'},
+          ], { order: [[3,'asc']] });
+        });
+      })();
+    </script>
+  </body>
+  </html>
+
+

@@ -1,0 +1,45 @@
+{
+  "version": "0.1",
+  "tasks": [
+    {
+      "label": "Mypy: check",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && mypy app"
+    },
+    {
+      "label": "Ruff: lint",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && ruff check app"
+    },
+    {
+      "label": "Black: format",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && black app"
+    },
+    {
+      "label": "Isort: sort imports",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && isort app"
+    },
+    {
+      "label": "Pytest: run",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && pytest"
+    },
+    {
+      "label": "Bandit: scan",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && bandit -r app"
+    },
+    {
+      "label": "Safety: scan",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && safety check"
+    },
+    {
+      "label": "Validate DB standard",
+      "type": "shell",
+      "command": "cd C:/Users/SZERTYUIOPMLMM/Desktop/APP && python scripts/forbid_direct_db_connect.py"
+    }
+  ]
+}

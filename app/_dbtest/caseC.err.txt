@@ -1,0 +1,11 @@
+﻿2025-11-10 21:49:05 INFO config.settings: ChargÚ .env depuis: C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\.env
+2025-11-10 21:49:06 INFO config.settings: ChargÚ .env depuis: C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\.env
+2025-11-10 21:49:06 INFO services.data_repo: Connection pool initialis├® (autocommit + timeouts + keepalive + lifecycle)
+2025-11-10 21:49:06 INFO providers.postgres_provider: SUCCESS: Connexion PostgreSQL ├®tablie (app=postgresql://payroll_unified:***@127.0.0.1:5432/payroll_db?application_name=PayrollApp&sslmode=disable, db=payroll_db, user=payroll_unified)
+[2840:10020:1110/214907.744:ERROR:gpu_channel_manager.cc(966)] Failed to create GLES3 context, fallback to GLES2.
+[2840:10020:1110/214907.744:ERROR:gpu_channel_manager.cc(977)] ContextResult::kFatalFailure: Failed to create shared context for virtualization.
+[2840:10020:1110/214907.744:ERROR:gpu_channel_manager.cc(966)] Failed to create GLES3 context, fallback to GLES2.
+[2840:10020:1110/214907.744:ERROR:gpu_channel_manager.cc(977)] ContextResult::kFatalFailure: Failed to create shared context for virtualization.
+2025-11-10 21:49:20 INFO services.data_repo: Connection pool ferm├®
+2025-11-10 21:49:20 INFO services.data_repo: Connection pool ferm├®
+

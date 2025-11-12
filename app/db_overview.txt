@@ -1,0 +1,8 @@
+=== INFORMATION DE CONNEXION ===
+Base : payroll_db
+Utilisateur : payroll_unified
+
+=== KPIs (payroll.payroll_transactions) ===
+
+Statut : ERREUR
+droit refusé pour la table payroll_transactions

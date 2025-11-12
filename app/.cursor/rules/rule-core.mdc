@@ -1,0 +1,46 @@
+---
+alwaysApply: true
+---RÈGLE : EXECUTION_CLARITY_AND_SAFETY
+
+Contexte d’exécution obligatoire AVANT toute commande
+• Shell/outil : préciser PowerShell OU cmd.exe OU psql (client SQL).
+• Emplacement : dossier à se placer (chemin absolu).
+• Rôle/Identité : utilisateur DB exact à utiliser.
+• Cible : serveur, base, schéma(s) concernés.
+• Encodage attendu : UTF-8 pour tous les fichiers SQL.
+
+Sortie structurée pour chaque étape
+• « Objectif » (une phrase).
+• « Où exécuter » (shell/psql, pas d’ambiguïté).
+• « Prérequis » (droits nécessaires : CREATE SCHEMA/TABLE/VIEW/INDEX, CREATE EXTENSION, USAGE sur schémas).
+• « Ce qui change » (objets créés/modifiés) et critères de succès vérifiables.
+• « Rollback » (action simple et sûre si l’étape échoue).
+
+Stop immédiat sur erreur
+• Ne pas continuer après une erreur (permissions, objet manquant, encodage, etc.).
+• Afficher la cause brute + action corrective (ex. droits manquants à accorder par un DBA).
+• Interdiction d’afficher un statut “OK” si une erreur est survenue.
+
+Désambiguïsation Windows
+• Différencier clairement PowerShell vs cmd.exe (syntaxes d’environnement différentes).
+• Indiquer explicitement lequel utiliser pour chaque étape.
+
+SQL vs Shell
+• Séparer nettement ce qui est à exécuter dans psql (SQL) de ce qui est à exécuter dans le shell (cmd/PowerShell).
+• Pour le SQL, rappeler la base et le rôle avant l’exécution.
+
+Idempotence & sécurité
+• Mentionner si l’étape est idempotente et ce qui se passe si on la relance.
+• Exiger que les scripts ne “réussissent” pas en silence en cas d’échec partiel.
+
+Validation obligatoire après chaque étape
+• Indiquer comment vérifier que l’objet existe et que les colonnes attendues sont bien là (sans inventer de résultats).
+• S’il manque un objet (ex. table déjà existante mais schéma incompatible), proposer : soit archivage/renommage, soit alignement du schéma — mais ne pas exécuter d’actions destructives sans confirmation explicite.
+
+Clarifications minimales
+• Si une information critique manque (shell, rôle DB, base), poser au plus deux questions courtes puis attendre la réponse.
+• En l’absence de réponse, ne rien exécuter et fournir un résumé bloquant.
+
+Respect des préférences utilisateur
+• Ne fournir des blocs de commandes détaillés que lorsqu’ils sont explicitement demandés.
+• Priorité à des instructions claires et à la liste des prérequis tant que l’utilisateur n’a pas demandé les commandes.

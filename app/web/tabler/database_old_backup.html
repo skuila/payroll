@@ -1,0 +1,1327 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Gestion des Données - PayrollAnalyzer</title>
+    <link href="./dist/css/tabler.min.css?1692870487" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css?1692870487" rel="stylesheet"/>
+    <style>
+      :root {
+        --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      body {
+        font-feature-settings: "cv03", "cv04", "cv11";
+        background-color: #f5f7fb;
+      }
+      
+      /* Cards avec effet glassmorphism */
+      .card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: var(--card-shadow);
+        transition: var(--transition-smooth);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      
+      .card:hover {
+        box-shadow: var(--card-shadow-hover);
+        transform: translateY(-2px);
+      }
+      
+      .card-header {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        padding: 1.25rem 1.5rem;
+      }
+      
+      .card-title {
+        font-weight: 600;
+        font-size: 1.125rem;
+        color: #2d3748;
+        margin-bottom: 0;
+      }
+      
+      /* Statistiques avec gradients */
+      .stat-card {
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+      }
+      
+      .h1, .h2 {
+        font-weight: 700;
+      }
+      
+      .text-success {
+        color: #11998e !important;
+      }
+      
+      .text-primary {
+        color: #667eea !important;
+      }
+      
+      .text-info {
+        color: #4facfe !important;
+      }
+      
+      .text-warning {
+        color: #fa709a !important;
+      }
+      
+      /* Badges améliorés */
+      .badge {
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        letter-spacing: 0.3px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      
+      .badge.bg-success {
+        background: var(--success-gradient) !important;
+        border: none;
+      }
+      
+      .badge.bg-primary {
+        background: var(--primary-gradient) !important;
+        border: none;
+      }
+      
+      .badge.bg-info {
+        background: var(--info-gradient) !important;
+        border: none;
+      }
+      
+      .badge.bg-warning {
+        background: var(--warning-gradient) !important;
+        border: none;
+      }
+      
+      /* Boutons modernes */
+      .btn {
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 0.625rem 1.25rem;
+        transition: var(--transition-smooth);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      }
+      
+      .btn-primary {
+        background: var(--primary-gradient);
+        border: none;
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+      }
+      
+      .btn-success {
+        background: var(--success-gradient);
+        border: none;
+        color: white;
+      }
+      
+      .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        color: white;
+      }
+      
+      .btn-danger {
+        background: var(--danger-gradient);
+        border: none;
+        color: white;
+      }
+      
+      .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+        color: white;
+      }
+      
+      /* Tabs navigation */
+      .nav-tabs {
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        margin-bottom: 2rem;
+      }
+      
+      .nav-tabs .nav-link {
+        border: none;
+        color: #718096;
+        font-weight: 600;
+        padding: 1rem 1.5rem;
+        transition: var(--transition-smooth);
+        border-radius: 8px 8px 0 0;
+        position: relative;
+      }
+      
+      .nav-tabs .nav-link:hover {
+        color: #667eea;
+        background: rgba(102, 126, 234, 0.05);
+      }
+      
+      .nav-tabs .nav-link.active {
+        color: #667eea;
+        background: rgba(102, 126, 234, 0.1);
+        border-bottom: 3px solid #667eea;
+      }
+      
+      .nav-tabs .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--primary-gradient);
+        border-radius: 3px 3px 0 0;
+      }
+      
+      /* Code blocks */
+      .code-block {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        color: #e0e7ff;
+        overflow-y: auto;
+        padding: 1.25rem;
+        border-radius: 8px;
+        font-family: 'Fira Code', 'Courier New', monospace;
+        font-size: 0.875rem;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .code-block code {
+        color: #fbbf24;
+      }
+      
+      /* List groups */
+      .list-group-item {
+        border: none;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1rem 1.5rem;
+        transition: var(--transition-smooth);
+      }
+      
+      .list-group-item:hover {
+        background: rgba(102, 126, 234, 0.05);
+        transform: translateX(4px);
+      }
+      
+      .list-group-item-action:hover {
+        cursor: pointer;
+      }
+      
+      .list-group-item-danger {
+        background: rgba(245, 87, 108, 0.1);
+        border-left: 4px solid #f5576c;
+      }
+      
+      /* Alerts */
+      .alert {
+        border-radius: 8px;
+        border: none;
+        box-shadow: var(--card-shadow);
+      }
+      
+      .alert-info {
+        background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
+        border-left: 4px solid #4facfe;
+      }
+      
+      .alert-title {
+        font-weight: 600;
+        color: #2d3748;
+      }
+      
+      /* Page header */
+      .page-header {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+        backdrop-filter: blur(10px);
+        border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+        padding: 1.5rem 0;
+        margin-bottom: 2rem;
+      }
+      
+      .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      /* Sidebar */
+      .navbar-vertical {
+        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        box-shadow: 4px 0 12px rgba(0,0,0,0.1);
+      }
+      
+      .navbar-brand-autodark {
+        font-weight: 700;
+        font-size: 1.25rem;
+      }
+      
+      .navbar-vertical .nav-link {
+        transition: var(--transition-smooth);
+        border-radius: 8px;
+        margin: 0.25rem 0.5rem;
+      }
+      
+      .navbar-vertical .nav-link:hover {
+        background: rgba(102, 126, 234, 0.2);
+        transform: translateX(4px);
+      }
+      
+      .navbar-vertical .nav-link.active {
+        background: var(--primary-gradient);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      }
+      
+      /* Animations */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      
+      .loading {
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      
+      /* Icons styling */
+      .icon {
+        transition: var(--transition-smooth);
+      }
+      
+      .btn:hover .icon {
+        transform: scale(1.1);
+      }
+      
+      /* Responsive improvements */
+      @media (max-width: 768px) {
+        .card-header {
+          padding: 1rem;
+        }
+        
+        .page-title {
+          font-size: 1.5rem;
+        }
+      }
+      
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.05);
+        border-radius: 4px;
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: var(--primary-gradient);
+        border-radius: 4px;
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      }
+      
+      /* Table improvements */
+      .table {
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      
+      .table thead th {
+        background: var(--primary-gradient);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        border: none;
+      }
+      
+      .table tbody tr {
+        transition: var(--transition-smooth);
+      }
+      
+      .table tbody tr:hover {
+        background: rgba(102, 126, 234, 0.05);
+        transform: scale(1.01);
+      }
+      
+      /* Connection status indicator */
+      .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--success-gradient);
+        box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.2);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      .status-indicator.disconnected {
+        background: var(--danger-gradient);
+        box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <script src="./dist/js/tabler.min.js?1692870487" defer></script>
+    
+    <!-- Helpers format fr-CA -->
+    <script>
+      window.fmtCad = function(value) {
+        try {
+          return new Intl.NumberFormat('fr-CA', {
+            style: 'currency',
+            currency: 'CAD',
+            currencyDisplay: 'narrowSymbol',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }).format(value);
+        } catch (e) {
+          return String(value).replace('.', ',') + ' $';
+        }
+      };
+      
+      window.fmtDate = function(dateStr) {
+        try {
+          return new Intl.DateTimeFormat('fr-CA', { dateStyle: 'medium' }).format(new Date(dateStr));
+        } catch (e) {
+          return dateStr;
+        }
+      };
+    </script>
+    
+    <div class="page">
+      <!-- Sidebar -->
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark">
+            <a href="./index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-receipt" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2"></path>
+                <path d="M14 8h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5m2 0v1.5m0 -9v1.5"></path>
+              </svg>
+              PayrollAnalyzer
+            </a>
+          </h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+              <li class="nav-item active"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./assistant.html"><span class="nav-link-title">Assistant IA</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./data-viewer.html"><span class="nav-link-title">Visualiser</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Page content -->
+      <div class="page-wrapper">
+        <div class="page-header d-print-none">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <h2 class="page-title">Gestion de la base de données</h2>
+                <div class="text-secondary mt-1">PostgreSQL • payroll_db</div>
+              </div>
+              <div class="col-auto ms-auto d-print-none">
+                <button class="btn btn-primary" onclick="refreshAll()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>
+                  Actualiser
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="page-body">
+          <div class="container-xl">
+            
+            <!-- Onglets Navigation -->
+            <ul class="nav nav-tabs mb-3" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a class="nav-link active" data-bs-toggle="tab" href="#tab-conn" role="tab">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0M4 6v6a8 3 0 0 0 16 0v-6"/></svg>
+                  Connexion
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-priv" role="tab">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6zM11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0M8 11v-4a4 4 0 1 1 8 0v4"/></svg>
+                  Privilèges
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-per" role="tab">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12zM16 3v4M8 3v4M4 11h16"/></svg>
+                  Périodes
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-maint" role="tab">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065zM9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg>
+                  Maintenance
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-sql" role="tab">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path></svg>
+                  SQL
+                </a>
+              </li>
+
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-logs" role="tab">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0M3 6l0 13M12 6l0 13M21 6l0 13"/></svg>
+                  Logs
+                </a>
+              </li>
+            </ul>
+            
+            <!-- Contenu des onglets -->
+            <div class="tab-content">
+              
+              <!-- ONGLET 1: CONNEXION -->
+              <div id="tab-conn" class="tab-pane fade show active" role="tabpanel">
+                <div class="row row-cards">
+                  <!-- Architecture Migration -->
+                  <div class="col-12">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Architecture Base de Données</h3>
+                        <span class="badge bg-success ms-auto">Référentiel Employés v3.0</span>
+                      </div>
+                      <div class="card-body">
+                        <div class="row" id="migration-stats">
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0 text-success" id="stat-core-employees">-</div>
+                              <div class="text-secondary small">Employés (core.employees)</div>
+                            </div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0 text-primary" id="stat-payroll-trans">-</div>
+                              <div class="text-secondary small">Transactions (payroll)</div>
+                            </div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0 text-info" id="stat-employes-2025-08">-</div>
+                              <div class="text-secondary small">Employés 2025-08</div>
+                            </div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0 text-warning" id="stat-batch-status">-</div>
+                              <div class="text-secondary small">Batch migration</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Informations de connexion</h3>
+                        <div class="card-actions">
+                          <button class="btn btn-sm btn-primary" onclick="loadConnectionInfo()">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>
+                            Actualiser
+                          </button>
+                        </div>
+                      </div>
+                      <div class="card-body">
+                        <div id="connection-info">
+                          <div class="text-center text-secondary py-3">Chargement...</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Rôle PostgreSQL actuel</h3>
+                      </div>
+                      <div class="card-body">
+                        <div id="current-user-info">
+                          <div class="text-center text-secondary py-3">Chargement...</div>
+                        </div>
+                        <div class="mt-3">
+                          <button class="btn btn-sm btn-outline-primary" onclick="testConnection()">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M9 12l2 2l4 -4"/></svg>
+                            Tester SELECT 1
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- ONGLET 2: PRIVILÈGES -->
+              <div id="tab-priv" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Gestion des privilèges</h3>
+                    <div class="card-actions">
+                      <button class="btn btn-sm btn-primary" onclick="applyMinimalGrants()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6zM11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0M8 11v-4a4 4 0 1 1 8 0v4"/></svg>
+                        Appliquer les privilèges
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="alert alert-info">
+                      <h4 class="alert-title">Configuration requise</h4>
+                      <div class="text-secondary">
+                        Script: <code>scripts/FIX_01_roles_et_privileges.sql</code>
+                        <br>
+                        Idempotent: Peut être exécuté plusieurs fois sans erreur
+                        <br><br>
+                        <strong>Méthode 1 (Interface):</strong> Cliquez sur le bouton ci-dessus
+                        <br>
+                        <strong>Méthode 2 (Ligne de commande):</strong>
+                        <div class="code-block mt-2">
+                          psql -U postgres -d payroll_db -f scripts/FIX_01_roles_et_privileges.sql
+                        </div>
+                      </div>
+                    </div>
+                    <div class="list-group list-group-flush">
+                      <div class="list-group-item">
+                        <div class="row align-items-center">
+                          <div class="col">Schéma payroll (USAGE + SELECT/INSERT/UPDATE/DELETE)</div>
+                          <div class="col-auto" id="check-payroll">⏳</div>
+                        </div>
+                      </div>
+                      <div class="list-group-item">
+                        <div class="row align-items-center">
+                          <div class="col">Table payroll.pay_periods (CRUD complet)</div>
+                          <div class="col-auto" id="check-pay-periods">⏳</div>
+                        </div>
+                      </div>
+                      <div class="list-group-item">
+                        <div class="row align-items-center">
+                          <div class="col">Vue payroll.v_imported_payroll (SELECT)</div>
+                          <div class="col-auto" id="check-v-imported">⏳</div>
+                        </div>
+                      </div>
+                      <div class="list-group-item">
+                        <div class="row align-items-center">
+                          <div class="col">Table payroll.kpi_snapshot (CRUD complet)</div>
+                          <div class="col-auto" id="check-kpi">⏳</div>
+                        </div>
+                      </div>
+                      <div class="list-group-item">
+                        <div class="row align-items-center">
+                          <div class="col">DEFAULT PRIVILEGES configurés</div>
+                          <div class="col-auto" id="check-default">⏳</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- ONGLET 3: PÉRIODES -->
+              <div id="tab-per" class="tab-pane fade" role="tabpanel">
+                <div class="row row-cards">
+                  <div class="col-lg-8">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Outils périodes</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="list-group list-group-flush">
+                          <a href="./periods.html" class="list-group-item list-group-item-action">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon text-blue" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M12 5l0 14M5 12l14 0"/></svg>
+                              </div>
+                              <div class="col">
+                                <div class="font-weight-medium">Gérer les périodes</div>
+                                <div class="text-secondary small">Ajouter, modifier, fermer, réouvrir, supprimer</div>
+                              </div>
+                            </div>
+                          </a>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col">
+                                <div class="font-weight-medium">Fonction ensure_period()</div>
+                                <div class="text-secondary small">
+                                  Création atomique périodes (évite doublons period_seq_in_year)
+                                  <br>
+                                  Script: <code>scripts/FIX_02_ensure_period_atomique.sql</code>
+                                </div>
+                              </div>
+                              <div class="col-auto">
+                                <button class="btn btn-sm btn-primary" onclick="installEnsurePeriod()">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M12 5l0 14M5 12l14 0"/></svg>
+                                  Installer
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <a href="#" onclick="showEnsurePeriodInfo(); return false;" class="list-group-item list-group-item-action">
+                            <div class="row align-items-center">
+                              <div class="col-auto">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon text-green" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M9 12l2 2l4 -4"/></svg>
+                              </div>
+                              <div class="col">
+                                <div class="font-weight-medium">Informations ensure_period()</div>
+                                <div class="text-secondary small">Voir comment fonctionne la fonction atomique</div>
+                              </div>
+                            </div>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-lg-4">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Statistiques périodes</h3>
+                      </div>
+                      <div class="card-body">
+                        <div id="periods-stats">
+                          <div class="text-center text-secondary py-3">Chargement...</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- ONGLET 4: MAINTENANCE -->
+              <div id="tab-maint" class="tab-pane fade" role="tabpanel">
+                <div class="row row-cards">
+                  <div class="col-12">
+                    <div class="card mb-3">
+                      <div class="card-header">
+                        <h3 class="card-title">Santé de la base</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="row" id="health-stats">
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0" id="stat-periods">-</div>
+                              <div class="text-secondary small">Périodes</div>
+                            </div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0" id="stat-employees">-</div>
+                              <div class="text-secondary small">Employés</div>
+                            </div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0" id="stat-transactions">-</div>
+                              <div class="text-secondary small">Transactions</div>
+                            </div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="text-center">
+                              <div class="h1 mb-0" id="stat-db-size">-</div>
+                              <div class="text-secondary small">Taille DB</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Actions de maintenance</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="list-group list-group-flush">
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col">
+                                <div class="font-weight-medium">ANALYZE tables</div>
+                                <div class="text-secondary small">Met à jour les statistiques PostgreSQL pour optimisation</div>
+                              </div>
+                              <div class="col-auto">
+                                <button class="btn btn-sm btn-success" onclick="runAnalyze()">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0M9 12l2 2l4 -4"/></svg>
+                                  Exécuter
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col">
+                                <div class="font-weight-medium">Refresh vues matérialisées</div>
+                                <div class="text-secondary small">Actualise v_monthly_payroll_summary et autres vues</div>
+                              </div>
+                              <div class="col-auto">
+                                <button class="btn btn-sm btn-primary" onclick="refreshMaterializedViews()">Exécuter</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item">
+                            <div class="row align-items-center">
+                              <div class="col">
+                                <div class="font-weight-medium">Créer partitions année suivante</div>
+                                <div class="text-secondary small">Prépare les partitions pour l'année prochaine</div>
+                              </div>
+                              <div class="col-auto">
+                                <button class="btn btn-sm btn-outline-primary" onclick="createNextYearPartition()">Exécuter</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="list-group-item list-group-item-danger">
+                            <div class="row align-items-center">
+                              <div class="col">
+                                <div class="font-weight-medium">Supprimer transactions d'une période</div>
+                                <div class="text-secondary">⚠️ Action irréversible</div>
+                              </div>
+                              <div class="col-auto">
+                                <button class="btn btn-sm btn-danger" onclick="deleteTransactionsForPeriod()">Supprimer</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- ONGLET 5: LOGS -->
+              <div id="tab-sql" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Exécuteur SQL</h3>
+                    <div class="card-actions">
+                      <button class="btn btn-sm btn-outline-secondary" onclick="clearSqlResults()">Effacer</button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <textarea id="sql-query" class="form-control" rows="6" placeholder="SELECT * FROM core.employees LIMIT 10;"></textarea>
+                    </div>
+                    <div class="mb-3">
+                      <button class="btn btn-primary" onclick="executeCustomQuery()">Exécuter</button>
+                    </div>
+                    <div id="sql-results" style="display:none;" class="mt-3">
+                      <h4>Résultats</h4>
+                      <div id="sql-output" class="code-block">Aucun résultat</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="tab-logs" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Logs récents</h3>
+                    <div class="card-actions">
+                      <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()">Effacer</button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div id="logs-console" class="code-block">
+                      <div class="text-secondary">Aucun log pour le moment. Les logs apparaîtront ici lors des actions.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- WebChannel -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+      let appBridge = null;
+      
+      // Helper pour appels asynchrones
+      async function callBridge(methodName, ...args) {
+        if (!appBridge) throw new Error('AppBridge non disponible');
+        const resultJson = await Promise.resolve(appBridge[methodName](...args));
+        return JSON.parse(resultJson);
+      }
+      
+      // Initialisation
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔄 DOMContentLoaded - database.html');
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+          appBridge = channel.objects.AppBridge;
+          console.log('✅ WebChannel connecté (database.html)', appBridge);
+          
+          // Charger données initiales
+          loadConnectionInfo();
+          loadDbStats();
+        });
+      });
+      
+      // ONGLET CONNEXION
+      async function loadConnectionInfo() {
+        try {
+          const info = await callBridge('get_connection_info');
+          const userData = await callBridge('get_current_database_user');
+          
+          document.getElementById('connection-info').innerHTML = `
+            <div class="list-group list-group-flush">
+              <div class="list-group-item">
+                <div class="row">
+                  <div class="col-auto"><strong>Statut:</strong></div>
+                  <div class="col">
+                    <span class="badge bg-${info.status === 'connected' ? 'success' : 'danger'}">
+                      ${info.status === 'connected' ? '✓ Connecté' : '✗ Déconnecté'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="list-group-item">
+                <div class="row">
+                  <div class="col-auto"><strong>DSN:</strong></div>
+                  <div class="col"><code>${info.dsn_masked || 'N/A'}</code></div>
+                </div>
+              </div>
+              <div class="list-group-item">
+                <div class="row">
+                  <div class="col-auto"><strong>Utilisateur:</strong></div>
+                  <div class="col"><code>${info.user || 'N/A'}</code></div>
+                </div>
+              </div>
+              <div class="list-group-item">
+                <div class="row">
+                  <div class="col-auto"><strong>Host:</strong></div>
+                  <div class="col"><code>${info.host || 'N/A'}:${info.port || 'N/A'}</code></div>
+                </div>
+              </div>
+              <div class="list-group-item">
+                <div class="row">
+                  <div class="col-auto"><strong>Base:</strong></div>
+                  <div class="col"><code>${info.database || 'N/A'}</code></div>
+                </div>
+              </div>
+              <div class="list-group-item">
+                <div class="row">
+                  <div class="col-auto"><strong>Architecture:</strong></div>
+                  <div class="col">
+                    <span class="badge bg-success">
+                      ${info.architecture || 'referentiel_v3'} - Référentiel Employés v3.0
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="list-group-item">
+                <div class="row">
+                  <div class="col-auto"><strong>Timezone:</strong></div>
+                  <div class="col"><code>${info.timezone || 'America/Toronto'}</code></div>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          document.getElementById('current-user-info').innerHTML = `
+            <div class="alert alert-info mb-0">
+              <h4 class="alert-title">Rôle PostgreSQL</h4>
+              <div class="text-secondary">
+                <strong>current_user:</strong> <code>${userData.current_user || 'N/A'}</code><br>
+                <strong>session_user:</strong> <code>${userData.session_user || 'N/A'}</code>
+              </div>
+            </div>
+          `;
+          
+          log('info', `Connexion: ${info.user}@${info.host}`);
+        } catch (error) {
+          log('error', 'Erreur chargement infos connexion: ' + error);
+        }
+      }
+      
+      // Improved connection test with latency measurement and UI updates
+      async function testConnection() {
+        const start = Date.now();
+        try {
+          const res = await callBridge('execute_sql', 'SELECT 1 AS test');
+          const latency = Date.now() - start;
+          if (res && res.rows && res.rows.length > 0) {
+            log('success', `Test connexion OK (${latency} ms)`);
+            // Update latency display if present
+            const latencyEl = document.getElementById('latency-value');
+            if (latencyEl) latencyEl.textContent = `${latency} ms`;
+            showToast(`Test réussi (${latency} ms)`, 'success');
+            // Refresh details
+            await loadConnectionInfo();
+            await loadDbStats();
+            return true;
+          } else {
+            showToast('Test échoué', 'error');
+            log('error', 'Test connexion: Échec');
+            return false;
+          }
+        } catch (error) {
+          const latency = Date.now() - start;
+          showToast(`Erreur connexion: ${error}`, 'error');
+          console.error('TestConnection error:', error);
+          const latencyEl = document.getElementById('latency-value');
+          if (latencyEl) latencyEl.textContent = `Erreur`;
+          log('error', 'Test connexion: ' + error);
+          return false;
+        }
+      }
+
+      // SQL Executor functions
+      async function executeCustomQuery() {
+        const query = document.getElementById('sql-query').value.trim();
+        if (!query) return;
+        try {
+          const result = await callBridge('execute_sql', query);
+          const output = document.getElementById('sql-output');
+          if (!output) return;
+          // Normalize rows: expect result.rows as array of arrays
+          if (result.rows && result.rows.length > 0) {
+            // Build table from rows
+            let html = '<div class="table-responsive"><table class="table table-sm table-striped">';
+            const colCount = result.rows[0].length;
+            html += '<thead><tr>';
+            for (let i = 0; i < colCount; i++) html += `<th>c${i+1}</th>`;
+            html += '</tr></thead><tbody>';
+            for (const row of result.rows) {
+              html += '<tr>';
+              for (const cell of row) html += `<td>${cell === null ? '' : cell}</td>`;
+              html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+            output.innerHTML = html;
+          } else {
+            output.textContent = 'Requête exécutée: aucune ligne retournée.';
+          }
+          document.getElementById('sql-results').style.display = 'block';
+          log('success', 'Requête SQL exécutée');
+        } catch (err) {
+          const out = document.getElementById('sql-output');
+          if (out) out.textContent = `Erreur: ${err}`;
+          const container = document.getElementById('sql-results');
+          if (container) container.style.display = 'block';
+          log('error', 'Erreur exécution SQL: ' + err);
+        }
+      }
+
+      function clearSqlResults() {
+        const output = document.getElementById('sql-output');
+        if (output) output.innerHTML = 'Aucun résultat';
+        const container = document.getElementById('sql-results');
+        if (container) container.style.display = 'none';
+        const q = document.getElementById('sql-query');
+        if (q) q.value = '';
+      }
+
+      // Simple toast helper (bootstrap toast must be available via Tabler)
+      function showToast(message, type = 'info') {
+        try {
+          const toastEl = document.getElementById('liveToast');
+          if (!toastEl) {
+            log(type === 'error' ? 'error' : 'info', message);
+            return;
+          }
+          const msg = document.getElementById('toast-message');
+          if (msg) msg.textContent = message;
+          const toast = new bootstrap.Toast(toastEl);
+          toast.show();
+        } catch (e) {
+          console.error('showToast error', e);
+          log(type === 'error' ? 'error' : 'info', message);
+        }
+      }
+      
+      // ONGLET PÉRIODES & MAINTENANCE
+      async function loadDbStats() {
+        console.log('🔄 loadDbStats() appelée');
+        try {
+          console.log('🔄 Appel callBridge get_db_stats...');
+          const stats = await callBridge('get_db_stats');
+          console.log('✅ Stats reçues:', stats);
+          
+          document.getElementById('stat-periods').textContent = stats.total_periods || '-';
+          document.getElementById('stat-employees').textContent = stats.active_employees || '-';
+          document.getElementById('stat-transactions').textContent = (stats.total_transactions || 0).toLocaleString('fr-CA');
+          document.getElementById('stat-db-size').textContent = stats.db_size_mb ? `${stats.db_size_mb} MB` : '-';
+          
+          console.log('✅ Éléments HTML mis à jour');
+          
+          // STATISTIQUES MIGRATION (nouvelles tables)
+          await loadMigrationStats();
+          
+          // Stats périodes
+          document.getElementById('periods-stats').innerHTML = `
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="text-center">
+                  <div class="h2 mb-0">${stats.total_periods || 0}</div>
+                  <div class="text-secondary small">Total</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="text-center">
+                  <div class="h2 mb-0 text-success">${stats.open_periods || 0}</div>
+                  <div class="text-secondary small">Ouvertes</div>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          log('info', 'Stats DB chargées');
+          console.log('✅ loadDbStats() terminée avec succès');
+        } catch (error) {
+          console.error('❌ Erreur dans loadDbStats():', error);
+          log('error', 'Erreur chargement stats: ' + error);
+        }
+      }
+      
+      // GESTION PRIVILEGES ET PERIODS
+      async function applyMinimalGrants() {
+        if (!confirm('Appliquer les privilèges minimaux?\n\nCette opération configure les droits PostgreSQL pour le rôle payroll_app.')) return;
+        
+        try {
+          const result = await callBridge('apply_minimal_grants');
+          if (result.success) {
+            alert('✅ ' + result.message + '\n\n' + result.details);
+            log('success', 'Privilèges appliqués: ' + result.details);
+          } else {
+            alert('❌ Erreur: ' + result.message);
+            log('error', result.message);
+          }
+        } catch (error) {
+          alert('❌ Erreur: ' + error);
+          log('error', 'Erreur apply_minimal_grants: ' + error);
+        }
+      }
+      
+      async function installEnsurePeriod() {
+        if (!confirm('Installer la fonction ensure_period()?\n\nCette fonction permet la création atomique de périodes (thread-safe).')) return;
+        
+        try {
+          const result = await callBridge('install_ensure_period');
+          if (result.success) {
+            alert('✅ ' + result.message + '\n\n' + result.details);
+            log('success', 'ensure_period() installé: ' + result.details);
+          } else {
+            alert('❌ Erreur: ' + result.message);
+            log('error', result.message);
+          }
+        } catch (error) {
+          alert('❌ Erreur: ' + error);
+          log('error', 'Erreur install_ensure_period: ' + error);
+        }
+      }
+      
+      async function runAnalyze() {
+        if (!confirm('Exécuter ANALYZE sur les tables principales?\n\nCela met à jour les statistiques PostgreSQL pour optimiser les requêtes.')) return;
+        
+        try {
+          const result = await callBridge('run_analyze');
+          if (result.success) {
+            const tables = result.tables || [];
+            alert('✅ ' + result.message + '\n\nTables: ' + tables.join(', '));
+            log('success', `ANALYZE: ${tables.length} tables`);
+          } else {
+            alert('❌ Erreur: ' + result.message);
+            log('error', result.message);
+          }
+        } catch (error) {
+          alert('❌ Erreur: ' + error);
+          log('error', 'Erreur run_analyze: ' + error);
+        }
+      }
+      
+      function showEnsurePeriodInfo() {
+        alert(`Fonction ensure_period()
+
+Créée via: scripts/FIX_02_ensure_period_atomique.sql
+
+Avantages:
+✅ Thread-safe (advisory lock par année)
+✅ Idempotent (appeler N fois = même ID)
+✅ Pas de doublon period_seq_in_year
+✅ Performance optimale
+
+Utilisation Python:
+  period_id = repo.run_query(
+    "SELECT payroll.ensure_period(%(d)s)",
+    {"d": date(2025, 8, 28)},
+    fetch_one=True
+  )[0]`);
+      }
+      
+      async function refreshMaterializedViews() {
+        if (!confirm('Actualiser les vues matérialisées?')) return;
+        
+        try {
+          const result = await callBridge('refresh_materialized_views');
+          if (result.success) {
+            alert('✅ ' + result.message);
+            log('success', 'Vues matérialisées actualisées');
+          } else {
+            alert('❌ Erreur: ' + result.message);
+            log('error', result.message);
+          }
+        } catch (error) {
+          alert('❌ Erreur: ' + error);
+          log('error', 'Erreur refresh vues: ' + error);
+        }
+      }
+      
+      async function createNextYearPartition() {
+        const year = new Date().getFullYear() + 1;
+        if (!confirm(`Créer les partitions pour ${year}?`)) return;
+        
+        try {
+          const result = await callBridge('create_next_year_partition');
+          if (result.success) {
+            alert('✅ ' + result.message);
+            log('success', `Partitions ${year} créées`);
+          } else {
+            alert('❌ Erreur: ' + result.message);
+            log('error', result.message);
+          }
+        } catch (error) {
+          alert('❌ Erreur: ' + error);
+          log('error', 'Erreur partitions: ' + error);
+        }
+      }
+      
+      async function deleteTransactionsForPeriod() {
+        const periodDate = prompt('⚠️ DANGER\n\nDate de la période (YYYY-MM-DD)?');
+        if (!periodDate) return;
+        
+        if (!confirm(`CONFIRMER suppression de TOUTES les transactions du ${periodDate}?\n\nIRRÉVERSIBLE!`)) return;
+        
+        try {
+          const result = await callBridge('delete_transactions_for_period', periodDate);
+          if (result.success) {
+            alert(`✅ ${result.deleted_count} transactions supprimées`);
+            log('warning', `${result.deleted_count} transactions supprimées pour ${periodDate}`);
+            loadDbStats();
+          } else {
+            alert('❌ Erreur: ' + result.message);
+            log('error', result.message);
+          }
+        } catch (error) {
+          alert('❌ Erreur: ' + error);
+          log('error', 'Erreur suppression: ' + error);
+        }
+      }
+      
+      // Charger statistiques migration
+      async function loadMigrationStats() {
+        try {
+          // Compter employés dans core.employees
+          const empResult = await callBridge('execute_sql', 'SELECT COUNT(*) FROM core.employees');
+          if (empResult.rows && empResult.rows.length > 0) {
+            document.getElementById('stat-core-employees').textContent = empResult.rows[0][0].toLocaleString('fr-CA');
+          }
+          
+          // Compter transactions dans payroll.payroll_transactions
+          const transResult = await callBridge('execute_sql', 'SELECT COUNT(*) FROM payroll.payroll_transactions');
+          if (transResult.rows && transResult.rows.length > 0) {
+            document.getElementById('stat-payroll-trans').textContent = transResult.rows[0][0].toLocaleString('fr-CA');
+          }
+          
+          // Compter employés période 2025-08
+          const emp2025Result = await callBridge('execute_sql', "SELECT COUNT(DISTINCT employee_id) FROM payroll.payroll_transactions WHERE TO_CHAR(pay_date, 'YYYY-MM') = '2025-08'");
+          if (emp2025Result.rows && emp2025Result.rows.length > 0) {
+            document.getElementById('stat-employes-2025-08').textContent = emp2025Result.rows[0][0].toLocaleString('fr-CA');
+          }
+          
+          // Statut dernier batch
+          const batchResult = await callBridge('execute_sql', 'SELECT status FROM payroll.import_batches ORDER BY batch_id DESC LIMIT 1');
+          if (batchResult.rows && batchResult.rows.length > 0) {
+            const status = batchResult.rows[0][0];
+            document.getElementById('stat-batch-status').textContent = status;
+            document.getElementById('stat-batch-status').className = 'h1 mb-0 ' + (status === 'completed' ? 'text-success' : 'text-warning');
+          }
+          
+          log('success', 'Statistiques migration chargées');
+        } catch (error) {
+          log('error', 'Erreur chargement stats migration: ' + error);
+        }
+      }
+      
+      // UTILITAIRES
+      async function refreshAll() {
+        loadConnectionInfo();
+        loadDbStats();
+        log('info', 'Actualisation complète');
+      }
+      
+      function log(type, message) {
+        const logs = document.getElementById('logs-console');
+        if (!logs) return;
+        
+        const timestamp = new Date().toLocaleTimeString('fr-CA');
+        const emoji = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+        const color = { success: 'text-success', error: 'text-danger', warning: 'text-warning', info: 'text-info' };
+        
+        const logEntry = document.createElement('div');
+        logEntry.className = `${color[type] || 'text-secondary'} small mb-1`;
+        logEntry.textContent = `${timestamp} ${emoji[type] || '•'} ${message}`;
+        
+        logs.appendChild(logEntry);
+        logs.scrollTop = logs.scrollHeight;
+      }
+      
+      function clearLogs() {
+        document.getElementById('logs-console').innerHTML = '<div class="text-secondary">Logs effacés</div>';
+      }
+    </script>
+  </body>
+</html>

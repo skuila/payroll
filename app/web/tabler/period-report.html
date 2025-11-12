@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Rapport Période - PayrollAnalyzer</title>
+    <link href="./dist/css/tabler.min.css?1692870487" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css?1692870487" rel="stylesheet"/>
+    <style>
+      /* OFFLINE: CDN Inter removed - using system font stack */
+      :root { --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+      .table-rank { width: 60px; text-align: center; font-weight: bold; }
+      .rank-gold { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
+      .rank-silver { background: linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%); color: white; }
+      .rank-bronze { background: linear-gradient(135deg, #CD7F32 0%, #B8860B 100%); color: white; }
+    </style>
+  </head>
+  <body>
+    <script src="./dist/js/tabler.min.js?1692870487" defer></script>
+    
+    <script>
+      window.fmtCad = function(value) {
+        try {
+          return new Intl.NumberFormat('fr-CA', {
+            style: 'currency',
+            currency: 'CAD',
+            currencyDisplay: 'narrowSymbol',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }).format(value);
+        } catch (e) {
+          return String(value).replace('.', ',') + ' $';
+        }
+      };
+      
+      window.fmtDate = function(dateStr) {
+        try {
+          return new Intl.DateTimeFormat('fr-CA', { dateStyle: 'long' }).format(new Date(dateStr));
+        } catch (e) {
+          return dateStr;
+        }
+      };
+    </script>
+    
+    <div class="page">
+      <!-- Sidebar -->
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark">
+            <a href="./index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-receipt" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2"></path>
+              </svg>
+              PayrollAnalyzer
+            </a>
+          </h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./assistant.html"><span class="nav-link-title">Assistant IA</span></a></li>
+              <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      
+      <div class="page-wrapper">
+        <div class="page-header d-print-none">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <div class="page-pretitle">Rapport détaillé</div>
+                <h2 class="page-title">
+                  Période du <span id="period-date-title">...</span>
+                </h2>
+              </div>
+              <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                  <button class="btn btn-secondary" onclick="window.history.back()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 11l-4 4l4 4m-4 -4h11a4 4 0 0 0 0 -8h-1" /></svg>
+                    Retour
+                  </button>
+                  <button class="btn btn-primary" onclick="window.print()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2" /><path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4" /><path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z" /></svg>
+                    Imprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="page-body">
+          <div class="container-xl">
+            
+            <!-- KPI Cards -->
+            <div class="row row-deck row-cards mb-4">
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Employés</div>
+                    </div>
+                    <div class="h1 mb-0" id="kpi-nb-employes">-</div>
+                    <div class="text-secondary small">Nombre total</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Salaire Brut</div>
+                    </div>
+                    <div class="h1 mb-0 text-success" id="kpi-brut">0,00 $</div>
+                    <div class="text-secondary small">Total période</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Déductions</div>
+                    </div>
+                    <div class="h1 mb-0 text-danger" id="kpi-deductions">0,00 $</div>
+                    <div class="text-secondary small">Total période</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-center">
+                      <div class="subheader">Salaire Net Global</div>
+                    </div>
+                    <div class="h1 mb-0 text-primary" id="kpi-net-total">0,00 $</div>
+                    <div class="text-secondary small">Total période</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Table Employés -->
+            <div class="row row-cards">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Classement des employés par salaire net</h3>
+                    <div class="ms-auto">
+                      <input type="text" class="form-control" placeholder="Rechercher..." id="search-employee" onkeyup="filterEmployees()">
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-vcenter card-table">
+                      <thead>
+                        <tr>
+                          <th class="table-rank">Rang</th>
+                          <th>Matricule</th>
+                          <th>Nom complet</th>
+                          <th class="text-end">Salaire Net</th>
+                          <th class="text-center">Nb lignes</th>
+                        </tr>
+                      </thead>
+                      <tbody id="employees-table-body">
+                        <tr>
+                          <td colspan="5" class="text-center text-secondary py-4">Chargement...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="card-footer d-flex align-items-center">
+                    <p class="m-0 text-secondary">Total : <span id="total-employees">0</span> employés</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- WebChannel -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+      let appBridge = null;
+      let allEmployees = [];
+      let currentPeriod = '';
+      
+      document.addEventListener('DOMContentLoaded', function() {
+        // Récupérer la date de période depuis l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        currentPeriod = urlParams.get('date') || '2025-01-15'; // Date par défaut
+        
+        // Init WebChannel
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+          appBridge = channel.objects.AppBridge;
+          console.log('✓ WebChannel connecté (period-report.html)');
+          
+          loadPeriodReport();
+        });
+      });
+      
+      function loadPeriodReport() {
+        if (!appBridge) {
+          console.error('AppBridge non disponible');
+          return;
+        }
+        
+        try {
+          const reportJson = appBridge.get_period_report(currentPeriod);
+          const report = JSON.parse(reportJson);
+          
+          if (!report.success) {
+            alert('❌ Erreur : ' + report.message);
+            return;
+          }
+          
+          // Afficher date
+          document.getElementById('period-date-title').textContent = window.fmtDate(report.pay_date);
+          
+          // Afficher KPI
+          document.getElementById('kpi-nb-employes').textContent = report.kpi.nb_employes;
+          document.getElementById('kpi-brut').textContent = window.fmtCad(report.kpi.brut);
+          document.getElementById('kpi-deductions').textContent = window.fmtCad(Math.abs(report.kpi.deductions));
+          document.getElementById('kpi-net-total').textContent = window.fmtCad(report.kpi.net_total);
+          
+          // Stocker et afficher employés
+          allEmployees = report.employees;
+          displayEmployees(allEmployees);
+          
+          console.log('✓ Rapport chargé:', report);
+          
+        } catch (error) {
+          console.error('Erreur chargement rapport:', error);
+          alert('❌ Erreur : ' + error);
+        }
+      }
+      
+      function displayEmployees(employees) {
+        const tbody = document.getElementById('employees-table-body');
+        
+        if (!employees || employees.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary py-4">Aucun employé trouvé</td></tr>';
+          document.getElementById('total-employees').textContent = '0';
+          return;
+        }
+        
+        tbody.innerHTML = employees.map(emp => {
+          let rankClass = '';
+          let rankIcon = '';
+          
+          if (emp.rang === 1) {
+            rankClass = 'rank-gold';
+            rankIcon = '🥇';
+          } else if (emp.rang === 2) {
+            rankClass = 'rank-silver';
+            rankIcon = '🥈';
+          } else if (emp.rang === 3) {
+            rankClass = 'rank-bronze';
+            rankIcon = '🥉';
+          }
+          
+          return `
+            <tr>
+              <td class="table-rank ${rankClass}">${rankIcon ? rankIcon : emp.rang}</td>
+              <td><code>${emp.matricule}</code></td>
+              <td><strong>${emp.nom_complet}</strong></td>
+              <td class="text-end"><strong>${window.fmtCad(emp.salaire_net)}</strong></td>
+              <td class="text-center"><span class="badge bg-secondary">${emp.nb_lignes}</span></td>
+            </tr>
+          `;
+        }).join('');
+        
+        document.getElementById('total-employees').textContent = employees.length;
+      }
+      
+      function filterEmployees() {
+        const search = document.getElementById('search-employee').value.toLowerCase();
+        const filtered = allEmployees.filter(e => 
+          e.matricule.toLowerCase().includes(search) ||
+          e.nom_complet.toLowerCase().includes(search)
+        );
+        displayEmployees(filtered);
+      }
+    </script>
+  </body>
+</html>
+

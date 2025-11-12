@@ -1,0 +1,25 @@
+﻿2025-11-10 21:49:03 INFO config.settings: ChargÚ .env depuis: C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\.env
+Traceback (most recent call last):
+  File "C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\launch_payroll.py", line 87, in main
+    with psycopg.connect(dsn_runtime, connect_timeout=5) as conn:
+         ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SZERTYUIOPMLMM\Desktop\APP\.venv\Lib\site-packages\psycopg\connection.py", line 120, in connect
+    raise last_ex.with_traceback(None)
+psycopg.OperationalError: connection failed: connection to server at "127.0.0.1", port 5432 failed: FATAL:  authentification par mot de passe \ufffdchou\ufffde pour l'utilisateur  \ufffd payroll_unified \ufffd
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\launch_payroll.py", line 114, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\launch_payroll.py", line 93, in main
+    print(f"ERROR: Úchec de connexion PostgreSQL: {e}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SZERTYUIOPMLMM\Desktop\APP\app\config\settings.py", line 214, in _safe_print
+    return _orig_print(*new_args, **kwargs)
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\ufffd' in position 154: character maps to <undefined>
+

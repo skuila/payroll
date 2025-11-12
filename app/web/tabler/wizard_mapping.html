@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Wizard Mapping — PayrollAnalyzer</title>
+  <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+  <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+</head>
+<body>
+  <script src="./dist/js/tabler.min.js"></script>
+  
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+      <div class="container-fluid">
+        <h1 class="navbar-brand"><a href="./index.html">PayrollAnalyzer</a></h1>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav pt-lg-3">
+            <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./periods.html"><span class="nav-link-title">Périodes</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
+            <li class="nav-item active"><a class="nav-link" href="./wizard_mapping.html"><span class="nav-link-title">Wizard Mapping</span></a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Page content -->
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div class="container-xl">
+          <h2 class="page-title">Configuration du Mapping</h2>
+          <div class="page-subtitle">Associer les colonnes du fichier aux champs de la base</div>
+        </div>
+      </div>
+      
+      <div class="page-body">
+        <div class="container-xl">
+          
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Champs disponibles</h3>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-vcenter">
+                  <thead>
+                    <tr>
+                      <th>Champ</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fields-list">
+                    <!-- Rempli par JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Liste des champs canoniques avec noms corrigés
+    const fields = [
+      "N de ligne","catégorie d'emploi","code emploi","titre d'emploi","date de paie",
+      "matricule","employé","catégorie de paie","code de paie","description du code de paie",
+      "poste budgétaire","description du poste budgétaire","montant","part employeur","montant combiné"
+    ];
+    
+    // Remplir le tableau
+    const fieldsList = document.getElementById('fields-list');
+    fields.forEach((field, idx) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${field}</strong></td>
+        <td>Colonne ${idx + 1}</td>
+      `;
+      fieldsList.appendChild(row);
+    });
+  </script>
+  
+</body>
+</html>
+

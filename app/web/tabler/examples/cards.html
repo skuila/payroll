@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Cards - Tabler</title>
+    <link href="../dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="../dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="page">
+      <header class="navbar navbar-expand-md navbar-light d-print-none">
+        <div class="container-xl">
+          <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
+            <a href="dashboard.html">PayrollAnalyzer - Cards Demo</a>
+          </h1>
+        </div>
+      </header>
+      <div class="page-wrapper">
+        <div class="page-header d-print-none">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <h2 class="page-title">Exemples de Cartes Tabler</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="row row-deck row-cards">
+              <!-- Simple Card -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Carte Simple</h3>
+                  </div>
+                  <div class="card-body">
+                    Ceci est une carte simple avec un titre et du contenu.
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card with footer -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Carte avec Footer</h3>
+                  </div>
+                  <div class="card-body">
+                    Contenu de la carte avec un footer en bas.
+                  </div>
+                  <div class="card-footer">
+                    <button class="btn btn-primary">Action</button>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card with status -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card">
+                  <div class="card-status-top bg-primary"></div>
+                  <div class="card-header">
+                    <h3 class="card-title">Carte avec Status</h3>
+                  </div>
+                  <div class="card-body">
+                    Carte avec une barre de statut colorée en haut.
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card with list -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Liste d'Employés</h3>
+                  </div>
+                  <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                      <div class="row align-items-center">
+                        <div class="col-auto">
+                          <span class="avatar">JD</span>
+                        </div>
+                        <div class="col text-truncate">
+                          <strong>Jean Dupont</strong>
+                          <div class="text-muted">Finance</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="list-group-item">
+                      <div class="row align-items-center">
+                        <div class="col-auto">
+                          <span class="avatar">MM</span>
+                        </div>
+                        <div class="col text-truncate">
+                          <strong>Marie Martin</strong>
+                          <div class="text-muted">RH</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Stats Card -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="subheader">Salaire Moyen</div>
+                    <div class="h1 mb-0">62,450 $</div>
+                    <div class="text-muted">Tous départements</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Alert Card -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="alert alert-warning mb-0" role="alert">
+                      <div class="d-flex">
+                        <div>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12.01" y2="8" /><polyline points="11 12 12 12 12 16 13 16" /></svg>
+                        </div>
+                        <div>
+                          <h4 class="alert-title">Attention!</h4>
+                          <div class="text-muted">3 périodes nécessitent une révision.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="../dist/js/tabler.min.js"></script>
+    <script src="../app_bridge.js"></script>
+  </body>
+</html>
+
