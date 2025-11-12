@@ -7,7 +7,6 @@ Script de test autonome (fonctionne sans dépendre d'autres scripts):
 
 import sys
 from datetime import date, datetime
-from datetime import datetime
 
 
 try:

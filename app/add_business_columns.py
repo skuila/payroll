@@ -11,13 +11,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.providers.postgres_provider import PostgresProvider
 from datetime import datetime
-from datetime import datetime
 
 
 def add_business_columns():
     """Ajouter des colonnes métier utiles"""
 
-    p = PostgresProvider()
+    _p = PostgresProvider()  # Provider initialisé mais non utilisé directement
 
     print("=== AJOUT DE COLONNES MÉTIER ===\n")
 

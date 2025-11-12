@@ -3,13 +3,14 @@
 """Diagnostic complet des charts/KPI non fonctionnels"""
 import sys
 import io
+import json
+import os
+import requests
 
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-"""Outils de diagnostic sans dépendances HTTP (API supprimée)."""
-import json
-import os
+session = requests.Session()
 
 print("=" * 70)
 print("DIAGNOSTIC - CHARTS/KPI NON FONCTIONNELS")
@@ -261,9 +262,6 @@ print("-" * 70)
 
 sys.path.insert(0, ".")
 from app.services.data_repo import DataRepository
-import requests
-
-session = requests.Session()
 
 
 try:
