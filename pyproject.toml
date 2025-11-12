@@ -1,4 +1,4 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=67"]
 build-backend = "setuptools.build_meta"
 
@@ -30,10 +30,8 @@ target-version = "py311"
 line-length = 88
 src = ["app", "tests"]
 fix = false
-exclude = ["archive/legacy_non_standard/**"]
 
 [tool.ruff.lint]
-per-file-ignores = {"app/ui/*.py" = ["E722", "F841", "E401"]}
 
 [tool.pytest.ini_options]
 minversion = "8.0"
