@@ -46,7 +46,7 @@ def parse_amount_neutral(value: Any, context: str = "") -> Optional[float]:
 
     # Retirer caractères non numériques courants
     # NBSP (non-breaking space U+202F et U+00A0)
-    cleaned = raw_value.replace("\u202F", "").replace("\u00A0", "")
+    cleaned = raw_value.replace("\u202f", "").replace("\u00a0", "")
     cleaned = cleaned.replace("$", "").replace("CA", "").replace("CAD", "")
 
     # Retirer tous les espaces

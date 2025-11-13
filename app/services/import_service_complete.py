@@ -5,7 +5,7 @@ Pipeline complet: Import → KPI Snapshot → Signal WebChannel
 
 Responsabilités:
 - Validation période (ouverte/fermée)
-- Calcul checksum + détection doublons  
+- Calcul checksum + détection doublons
 - Parsing Excel + normalisation colonnes
 - Mapping lignes -> dimensions (employees, pay_codes, budget_posts)
 - Application sign_policy

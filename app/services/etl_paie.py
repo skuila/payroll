@@ -349,7 +349,7 @@ class ETLPaie:
         raw = raw.replace("$", "").replace("CA", "").replace("CAD", "")
 
         # Retirer espaces (y compris insécables U+00A0 et U+202F)
-        raw = raw.replace("\u00A0", "").replace("\u202F", "")
+        raw = raw.replace("\u00a0", "").replace("\u202f", "")
         raw = re.sub(r"\s+", "", raw)
 
         # Gérer virgule comme décimale
