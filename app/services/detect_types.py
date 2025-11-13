@@ -537,12 +537,12 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
     # ========== PARSING INPUT ==========
 
     try:
-        import pandas as pd
-
-        is_pandas = isinstance(df, pd.DataFrame)
+        import pandas as pd  # type: ignore[import]
     except Exception as _exc:
+        pd = None  # type: ignore[assignment]
         is_pandas = False
-        pd = None
+    else:
+        is_pandas = isinstance(df, pd.DataFrame)
 
     if is_pandas:
         headers = [str(h) for h in df.columns]
@@ -608,14 +608,14 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
         reverse=True,
     )
 
-    taken_cols = set()
-    mapping = {}
-    confidence = {}
-    scores_detail = {}
+    taken_cols: set[int] = set()
+    mapping: Dict[str, Optional[int]] = {}
+    confidence: Dict[str, float] = {}
+    scores_detail: Dict[str, List[Tuple[int, float]]] = {}
 
     for type_name in types_by_priority:
         # Trier colonnes par score décroissant
-        ranked = sorted(
+        ranked: List[Tuple[int, float]] = sorted(
             [(col_idx, scores_matrix[type_name][col_idx]) for col_idx in range(n_cols)],
             key=lambda x: -x[1],
         )
@@ -639,10 +639,11 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
     min_accept = registry["ui"].get("min_confidence_accept", 0.70)
     min_warn = registry["ui"].get("min_confidence_warn", 0.50)
 
-    for type_name, col_idx in mapping.items():
+    for type_name, col_idx_opt in mapping.items():
         conf = confidence[type_name]
 
-        if col_idx is not None:
+        if col_idx_opt is not None:
+            col_idx = col_idx_opt
             col_name = headers[col_idx]
             if conf >= min_accept:
                 notes.append(
@@ -683,7 +684,7 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
 # ========== TESTS ==========
 
 if __name__ == "__main__":
-    import yaml
+    import yaml  # type: ignore[import]
     from pathlib import Path
 
     print("=" * 70)

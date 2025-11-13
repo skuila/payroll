@@ -32,8 +32,8 @@ def fetch_employees(limit: Optional[int] = None) -> Iterable[tuple]:
     """Récupère la liste des employés depuis la base."""
     query = DEFAULT_QUERY
     if limit:
-        query = f"{DEFAULT_QUERY}\nLIMIT %s"
-        return run_select(query, [limit])
+        query = f"{DEFAULT_QUERY}\nLIMIT %(limit)s"
+        return run_select(query, {"limit": limit})
     return run_select(query)
 
 

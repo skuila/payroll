@@ -1,6 +1,7 @@
 from collections import Counter
+from typing import Counter as CounterType
 
-c = Counter()
+c: CounterType[str] = Counter()
 try:
     for line in open("ruff-remaining.txt", "r", encoding="utf-8"):
         parts = line.split()

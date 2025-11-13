@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 """Test rapide de la méthode get_periods()"""
 
-import sys
 import json
-from pathlib import Path
 
-# Ajouter le répertoire parent au path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-# Charger .env AVANT tout
 from dotenv import load_dotenv
+from app.providers.postgres_provider import PostgresProvider
 
 load_dotenv()
-
-from app.providers.postgres_provider import PostgresProvider
 
 print("=" * 70)
 print("TEST DE get_periods()")
@@ -38,7 +31,11 @@ try:
     ORDER BY pay_date DESC
     """
 
-    result = provider.repo.run_query(sql, {})
+    repo = provider.repo
+    if repo is None:
+        raise RuntimeError("Connexion base de données indisponible.")
+
+    result = repo.run_query(sql)
     print(f"📊 Résultat: {len(result) if result else 0} lignes")
     print()
 

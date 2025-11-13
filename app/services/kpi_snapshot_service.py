@@ -48,7 +48,7 @@ class KPISnapshotService:
         3. Insérer le nouveau snapshot
 
         Args:
-            period: Période au format YYYY-MM (ex: '2025-01')
+            period: Date de paie au format YYYY-MM-DD (ex: '2025-01-15')
 
         Returns:
             dict avec les KPI calculés
@@ -77,7 +77,7 @@ class KPISnapshotService:
         Si snapshot inexistant, calcule à la volée.
 
         Args:
-            period: Période au format YYYY-MM (ex: '2025-01')
+            period: Date de paie au format YYYY-MM-DD (ex: '2025-01-15')
 
         Returns:
             dict avec structure:
@@ -130,7 +130,7 @@ class KPISnapshotService:
 
     def _calculate_kpi(self, period: str) -> dict[str, Any]:
         """
-        Calcule les KPI pour une période depuis payroll_transactions.
+        Calcule les KPI pour une date de paie précise depuis payroll_transactions.
 
         Structure retournée:
         {
@@ -163,34 +163,20 @@ class KPISnapshotService:
         """Calcule les KPI cartes (agrégats globaux) - LOGIQUE CORRECTE."""
         sql = """
         SELECT 
-            -- Salaire net total (somme simple de tous les montants employé)
-            COALESCE(SUM(amount_employee_norm_cents) / 100.0, 0) as salaire_net_total,
-            
-            -- Masse salariale (montants positifs employé) - pour information
-            COALESCE(SUM(CASE WHEN amount_employee_norm_cents > 0 THEN amount_employee_norm_cents ELSE 0 END) / 100.0, 0) as masse_salariale,
-            
-            -- Déductions (montants négatifs employé) - pour information
-            COALESCE(SUM(CASE WHEN amount_employee_norm_cents < 0 THEN amount_employee_norm_cents ELSE 0 END) / 100.0, 0) as deductions,
-            
-            -- Masse employeur
-            COALESCE(SUM(amount_employer_norm_cents) / 100.0, 0) as masse_employeur,
-            
-            -- Net moyen (salaire net total / nb employés)
+            COALESCE(SUM(amount_cents) / 100.0, 0) AS salaire_net_total,
+            COALESCE(SUM(CASE WHEN amount_cents > 0 THEN amount_cents ELSE 0 END) / 100.0, 0) AS masse_salariale,
+            COALESCE(SUM(CASE WHEN amount_cents < 0 THEN amount_cents ELSE 0 END) / 100.0, 0) AS deductions,
+            0.0 AS masse_employeur,
             CASE 
-                WHEN COUNT(DISTINCT employee_id) > 0 
-                THEN (SUM(amount_employee_norm_cents) / 100.0) / COUNT(DISTINCT employee_id)
+                WHEN COUNT(DISTINCT COALESCE(employee_id::text, '')) > 0
+                THEN (SUM(amount_cents) / 100.0) / COUNT(DISTINCT COALESCE(employee_id::text, ''))
                 ELSE 0
-            END as net_moyen,
-            
-            -- Nombre d'employés distincts
-            COUNT(DISTINCT employee_id) as nb_employes,
-            
-            -- Nombre de transactions
-            COUNT(*) as nb_transactions
-        
+            END AS net_moyen,
+            COUNT(DISTINCT COALESCE(employee_id::text, '')) AS nb_employes,
+            COUNT(*) AS nb_transactions
         FROM payroll.payroll_transactions pt
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
+        JOIN payroll.pay_periods pp ON pt.pay_date = pp.pay_date
+        WHERE pp.pay_date = %(period)s::date
         """
 
         result = self.repo.run_query(sql, {"period": period}, fetch_one=True)
@@ -241,19 +227,19 @@ class KPISnapshotService:
         """Récupère les anomalies (nets négatifs, montants suspects)."""
         sql = """
         SELECT 
-            e.matricule,
-            e.nom || ' ' || e.prenom as nom_prenom,
-            pc.label as code_label,
-            pt.amount_employee_norm_cents / 100.0 as montant,
-            pp.pay_date::text as date_paie,
-            'Net négatif' as type_anomalie
+            COALESCE(e.matricule, pt.employee_id::text) AS matricule,
+            COALESCE(e.nom || ' ' || e.prenom, 'N/A') AS nom_prenom,
+            COALESCE(pc.label, pt.pay_code) AS code_label,
+            pt.amount_cents / 100.0 AS montant,
+            pp.pay_date::text AS date_paie,
+            'Net négatif' AS type_anomalie
         FROM payroll.payroll_transactions pt
-        JOIN core.employees e ON pt.employee_id = e.employee_id
-        JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
-          AND pt.amount_employee_norm_cents < -100000  -- < -1000$ (suspect)
-        ORDER BY pt.amount_employee_norm_cents ASC
+        LEFT JOIN core.employees e ON pt.employee_id = e.employee_id
+        LEFT JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
+        JOIN payroll.pay_periods pp ON pt.pay_date = pp.pay_date
+        WHERE pp.pay_date = %(period)s::date
+          AND pt.amount_cents < -100000
+        ORDER BY pt.amount_cents ASC
         LIMIT %(limit)s
         """
 
@@ -279,17 +265,17 @@ class KPISnapshotService:
         """Récupère le top N codes de paie par montant."""
         sql = """
         SELECT 
-            pc.pay_code,
-            pc.label,
-            pc.category,
-            COUNT(*) as nb_transactions,
-            SUM(pt.amount_employee_norm_cents) / 100.0 as total_montant
+            COALESCE(pc.pay_code, pt.pay_code) AS pay_code,
+            COALESCE(pc.label, pt.pay_code) AS label,
+            COALESCE(pc.category, 'Inconnu') AS category,
+            COUNT(*) AS nb_transactions,
+            SUM(pt.amount_cents) / 100.0 AS total_montant
         FROM payroll.payroll_transactions pt
-        JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
-        GROUP BY pc.pay_code, pc.label, pc.category
-        ORDER BY ABS(SUM(pt.amount_employee_norm_cents)) DESC
+        LEFT JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
+        JOIN payroll.pay_periods pp ON pt.pay_date = pp.pay_date
+        WHERE pp.pay_date = %(period)s::date
+        GROUP BY COALESCE(pc.pay_code, pt.pay_code), COALESCE(pc.label, pt.pay_code), COALESCE(pc.category, 'Inconnu')
+        ORDER BY ABS(SUM(pt.amount_cents)) DESC
         LIMIT %(limit)s
         """
 
@@ -317,17 +303,20 @@ class KPISnapshotService:
             bp.code,
             bp.description,
             COUNT(*) as nb_transactions,
-            SUM(pt.amount_employee_norm_cents) / 100.0 as total_montant
+            SUM(pt.amount_cents) / 100.0 as total_montant
         FROM payroll.payroll_transactions pt
         JOIN core.budget_posts bp ON pt.budget_post_id = bp.budget_post_id
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
+        JOIN payroll.pay_periods pp ON pt.pay_date = pp.pay_date
+        WHERE pp.pay_date = %(period)s::date
         GROUP BY bp.code, bp.description
-        ORDER BY ABS(SUM(pt.amount_employee_norm_cents)) DESC
+        ORDER BY ABS(SUM(pt.amount_cents)) DESC
         LIMIT %(limit)s
         """
 
-        result = self.repo.run_query(sql, {"period": period, "limit": limit})
+        try:
+            result = self.repo.run_query(sql, {"period": period, "limit": limit})
+        except Exception:
+            return []
 
         postes = []
         if result:
@@ -353,7 +342,7 @@ class KPISnapshotService:
         """
         sql = """
         INSERT INTO payroll.kpi_snapshot (period, data, calculated_at, row_count)
-        VALUES (%(period)s, %(data)s, CURRENT_TIMESTAMP, %(row_count)s)
+        VALUES (%s, %s, CURRENT_TIMESTAMP, %s)
         ON CONFLICT (period) DO UPDATE SET
             data = EXCLUDED.data,
             calculated_at = EXCLUDED.calculated_at,
@@ -362,10 +351,7 @@ class KPISnapshotService:
 
         row_count = kpi_data.get("cards", {}).get("nb_transactions", 0)
 
-        self.repo.execute_dml(
-            sql,
-            {"period": period, "data": json.dumps(kpi_data), "row_count": row_count},
-        )
+        self.repo.execute_dml(sql, (period, json.dumps(kpi_data), row_count))
 
         logger.info(
             f"OK: Snapshot KPI upserted pour {period} ({row_count} transactions)"

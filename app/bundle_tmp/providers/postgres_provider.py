@@ -5,4 +5,6 @@ names when running the static type checker. Keep this placeholder to
 preserve history but do NOT import it.
 """
 
-__all__ = []
+from typing import List
+
+__all__: List[str] = []
