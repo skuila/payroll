@@ -90,8 +90,8 @@ def parse_date_robust(value: Any, context: str = "") -> Optional[str]:
 
     # Si déjà un Timestamp pandas ou datetime
     if isinstance(value, (pd.Timestamp, datetime)):
-        year_num = value.year
-        if 2000 <= year_num <= 2050:
+        year = value.year
+        if 2000 <= year <= 2050:
             return value.strftime("%Y-%m-%d")
         else:
             return None
@@ -104,27 +104,27 @@ def parse_date_robust(value: Any, context: str = "") -> Optional[str]:
     # Format ISO complet: "2025-08-28 00:00:00" → "2025-08-28"
     match = re.match(r"^(\d{4})-(\d{2})-(\d{2})", date_str)
     if match:
-        year_str, month_str, day_str = match.groups()
-        year_int = int(year_str)
+        year, month, day = match.groups()
+        year_int = int(year)
         if 2000 <= year_int <= 2050:
-            return f"{year_str}-{month_str}-{day_str}"
+            return f"{year}-{month}-{day}"
         else:
             return None
 
     # Format européen: DD/MM/YYYY ou DD-MM-YYYY
     match = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$", date_str)
     if match:
-        day_str, month_str, year_str = match.groups()
-        year_int = int(year_str)
-        month_int = int(month_str)
-        day_int = int(day_str)
+        day, month, year = match.groups()
+        year_int = int(year)
+        month_int = int(month)
+        day_int = int(day)
 
         # Validation date logique
         if not (1 <= month_int <= 12 and 1 <= day_int <= 31):
             return None
 
         if 2000 <= year_int <= 2050:
-            return f"{year_str}-{month_str.zfill(2)}-{day_str.zfill(2)}"
+            return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
         else:
             return None
 
@@ -132,12 +132,12 @@ def parse_date_robust(value: Any, context: str = "") -> Optional[str]:
     try:
         date_dt = pd.to_datetime(date_str, errors="coerce", dayfirst=True)
         if not pd.isna(date_dt):
-            year_num = date_dt.year
-            if 2000 <= year_num <= 2050:
+            year = date_dt.year
+            if 2000 <= year <= 2050:
                 return date_dt.strftime("%Y-%m-%d")
             else:
                 return None
-    except Exception as _exc:
+    except:
         pass
 
     return None

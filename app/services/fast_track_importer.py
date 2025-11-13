@@ -5,9 +5,10 @@
 # Import direct si en-têtes exactes (15 colonnes maître)
 # AUCUN échec bloquant - tolérance totale
 
+import re
 from typing import Dict, List, Any, Tuple, Optional
-from datetime import date
-from decimal import Decimal
+from datetime import datetime, date
+from decimal import Decimal, InvalidOperation
 
 from .locale_fr_ca import parse_date_fr_ca, parse_number_fr_ca
 
@@ -83,11 +84,11 @@ def is_fast_track_eligible(headers: List[str]) -> Tuple[bool, Dict[str, int]]:
     eligible = len(missing) == 0
 
     if not eligible:
-        print(f"WARN: Fast track NON éligible: {len(missing)} colonnes manquantes")
+        print(f"⚠️ Fast track NON éligible: {len(missing)} colonnes manquantes")
         for m in missing[:5]:
             print(f"   - '{m}'")
     else:
-        print("✅ Fast track ÉLIGIBLE: 15/15 colonnes détectées")
+        print(f"✅ Fast track ÉLIGIBLE: 15/15 colonnes détectées")
 
     return eligible, mapping
 
@@ -108,7 +109,7 @@ def convert_to_integer(value: Any) -> Optional[int]:
         # Parse texte
         s = str(value).strip()
         return int(float(s))
-    except Exception as _exc:
+    except:
         return None
 
 
@@ -170,7 +171,7 @@ class FastTrackImporter:
 
     def __init__(self, db_repo=None):
         self.db_repo = db_repo
-        self.current_run_id: Optional[int] = None
+        self.current_run_id = None
         self.alerts = []
 
     def import_dataframe(self, df, source_file: str) -> Dict:
@@ -199,7 +200,7 @@ class FastTrackImporter:
             import pandas as pd
 
             is_pandas = isinstance(df, pd.DataFrame)
-        except Exception as _exc:
+        except:
             is_pandas = False
             pd = None
 
@@ -223,7 +224,7 @@ class FastTrackImporter:
                 "message": "Fast track non éligible - basculer sur détection",
             }
 
-        print(f"  OK: Mapping: {len(mapping)} colonnes")
+        print(f"  ✓ Mapping: {len(mapping)} colonnes")
 
         # ========== CRÉER RUN ==========
 
@@ -236,10 +237,12 @@ class FastTrackImporter:
         rows_skipped = 0
         self.alerts = []
 
-        converted_rows: list[dict[str, object]] = []
+        converted_rows = []
 
         for row_idx, row in enumerate(rows_data, start=1):
-            converted_row: dict[str, object] = {"source_row_number": row_idx}
+            converted_row = {"source_row_number": row_idx}
+
+            skip_row = False
 
             # Convertir chaque champ
             for db_field, col_idx in mapping.items():
@@ -316,8 +319,8 @@ class FastTrackImporter:
         if self.db_repo and self.current_run_id:
             self._complete_run(rows_imported, rows_skipped, len(self.alerts))
 
-        print(f"  OK: {rows_imported} lignes importées")
-        print(f"  WARN: {rows_skipped} lignes ignorées")
+        print(f"  ✓ {rows_imported} lignes importées")
+        print(f"  ⚠️ {rows_skipped} lignes ignorées")
         print(f"  📋 {len(self.alerts)} alertes")
 
         return {
@@ -329,7 +332,7 @@ class FastTrackImporter:
             "run_id": self.current_run_id,
         }
 
-    def _create_run(self, source_file: str, total_rows: int) -> Optional[int]:
+    def _create_run(self, source_file: str, total_rows: int) -> int:
         """Crée un enregistrement import_runs"""
         sql = """
         INSERT INTO payroll.import_runs 
@@ -345,7 +348,7 @@ class FastTrackImporter:
             conn.commit()
 
             if result:
-                print(f"  OK: Run créé: ID {result[0]}")
+                print(f"  ✓ Run créé: ID {result[0]}")
                 return result[0]
 
         return None
@@ -378,7 +381,7 @@ class FastTrackImporter:
                 self.db_repo.run_execute(conn, sql, params)
 
             conn.commit()
-            print(f"  OK: {len(rows)} lignes insérées")
+            print(f"  ✓ {len(rows)} lignes insérées")
 
     def _log_alerts(self):
         """Insère alertes dans import_log"""
@@ -406,7 +409,7 @@ class FastTrackImporter:
                 )
 
             conn.commit()
-            print(f"  OK: {len(self.alerts[:1000])} alertes loggées")
+            print(f"  ✓ {len(self.alerts[:1000])} alertes loggées")
 
     def _complete_run(self, rows_imported: int, rows_skipped: int, alerts_count: int):
         """Finalise le run"""

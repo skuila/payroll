@@ -22,19 +22,21 @@ Usage:
 import logging
 import hashlib
 import csv
+import io
 import re
-import uuid
+import os
+import tempfile
 from datetime import datetime
-from typing import Any, Optional, Callable
+from typing import Any, Optional, Callable, Dict, List, Tuple
 from pathlib import Path
 import pandas as pd
 from unidecode import unidecode
 
-from app.services.data_repo import DataRepository
-from app.services.kpi_snapshot_service import KPISnapshotService
-from app.services.detect_types import detect_types
-from app.services.parsers import parse_amount_neutral
-from app.services.cleaners import clean_payroll_excel_df
+from services.data_repo import DataRepository
+from services.kpi_snapshot_service import KPISnapshotService
+from services.detect_types import detect_types
+from services.parsers import parse_amount_neutral, parse_date_robust
+from services.cleaners import clean_payroll_excel_df
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ class ImportServiceComplete:
         self,
         repo: DataRepository,
         kpi_service: KPISnapshotService,
-        import_finished_callback: Optional[Callable[[str, str, int], None]] = None,
+        import_finished_callback: Optional[Callable] = None,
     ):
         """
         Initialise le service d'import complet.
@@ -107,7 +109,7 @@ class ImportServiceComplete:
 
         batch_id = None
         checksum = None
-        period = pay_date.strftime("%Y-%m-%d")
+        period = pay_date.strftime("%Y-%m")
 
         try:
             # 1. Vérifier statut période
@@ -196,7 +198,7 @@ class ImportServiceComplete:
                     f"{kpi_data['cards']['masse_salariale']:.2f}$ masse salariale"
                 )
             except Exception as e_kpi:
-                logger.warning(f"WARN: KPI non calculés (problème de droits): {e_kpi}")
+                logger.warning(f"⚠️ KPI non calculés (problème de droits): {e_kpi}")
                 # Continue quand même, les données sont importées
 
             # 12. Refresh vues matérialisées (async)
@@ -207,17 +209,12 @@ class ImportServiceComplete:
                 self.import_finished_callback(period, batch_id, len(signed_rows))
                 logger.info(f"📡 Signal import_finished émis pour période {period}")
 
-            cards = kpi_data.get("cards", {}) if kpi_data else {}
-            tables = kpi_data.get("tables", {}) if kpi_data else {}
-
             return {
                 "status": "success",
                 "batch_id": batch_id,
                 "rows_count": len(signed_rows),
                 "period": period,
-                "kpi_cards": cards,
-                "kpi_tables": tables,
-                "kpi": kpi_data or {},
+                "kpi": kpi_data.get("cards", {}) if kpi_data else {},
                 "message": f"Import réussi: {len(signed_rows)} lignes"
                 + (" — KPI actualisés" if kpi_data else " (KPI non disponibles)"),
             }
@@ -226,7 +223,7 @@ class ImportServiceComplete:
             logger.error(f"❌ Erreur import: {e}", exc_info=True)
 
             # Traduire l'erreur en message utilisateur simple
-            from app.services.error_messages import format_error_for_user
+            from services.error_messages import format_error_for_user
 
             error_info = format_error_for_user(e)
             user_message = error_info["message"]
@@ -243,7 +240,7 @@ class ImportServiceComplete:
                         error_message=user_message,  # Message utilisateur simple
                     )
             except Exception as batch_err:
-                logger.error(f"WARN: Impossible de créer batch failed: {batch_err}")
+                logger.error(f"⚠️ Impossible de créer batch failed: {batch_err}")
 
             # Lever une exception avec le message utilisateur
             raise ImportError(user_message) from e
@@ -282,7 +279,7 @@ class ImportServiceComplete:
 
         period_id = result[0]
         logger.info(
-            f"OK: Période {pay_date.date()} obtenue via ensure_period() (period_id={period_id[:8]}...)"
+            f"✓ Période {pay_date.date()} obtenue via ensure_period() (period_id={period_id[:8]}...)"
         )
 
         # Vérifier le statut (ouverte/fermée)
@@ -302,7 +299,7 @@ class ImportServiceComplete:
                 raise ImportError(
                     f"❌ Période {pay_date.date()} est {status}, écriture interdite"
                 )
-            logger.info("OK: Période ouverte, import autorisé")
+            logger.info(f"✓ Période ouverte, import autorisé")
 
         return period_id
 
@@ -326,7 +323,7 @@ class ImportServiceComplete:
                     f"❌ Période {pay_date.date()} existe mais est {status}, écriture interdite"
                 )
             logger.info(
-                f"OK: Période {pay_date.date()} existe déjà (period_id={period_id[:8]}...)"
+                f"✓ Période {pay_date.date()} existe déjà (period_id={period_id[:8]}...)"
             )
             return period_id
 
@@ -363,11 +360,11 @@ class ImportServiceComplete:
         INSERT INTO payroll.pay_periods (
             pay_date, pay_day, pay_month, pay_year, period_seq_in_year, status
         ) VALUES (
-            %s, 
-            %s, 
-            %s, 
-            %s,
-            %s,
+            %(pay_date)s, 
+            %(pay_day)s, 
+            %(pay_month)s, 
+            %(pay_year)s,
+            %(period_seq)s,
             'ouverte'
         )
         RETURNING period_id::text
@@ -375,13 +372,13 @@ class ImportServiceComplete:
 
         result = self.repo.execute_dml(
             sql_insert,
-            (
-                pay_date.date(),
-                pay_date.day,
-                pay_date.month,
-                pay_date.year,
-                period_seq,
-            ),
+            {
+                "pay_date": pay_date.date(),
+                "pay_day": pay_date.day,
+                "pay_month": pay_date.month,
+                "pay_year": pay_date.year,
+                "period_seq": period_seq,
+            },
             returning=True,
         )
 
@@ -417,7 +414,7 @@ class ImportServiceComplete:
                 f"❌ Fichier déjà importé (doublon détecté: period_id={period_id[:8]}..., checksum={checksum[:16]}...)"
             )
 
-        logger.info("OK: Aucun doublon détecté")
+        logger.info("✓ Aucun doublon détecté")
 
     def _parse_excel_file(self, file_path: str) -> pd.DataFrame:
         """Parse le fichier Excel ou CSV avec détection robuste et gestion des fichiers temporaires."""
@@ -434,7 +431,7 @@ class ImportServiceComplete:
             if df.empty:
                 raise ImportError("❌ Fichier vide")
 
-            logger.info(f"OK: Fichier parsé ({file_ext}): {len(df)} lignes")
+            logger.info(f"✓ Fichier parsé ({file_ext}): {len(df)} lignes")
             return df
 
         except Exception as e:
@@ -455,7 +452,7 @@ class ImportServiceComplete:
 
                     df = pd.read_csv(f, encoding=encoding, delimiter=delimiter)
                     logger.info(
-                        f"OK: CSV lu: encoding={encoding}, delimiter='{delimiter}'"
+                        f"✓ CSV lu: encoding={encoding}, delimiter='{delimiter}'"
                     )
                     return self._clean_dataframe(df)
 
@@ -502,10 +499,10 @@ class ImportServiceComplete:
             df = sheet_scores[best_sheet][1]
 
             logger.info(
-                f"OK: Feuille sélectionnée: '{best_sheet}' (score: {sheet_scores[best_sheet][0]:.2f})"
+                f"✓ Feuille sélectionnée: '{best_sheet}' (score: {sheet_scores[best_sheet][0]:.2f})"
             )
             # Utiliser la ligne 0 comme en-tête (déjà fait par header=0)
-            logger.info("OK: En-tête utilisée: ligne 0")
+            logger.info("✓ En-tête utilisée: ligne 0")
             logger.info(f"📋 En-têtes détectés: {list(df.columns)}")
             logger.info(f"📊 Lignes de données: {len(df)}")
 
@@ -543,8 +540,8 @@ class ImportServiceComplete:
         if df.empty:
             return 0
 
-        best_row: int = 0
-        best_score: float = 0.0
+        best_row = 0
+        best_score = 0
 
         for row_idx in range(min(10, len(df))):
             # Évaluer si cette ligne ressemble à des en-têtes
@@ -622,7 +619,7 @@ class ImportServiceComplete:
                         try:
                             float(v.replace(",", ".").replace(" ", ""))
                             numeric_count += 1
-                        except Exception as _exc:
+                        except:
                             pass
 
                     data_consistency = numeric_count / len(next_non_empty)
@@ -649,9 +646,7 @@ class ImportServiceComplete:
                 best_score = score
                 best_row = row_idx
 
-        logger.info(
-            f"OK: Ligne d'en-tête détectée: {best_row} (score: {best_score:.2f})"
-        )
+        logger.info(f"✓ Ligne d'en-tête détectée: {best_row} (score: {best_score:.2f})")
         return best_row
 
     def _looks_like_data_value(self, value: str) -> bool:
@@ -673,7 +668,7 @@ class ImportServiceComplete:
         try:
             float(value.replace(",", ".").replace(" ", ""))
             return True
-        except Exception as _exc:
+        except:
             pass
 
         # Vérifier si c'est une date (format ISO ou avec slashes)
@@ -736,7 +731,7 @@ class ImportServiceComplete:
 
             normalized_headers.append(normalized)
 
-        logger.info(f"OK: En-têtes normalisés: {normalized_headers}")
+        logger.info(f"✓ En-têtes normalisés: {normalized_headers}")
 
         # 2. Détection robuste avec échantillon
         sample_size = min(200, len(df))
@@ -762,7 +757,7 @@ class ImportServiceComplete:
                 mapping = detection_result.get("mapping", {})
                 confidence_scores = detection_result.get("confidence", {})
 
-            logger.info(f"OK: Détection terminée: {len(mapping)} colonnes mappées")
+            logger.info(f"✓ Détection terminée: {len(mapping)} colonnes mappées")
 
             # 3. Appliquer mapping selon seuils
             critical_columns = ["matricule", "pay_code", "amount_employee"]
@@ -784,7 +779,7 @@ class ImportServiceComplete:
                         staging_needed = True
                         final_mapping[source_col] = target_col
                         logger.warning(
-                            f"  WARN: {target_col} en zone grise (score: {confidence:.2f})"
+                            f"  ⚠️ {target_col} en zone grise (score: {confidence:.2f})"
                         )
                     else:
                         logger.error(
@@ -793,7 +788,7 @@ class ImportServiceComplete:
 
             # 4. Gestion staging si nécessaire
             if staging_needed:
-                logger.warning("WARN: Staging requis pour colonnes en zone grise")
+                logger.warning("⚠️ Staging requis pour colonnes en zone grise")
                 # Pour l'instant, on continue avec un warning
                 # TODO: Implémenter staging pipeline complet
 
@@ -801,7 +796,7 @@ class ImportServiceComplete:
             if final_mapping:
                 df.columns = normalized_headers
                 df = df.rename(columns=final_mapping)
-                logger.info(f"OK: Mapping appliqué: {final_mapping}")
+                logger.info(f"✓ Mapping appliqué: {final_mapping}")
 
             # 6. Vérifier colonnes critiques
             missing_critical = [
@@ -824,7 +819,7 @@ class ImportServiceComplete:
         except Exception as e:
             logger.error(f"❌ Erreur détection: {e}")
             # Fallback vers l'ancienne méthode
-            logger.warning("WARN: Fallback vers normalisation basique")
+            logger.warning("⚠️ Fallback vers normalisation basique")
             return self._normalize_columns_fallback(df)
 
     def _normalize_columns_fallback(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -887,14 +882,14 @@ class ImportServiceComplete:
         ]
 
         if unmapped_cols:
-            logger.warning(f"WARN: Colonnes non mappées: {unmapped_cols}")
-            logger.info("✅ Mapping par position activé")
+            logger.warning(f"⚠️ Colonnes non mappées: {unmapped_cols}")
+            logger.info(f"✅ Mapping par position activé")
 
             if (
                 True
             ):  # Toujours utiliser le mapping par position pour les colonnes non mappées
                 logger.warning(
-                    f"WARN: Utilisation du mapping par position pour: {unmapped_cols}"
+                    f"⚠️ Utilisation du mapping par position pour: {unmapped_cols}"
                 )
                 # Mapping par position pour Classeur1.xlsx (15 colonnes)
                 position_mapping = {
@@ -954,34 +949,27 @@ class ImportServiceComplete:
         self, df: pd.DataFrame, pay_date: datetime, source_file: str
     ) -> list[dict]:
         """Transforme DataFrame en liste de dicts avec parsing neutre."""
-        rows: list[dict[str, Any]] = []
-        staging_issues: list[dict[str, Any]] = []
+        rows = []
+        staging_issues = []
 
         for idx, row in df.iterrows():
             try:
                 # Parsing montants avec parseur neutre (noms français)
-                amount_employee_opt: Optional[float] = parse_amount_neutral(
+                amount_employee = parse_amount_neutral(
                     row.get("montant_employe"), f"Ligne {idx+1}"
                 )
-                amount_employee: float = (
-                    amount_employee_opt if amount_employee_opt is not None else 0.0
-                )
                 amount_employer_raw = row.get("part_employeur")
-                amount_employer_opt: Optional[float] = None
 
                 # Pour part_employeur, NaN/vide est NORMAL, ne pas logger de warning
                 if pd.isna(amount_employer_raw):
                     amount_employer = 0.0
                 else:
-                    amount_employer_opt = parse_amount_neutral(
+                    amount_employer = parse_amount_neutral(
                         amount_employer_raw, f"Ligne {idx+1}"
-                    )
-                    amount_employer = (
-                        amount_employer_opt if amount_employer_opt is not None else 0.0
                     )
 
                 # Si parsing échoue pour montant_employe (obligatoire), ajouter à staging
-                if amount_employee_opt is None and "montant_employe" in row:
+                if amount_employee is None and "montant_employe" in row:
                     val = row.get("montant_employe")
                     if not pd.isna(val):  # Seulement si ce n'est pas NaN
                         staging_issues.append(
@@ -995,7 +983,7 @@ class ImportServiceComplete:
                     amount_employee = 0.0  # Valeur par défaut
 
                 # Pour part_employeur, seulement warning si valeur présente mais invalide
-                if amount_employer_opt is None:
+                if amount_employer is None:
                     val_emp = row.get("part_employeur")
                     if not pd.isna(val_emp) and val_emp != "":
                         staging_issues.append(
@@ -1047,7 +1035,7 @@ class ImportServiceComplete:
 
         # Logger les issues de staging
         if staging_issues:
-            logger.warning(f"WARN: {len(staging_issues)} issues détectées pour staging")
+            logger.warning(f"⚠️ {len(staging_issues)} issues détectées pour staging")
             for issue in staging_issues[:5]:  # Logger les 5 premières
                 logger.warning(
                     f"  Ligne {issue['row']}: {issue['column']} = '{issue['value']}' ({issue['issue']})"
@@ -1098,7 +1086,7 @@ class ImportServiceComplete:
                 int(amount_employer * 100) * policy["employer_sign"]
             )
 
-        logger.info(f"OK: Sign policy appliquée: {len(policies)} codes mappés")
+        logger.info(f"✓ Sign policy appliquée: {len(policies)} codes mappés")
         return rows
 
     def _validate_rows(self, rows: list[dict]) -> None:
@@ -1115,9 +1103,9 @@ class ImportServiceComplete:
                 errors.append(f"Ligne {idx+1}: montant employé manquant")
 
         if errors:
-            raise ImportError("❌ Validation échouée:\n" + "\n".join(errors[:10]))
+            raise ImportError(f"❌ Validation échouée:\n" + "\n".join(errors[:10]))
 
-        logger.info(f"OK: Validation réussie: {len(rows)} lignes valides")
+        logger.info(f"✓ Validation réussie: {len(rows)} lignes valides")
 
     def _import_transaction(
         self,
@@ -1133,23 +1121,15 @@ class ImportServiceComplete:
         def transaction_fn(conn):
             # 1. Upserter dimensions
             employee_ids = self._upsert_employees(conn, signed_rows)
-            self._upsert_budget_posts(conn, signed_rows)
+            budget_post_ids = self._upsert_budget_posts(conn, signed_rows)
             self._upsert_pay_codes(conn, signed_rows)
 
-            # 2. Insérer transactions dans payroll.payroll_transactions
-            self._insert_payroll_transactions(
-                conn,
-                signed_rows,
-                pay_date,
-                employee_ids,
-                file_name,
-                user_id,
+            # 2. Insérer transactions (batch)
+            self._insert_transactions_batch(
+                conn, signed_rows, period_id, pay_date, employee_ids, budget_post_ids
             )
 
-            # 3. Insérer l'audit dans imported_payroll_master
-            self._insert_import_master_entries(conn, signed_rows, pay_date, file_name)
-
-            # 4. Créer import_batch
+            # 3. Créer import_batch
             batch_id = self._create_import_batch_tx(
                 conn,
                 file_name,
@@ -1160,9 +1140,6 @@ class ImportServiceComplete:
                 user_id,
                 "success",
             )
-
-            # 5. Attacher les transactions au batch
-            self._attach_transactions_to_batch(conn, batch_id, pay_date, file_name)
 
             return batch_id
 
@@ -1227,7 +1204,7 @@ class ImportServiceComplete:
                 employee_id = cur.fetchone()[0]
                 employee_ids[matricule] = employee_id
 
-        logger.info(f"OK: Employees upsertés: {len(employee_ids)}")
+        logger.info(f"✓ Employees upsertés: {len(employee_ids)}")
         return employee_ids
 
     def _upsert_budget_posts(self, conn, rows: list[dict]) -> dict[str, int]:
@@ -1255,7 +1232,7 @@ class ImportServiceComplete:
                 budget_post_id = cur.fetchone()[0]
                 budget_post_ids[code] = budget_post_id
 
-        logger.info(f"OK: Budget posts upsertés: {len(budget_post_ids)}")
+        logger.info(f"✓ Budget posts upsertés: {len(budget_post_ids)}")
         return budget_post_ids
 
     def _upsert_pay_codes(self, conn, rows: list[dict]) -> None:
@@ -1275,137 +1252,18 @@ class ImportServiceComplete:
             with conn.cursor() as cur:
                 cur.execute(sql, {"pay_code": pay_code, "label": f"Code {pay_code}"})
 
-        logger.info(f"OK: Pay codes upsertés: {len(pay_codes)}")
+        logger.info(f"✓ Pay codes upsertés: {len(pay_codes)}")
 
-    def _insert_payroll_transactions(
+    def _insert_transactions_batch(
         self,
         conn,
         rows: list[dict],
+        period_id: str,
         pay_date: datetime,
         employee_ids: dict,
-        file_name: str,
-        user_id: str,
+        budget_post_ids: dict,
     ) -> None:
-        """Insère les transactions normalisées dans payroll.payroll_transactions."""
-
-        pay_day = pay_date.day
-        pay_month = pay_date.month
-        pay_year = pay_date.year
-
-        sql = """
-        INSERT INTO payroll.payroll_transactions (
-            transaction_id,
-            employee_id,
-            pay_date,
-            pay_day,
-            pay_month,
-            pay_year,
-            pay_code,
-            amount_cents,
-            import_batch_id,
-            source_file,
-            source_row_no,
-            created_at,
-            created_by
-        ) VALUES (
-            %(transaction_id)s,
-            %(employee_id)s,
-            %(pay_date)s,
-            %(pay_day)s,
-            %(pay_month)s,
-            %(pay_year)s,
-            %(pay_code)s,
-            %(amount_cents)s,
-            NULL,
-            %(source_file)s,
-            %(source_row_no)s,
-            CURRENT_TIMESTAMP,
-            %(created_by)s
-        )
-        """
-
-        params_list = []
-
-        for row in rows:
-            matricule = row.get("matricule")
-            employee_id = employee_ids.get(matricule)
-            if not employee_id:
-                continue
-
-            pay_code = row.get("code_paie") or row.get("pay_code") or ""
-            amount_cents = row.get("amount_employee_norm_cents")
-            if amount_cents is None:
-                montant = (
-                    row.get("montant")
-                    or row.get("montant_employe")
-                    or row.get("montant_employe_norm")
-                    or 0
-                )
-                try:
-                    amount_cents = int(round(float(montant) * 100))
-                except Exception:
-                    amount_cents = 0
-
-            params_list.append(
-                {
-                    "employee_id": employee_id,
-                    "pay_date": pay_date.date(),
-                    "pay_day": pay_day,
-                    "pay_month": pay_month,
-                    "pay_year": pay_year,
-                    "pay_code": pay_code,
-                    "amount_cents": amount_cents,
-                    "source_file": row.get("source_file", file_name),
-                    "source_row_no": row.get(
-                        "source_row_no", row.get("numero_ligne", 0)
-                    ),
-                    "created_by": user_id,
-                    "transaction_id": str(uuid.uuid4()),
-                }
-            )
-
-        if not params_list:
-            logger.warning(
-                "WARN: aucune transaction à insérer dans payroll.payroll_transactions"
-            )
-            return
-
-        with conn.cursor() as cur:
-            cur.executemany(sql, params_list)
-
-        logger.info(f"OK: Transactions normalisées insérées: {len(params_list)}")
-
-    def _attach_transactions_to_batch(
-        self, conn, batch_id: str, pay_date: datetime, file_name: str
-    ) -> None:
-        """Attache les transactions insérées au batch créé."""
-
-        sql = """
-        UPDATE payroll.payroll_transactions
-        SET import_batch_id = %(batch_id)s
-        WHERE import_batch_id IS NULL
-          AND pay_date = %(pay_date)s
-          AND source_file = %(source_file)s
-        """
-
-        with conn.cursor() as cur:
-            cur.execute(
-                sql,
-                {
-                    "batch_id": batch_id,
-                    "pay_date": pay_date.date(),
-                    "source_file": file_name,
-                },
-            )
-
-    def _insert_import_master_entries(
-        self,
-        conn,
-        rows: list[dict],
-        pay_date: datetime,
-        file_name: str,
-    ) -> None:
-        """Insère les lignes d'audit dans imported_payroll_master (historique brut)."""
+        """Insère les transactions en batch dans imported_payroll_master (noms normalisés)."""
         sql = """
         INSERT INTO payroll.imported_payroll_master (
             numero_ligne, categorie_emploi, code_emploi, titre_emploi, date_paie,
@@ -1443,17 +1301,15 @@ class ImportServiceComplete:
                     "part_employeur": row.get("part_employeur", 0)
                     or 0,  # NUMERIC maintenant
                     "mnt_cmb": row.get("montant_combine", 0) or 0,  # NUMERIC maintenant
-                    "source_file": row.get("source_file", file_name),
-                    "source_row_number": row.get(
-                        "source_row_no", row.get("numero_ligne", 0)
-                    ),
+                    "source_file": row.get("source_file", ""),
+                    "source_row_number": row.get("source_row_no", 0),
                 }
             )
 
         with conn.cursor() as cur:
             cur.executemany(sql, params_list)
 
-        logger.info(f"OK: Transactions insérées: {len(params_list)}")
+        logger.info(f"✓ Transactions insérées: {len(params_list)}")
 
     def _create_import_batch_tx(
         self,
@@ -1507,21 +1363,21 @@ class ImportServiceComplete:
         INSERT INTO payroll.import_batches (
             file_name, checksum, period_id, pay_date, rows_count, status, error_message, imported_by
         ) VALUES (
-            %s, %s, %s::uuid, %s, 0, 'error', %s, %s::uuid
+            %(file_name)s, %(checksum)s, %(period_id)s::uuid, %(pay_date)s, 0, 'error', %(error_message)s, %(imported_by)s::uuid
         )
         RETURNING batch_id::text
         """
 
         result = self.repo.execute_dml(
             sql,
-            (
-                file_name,
-                checksum,
-                period_id,
-                pay_date.date(),
-                error_message,
-                user_id,
-            ),
+            {
+                "file_name": file_name,
+                "checksum": checksum,
+                "period_id": period_id,
+                "pay_date": pay_date.date(),
+                "error_message": error_message,
+                "imported_by": user_id,
+            },
             returning=True,
         )
 
@@ -1541,4 +1397,4 @@ class ImportServiceComplete:
                 self.repo.run_query(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view}")
                 logger.info(f"✅ {view} refreshed")
             except Exception as e:
-                logger.warning(f"WARN: Erreur refresh {view}: {e}")
+                logger.warning(f"⚠️ Erreur refresh {view}: {e}")

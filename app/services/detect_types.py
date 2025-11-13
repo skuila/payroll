@@ -11,7 +11,7 @@ from collections import Counter
 from typing import Dict, List, Any, Tuple, Optional
 
 # Import du parseur neutre depuis le module parsers
-from app.services.parsers import parse_amount_neutral, parse_date_robust
+from services.parsers import parse_amount_neutral, parse_date_robust
 
 
 # ========== UTILITAIRES FEATURES ==========
@@ -420,7 +420,7 @@ def run_detector(detector_config: Dict, values: List[Any]) -> float:
         base_score = DETECTOR_FUNCTIONS[kind](values, detector_config)
         return base_score * weight
     except Exception as e:
-        print(f"WARN: Erreur détecteur {kind}: {e}")
+        print(f"⚠️ Erreur détecteur {kind}: {e}")
         return 0.0
 
 
@@ -486,7 +486,7 @@ def detect_segments(df, sample_size: int = 200) -> List[Tuple[int, int]]:
             total_rows = len(df)
         else:
             total_rows = len(df) - 1 if df else 0
-    except Exception as _exc:
+    except:
         total_rows = len(df) - 1 if df else 0
 
     return [(0, total_rows)]
@@ -537,12 +537,12 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
     # ========== PARSING INPUT ==========
 
     try:
-        import pandas as pd  # type: ignore[import]
-    except Exception as _exc:
-        pd = None  # type: ignore[assignment]
-        is_pandas = False
-    else:
+        import pandas as pd
+
         is_pandas = isinstance(df, pd.DataFrame)
+    except:
+        is_pandas = False
+        pd = None
 
     if is_pandas:
         headers = [str(h) for h in df.columns]
@@ -608,14 +608,14 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
         reverse=True,
     )
 
-    taken_cols: set[int] = set()
-    mapping: Dict[str, Optional[int]] = {}
-    confidence: Dict[str, float] = {}
-    scores_detail: Dict[str, List[Tuple[int, float]]] = {}
+    taken_cols = set()
+    mapping = {}
+    confidence = {}
+    scores_detail = {}
 
     for type_name in types_by_priority:
         # Trier colonnes par score décroissant
-        ranked: List[Tuple[int, float]] = sorted(
+        ranked = sorted(
             [(col_idx, scores_matrix[type_name][col_idx]) for col_idx in range(n_cols)],
             key=lambda x: -x[1],
         )
@@ -639,19 +639,18 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
     min_accept = registry["ui"].get("min_confidence_accept", 0.70)
     min_warn = registry["ui"].get("min_confidence_warn", 0.50)
 
-    for type_name, col_idx_opt in mapping.items():
+    for type_name, col_idx in mapping.items():
         conf = confidence[type_name]
 
-        if col_idx_opt is not None:
-            col_idx = col_idx_opt
+        if col_idx is not None:
             col_name = headers[col_idx]
             if conf >= min_accept:
                 notes.append(
-                    f"OK: {type_name}: col {col_idx} '{col_name}' (confiance: {conf})"
+                    f"✓ {type_name}: col {col_idx} '{col_name}' (confiance: {conf})"
                 )
             elif conf >= min_warn:
                 notes.append(
-                    f"WARN: {type_name}: col {col_idx} '{col_name}' (FAIBLE confiance: {conf})"
+                    f"⚠️ {type_name}: col {col_idx} '{col_name}' (FAIBLE confiance: {conf})"
                 )
             else:
                 notes.append(
@@ -684,7 +683,7 @@ def detect_types(df, registry: Optional[Dict] = None) -> Dict:
 # ========== TESTS ==========
 
 if __name__ == "__main__":
-    import yaml  # type: ignore[import]
+    import yaml
     from pathlib import Path
 
     print("=" * 70)
@@ -697,7 +696,7 @@ if __name__ == "__main__":
     with open(registry_path, "r", encoding="utf-8") as f:
         registry = yaml.safe_load(f)
 
-    print(f"OK: Registre chargé: {len(registry['types'])} types")
+    print(f"✓ Registre chargé: {len(registry['types'])} types")
 
     # Données test (colonnes inversées + "Gains" constant)
     test_data = [
