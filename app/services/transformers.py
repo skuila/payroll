@@ -7,11 +7,9 @@
 import re
 import unicodedata
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional, Dict
 
 from .locale_fr_ca import parse_date_fr_ca, parse_number_fr_ca
-
-TransformConfig = Dict[str, Any]
 
 
 # ========== UTILITAIRES BASE ==========
@@ -36,30 +34,28 @@ def _normalize_unicode(s: str) -> str:
 # ========== TRANSFORMERS TEXTE ==========
 
 
-def transform_strip(value: Any, config: Optional[TransformConfig] = None) -> str:
+def transform_strip(value: Any, config: Dict = None) -> str:
     """Supprime espaces début/fin"""
     return str(value).strip() if value is not None else ""
 
 
-def transform_collapse_spaces(
-    value: Any, config: Optional[TransformConfig] = None
-) -> str:
+def transform_collapse_spaces(value: Any, config: Dict = None) -> str:
     """Collapse espaces multiples"""
     s = str(value) if value is not None else ""
     return " ".join(s.split())
 
 
-def transform_to_upper(value: Any, config: Optional[TransformConfig] = None) -> str:
+def transform_to_upper(value: Any, config: Dict = None) -> str:
     """Convertir en MAJUSCULES"""
     return str(value).upper() if value is not None else ""
 
 
-def transform_to_lower(value: Any, config: Optional[TransformConfig] = None) -> str:
+def transform_to_lower(value: Any, config: Dict = None) -> str:
     """Convertir en minuscules"""
     return str(value).lower() if value is not None else ""
 
 
-def transform_title_case(value: Any, config: Optional[TransformConfig] = None) -> str:
+def transform_title_case(value: Any, config: Dict = None) -> str:
     """
     Majuscule première lettre de chaque mot
 
@@ -69,9 +65,7 @@ def transform_title_case(value: Any, config: Optional[TransformConfig] = None) -
     return s.title()
 
 
-def transform_title_case_keep_hyphen(
-    value: Any, config: Optional[TransformConfig] = None
-) -> str:
+def transform_title_case_keep_hyphen(value: Any, config: Dict = None) -> str:
     """
     Title case en préservant les tirets
 
@@ -82,9 +76,7 @@ def transform_title_case_keep_hyphen(
     return "-".join(p.capitalize() for p in parts)
 
 
-def transform_sentence_case(
-    value: Any, config: Optional[TransformConfig] = None
-) -> str:
+def transform_sentence_case(value: Any, config: Dict = None) -> str:
     """
     Première lettre majuscule uniquement
 
@@ -94,9 +86,7 @@ def transform_sentence_case(
     return s[0].upper() + s[1:] if s else ""
 
 
-def transform_drop_trailing_digit(
-    value: Any, config: Optional[TransformConfig] = None
-) -> str:
+def transform_drop_trailing_digit(value: Any, config: Dict = None) -> str:
     """
     Supprime chiffre final (parasite)
 
@@ -109,9 +99,7 @@ def transform_drop_trailing_digit(
 # ========== TRANSFORMERS NOMS ==========
 
 
-def transform_split_fullname(
-    value: Any, config: Optional[TransformConfig] = None
-) -> Dict[str, str]:
+def transform_split_fullname(value: Any, config: Dict = None) -> Dict[str, str]:
     """
     Sépare "Nom, Prénom" en composants
 
@@ -155,9 +143,7 @@ def transform_split_fullname(
 # ========== TRANSFORMERS NOMBRES/DATES ==========
 
 
-def transform_to_iso_date(
-    value: Any, config: Optional[TransformConfig] = None
-) -> Optional[str]:
+def transform_to_iso_date(value: Any, config: Dict = None) -> Optional[str]:
     """
     Convertit en date ISO (YYYY-MM-DD)
 
@@ -172,9 +158,7 @@ def transform_to_iso_date(
     return str(date_obj) if date_obj else None
 
 
-def transform_to_decimal(
-    value: Any, config: Optional[TransformConfig] = None
-) -> Optional[Decimal]:
+def transform_to_decimal(value: Any, config: Dict = None) -> Optional[Decimal]:
     """
     Convertit en Decimal
 
@@ -188,9 +172,7 @@ def transform_to_decimal(
     return parse_number_fr_ca(value)
 
 
-def transform_normalize_currency(
-    value: Any, config: Optional[TransformConfig] = None
-) -> str:
+def transform_normalize_currency(value: Any, config: Dict = None) -> str:
     """
     Normalise code devise
 
@@ -237,7 +219,7 @@ TRANSFORMER_FUNCTIONS = {
 }
 
 
-def apply_transforms(value: Any, transform_configs: List[TransformConfig]) -> Any:
+def apply_transforms(value: Any, transform_configs: List[Dict]) -> Any:
     """
     Applique une chaîne de transformations
 
@@ -267,7 +249,7 @@ def apply_transforms(value: Any, transform_configs: List[TransformConfig]) -> An
             try:
                 result = TRANSFORMER_FUNCTIONS[kind](result, transform_config)
             except Exception as e:
-                print(f"WARN: Erreur transform {kind}: {e}")
+                print(f"⚠️ Erreur transform {kind}: {e}")
                 continue
 
     return result
@@ -289,10 +271,8 @@ if __name__ == "__main__":
         "Adrienne, Terry",
     ]
     for name in test_names:
-        split_result = transform_split_fullname(name)
-        print(
-            f"  '{name}' → nom='{split_result['nom']}' prenom='{split_result['prenom']}'"
-        )
+        result = transform_split_fullname(name)
+        print(f"  '{name}' → nom='{result['nom']}' prenom='{result['prenom']}'")
 
     # Test to_iso_date
     print("\n📅 Test to_iso_date:")
@@ -302,8 +282,8 @@ if __name__ == "__main__":
         "44927",  # Excel serial
     ]
     for date in test_dates:
-        iso_result = transform_to_iso_date(date)
-        print(f"  '{date}' → '{iso_result}'")
+        result = transform_to_iso_date(date)
+        print(f"  '{date}' → '{result}'")
 
     # Test to_decimal
     print("\n💰 Test to_decimal:")
@@ -313,14 +293,14 @@ if __name__ == "__main__":
         "1234.56",
     ]
     for num in test_nums:
-        decimal_result = transform_to_decimal(num)
-        print(f"  '{num}' → {decimal_result}")
+        result = transform_to_decimal(num)
+        print(f"  '{num}' → {result}")
 
     # Test chaîne transforms
     print("\n🔗 Test chaîne transforms:")
     value = "  jean-pierre  "
     transforms = [{"kind": "strip"}, {"kind": "title_case_keep_hyphen"}]
-    chain_result = apply_transforms(value, transforms)
-    print(f"  '{value}' → '{chain_result}'")
+    result = apply_transforms(value, transforms)
+    print(f"  '{value}' → '{result}'")
 
     print("\n✅ Tests terminés")

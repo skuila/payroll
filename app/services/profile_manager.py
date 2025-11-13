@@ -111,7 +111,7 @@ class ProfileManager:
         with open(profile_path, "w", encoding="utf-8") as f:
             json.dump(profile_data, f, indent=2, ensure_ascii=False)
 
-        print(f"OK: Profil sauvegardé: {profile_path}")
+        print(f"✓ Profil sauvegardé: {profile_path}")
 
         return str(profile_path)
 
@@ -143,7 +143,7 @@ class ProfileManager:
                 json.dump(profile, f, indent=2, ensure_ascii=False)
 
             print(
-                f"OK: Profil trouvé: {profile['name']} (utilisé {profile['usage_count']} fois)"
+                f"✓ Profil trouvé: {profile['name']} (utilisé {profile['usage_count']} fois)"
             )
 
             return profile
@@ -165,7 +165,7 @@ class ProfileManager:
                     profile = json.load(f)
                 profiles.append(profile)
             except Exception as e:
-                print(f"WARN: Erreur lecture profil {profile_file}: {e}")
+                print(f"⚠️ Erreur lecture profil {profile_file}: {e}")
 
         # Trier par dernière utilisation
         profiles.sort(key=lambda p: p.get("last_used", ""), reverse=True)
@@ -186,7 +186,7 @@ class ProfileManager:
 
         if profile_path.exists():
             profile_path.unlink()
-            print(f"OK: Profil supprimé: {fingerprint}")
+            print(f"✓ Profil supprimé: {fingerprint}")
             return True
 
         return False
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     print("\n2️⃣ Recherche profil:")
     found = manager.find_profile(headers, sample_rows)
     if found:
-        print(f"  OK: Profil retrouvé: {found['name']}")
+        print(f"  ✓ Profil retrouvé: {found['name']}")
         print(f"  Mapping: {found['mapping']}")
 
     # Test 3: Lister profils

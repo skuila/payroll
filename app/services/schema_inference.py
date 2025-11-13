@@ -4,7 +4,7 @@
 # ========================================
 
 import pandas as pd
-from typing import Dict, Any
+from typing import List, Dict, Any
 
 # Noms canoniques (corrigés) pour les colonnes payroll
 CANONICAL_HEADERS = [
@@ -80,8 +80,8 @@ def suggest_mapping(df: pd.DataFrame) -> Dict[str, Any]:
         if col in CANONICAL_HEADERS:
             mapping[col] = idx
             confidence[col] = 1.0
-            notes.append(f"{col}: OK: match exact (confiance 1.0)")
+            notes.append(f"{col}: ✓ match exact (confiance 1.0)")
         else:
-            notes.append(f"{col}: WARN: non reconnu dans les champs canoniques")
+            notes.append(f"{col}: ⚠️ non reconnu dans les champs canoniques")
 
     return {"mapping": mapping, "confidence": confidence, "notes": notes}

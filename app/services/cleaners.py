@@ -38,7 +38,7 @@ def clean_payroll_excel_df(
 
     - Normalise les en-têtes (strip espaces) en conservant les libellés FR attendus par les tests:
       'employé', 'matricule', 'date de paie', 'montant', 'part employeur', 'code de paie', etc.
-    - (Optionnel) Retire les lignes 'marqueurs' de catégorie (gains/syndicats/assurances/...)
+    - (Optionnel) Retire les lignes 'marqueurs' de catégorie (gains/syndicats/assurances/…)
     - Filtre les lignes dont 'matricule' n'est pas entièrement numérique
     - Convertit 'montant' et 'part employeur' en nombres et expose en cents:
       'amount_employee_cents', 'amount_employer_cents'

@@ -4,12 +4,10 @@
 Module de traduction des erreurs techniques en messages utilisateur simples
 """
 import re
-from typing import Optional, Tuple
+from typing import Tuple
 
 
-def translate_error(
-    error: Exception, error_message: Optional[str] = None
-) -> Tuple[str, str]:
+def translate_error(error: Exception, error_message: str = None) -> Tuple[str, str]:
     """
     Traduit une erreur technique en message utilisateur simple.
 
@@ -253,9 +251,7 @@ def translate_warning(warning_message: str) -> Tuple[str, str]:
     return (warning_message, "Aucune action requise.")
 
 
-def format_error_for_user(
-    error: Exception, error_message: Optional[str] = None
-) -> dict:
+def format_error_for_user(error: Exception, error_message: str = None) -> dict:
     """
     Formate une erreur pour l'affichage à l'utilisateur.
 

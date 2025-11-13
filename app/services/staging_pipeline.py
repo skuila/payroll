@@ -6,10 +6,10 @@
 # Aucune exception bloquante, tout passe en staging avec traçabilité
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from .transformers import apply_transforms
+from .transformers import apply_transforms, TRANSFORMER_FUNCTIONS
 
 
 class StagingPipeline:
@@ -64,30 +64,27 @@ class StagingPipeline:
             import pandas as pd
 
             is_pandas = isinstance(df, pd.DataFrame)
-        except Exception as _exc:
+        except:
             is_pandas = False
-            pd = None  # type: ignore[assignment]
+            pd = None
 
         if is_pandas:
+            headers = [str(h) for h in df.columns]
             rows_data = df.values.tolist()
         else:
             if not df or len(df) == 0:
                 return {"staging_data": [], "stats": {}, "issues": {}, "preview": []}
+            headers = [str(h) for h in df[0]]
             rows_data = df[1:]
 
         # ========== TRAITEMENT LIGNES ==========
 
-        staging_rows: List[Dict[str, Any]] = []
-        issues_by_type: Dict[str, List[Dict[str, Any]]] = {}
-        transform_errors: List[Dict[str, Any]] = []
+        staging_rows = []
+        issues_by_type = {}
+        transform_errors = []
 
         for row_idx, row in enumerate(rows_data):
-            staged_row: Dict[str, Any] = {
-                "row_idx": row_idx,
-                "raw": {},
-                "parsed": {},
-                "issues": [],
-            }
+            staged_row = {"row_idx": row_idx, "raw": {}, "parsed": {}, "issues": []}
 
             # Pour chaque type mappé
             for type_name, col_idx in mapping.items():
@@ -150,9 +147,9 @@ class StagingPipeline:
         self.stats = stats
         self.issues_summary = issues_by_type
 
-        print(f"  OK: {stats['total_rows']} lignes stagées")
-        print(f"  OK: {stats['rows_clean']} lignes propres")
-        print(f"  WARN: {stats['rows_with_issues']} lignes avec issues")
+        print(f"  ✓ {stats['total_rows']} lignes stagées")
+        print(f"  ✓ {stats['rows_clean']} lignes propres")
+        print(f"  ⚠️ {stats['rows_with_issues']} lignes avec issues")
 
         return {
             "staging_data": staging_rows,
@@ -203,7 +200,7 @@ class StagingPipeline:
 
         rows_committed = 0
         rows_skipped = 0
-        errors: List[Dict[str, Any]] = []
+        errors = []
 
         for staged_row in self.staging_data:
             if staged_row["issues"]:
@@ -212,8 +209,8 @@ class StagingPipeline:
                 # UPSERT logic ici
                 rows_committed += 1
 
-        print(f"  OK: {rows_committed} lignes committées")
-        print(f"  WARN: {rows_skipped} lignes ignorées (issues)")
+        print(f"  ✓ {rows_committed} lignes committées")
+        print(f"  ⚠️ {rows_skipped} lignes ignorées (issues)")
 
         return {
             "success": True,
@@ -241,7 +238,7 @@ class StagingPipeline:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
-        print(f"OK: Rapport exporté: {output_path}")
+        print(f"✓ Rapport exporté: {output_path}")
 
 
 # ========== TESTS ==========
@@ -278,11 +275,11 @@ if __name__ == "__main__":
     pipeline = StagingPipeline()
     result = pipeline.prepare(test_data, mapping, type_defs)
 
-    print("\n📊 Statistiques:")
+    print(f"\n📊 Statistiques:")
     for k, v in result["stats"].items():
         print(f"  {k}: {v}")
 
-    print("\n📋 Preview (3 premières lignes):")
+    print(f"\n📋 Preview (3 premières lignes):")
     for i, row in enumerate(result["preview"][:3]):
         print(f"\n  Ligne {i}:")
         print(f"    Raw: {row['raw']}")

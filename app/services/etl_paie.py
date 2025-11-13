@@ -27,25 +27,21 @@ Author: Équipe Analytics
 Date: 2025-10-21
 """
 
-import sys
-import yaml  # type: ignore[import]
-import pandas as pd
-import hashlib
-import re
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-from datetime import datetime, date
-from dataclasses import dataclass
-import logging
 import argparse
+import hashlib
+import logging
+import re
+import sys
 import unicodedata
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from config.connection_standard import (
-    open_connection,
-    get_dsn as standard_get_dsn,
-    mask_dsn,
-)
-from psycopg import Connection
+import pandas as pd
+import yaml
+
+from config.connection_standard import get_dsn, open_connection
 
 # Logging
 logging.basicConfig(
@@ -88,7 +84,7 @@ class ImportBatch:
     nb_lignes_rejetees: int = 0
     statut: str = "en_cours"
     message_erreur: Optional[str] = None
-    started_at: Optional[datetime] = None
+    started_at: datetime = None
     completed_at: Optional[datetime] = None
     created_by: str = "etl_paie.py"
 
@@ -103,15 +99,15 @@ class ETLPaie:
     ETL pour import de fichiers paie dans le schéma en étoile
     """
 
-    def __init__(self, conn_string: Optional[str] = None):
+    def __init__(self, conn_string: str):
         """
         Initialise l'ETL
 
         Args:
             conn_string: Chaîne de connexion PostgreSQL
         """
-        self.conn_string = conn_string or standard_get_dsn()
-        self.conn: Connection | None = None
+        self.conn_string = conn_string
+        self.conn = None
         self.mapping_config = self._load_mapping_config()
         self.kpi_catalog = self._load_kpi_catalog()
         self.code_paie_catalog = self._build_code_paie_catalog()
@@ -155,26 +151,19 @@ class ETLPaie:
 
     def connect(self):
         """Établit la connexion PostgreSQL"""
-        if self.conn:
-            return
         logger.info("Connexion à PostgreSQL...")
+        # Utiliser l'API standard si conn_string n'est pas fourni
+        if not self.conn_string:
+            self.conn_string = get_dsn()
+        # Utiliser open_connection avec dsn_override si nécessaire
         self.conn = open_connection(autocommit=False, dsn_override=self.conn_string)
-        logger.info(f"OK: Connecté ({mask_dsn(self.conn_string)})")
+        logger.info("✓ Connecté")
 
     def disconnect(self):
         """Ferme la connexion"""
         if self.conn:
             self.conn.close()
-            logger.info("OK: Déconnecté")
-            self.conn = None
-
-    def _require_conn(self) -> Connection:
-        """Retourne la connexion active ou lève une erreur claire."""
-        if self.conn is None:
-            raise RuntimeError(
-                "Connexion PostgreSQL absente. Appelez connect() avant cette opération."
-            )
-        return self.conn
+            logger.info("✓ Déconnecté")
 
     # ========================================================================
     # ÉTAPE 1: Lecture fichier source
@@ -192,10 +181,10 @@ class ETLPaie:
         """
         logger.info(f"Lecture fichier: {filepath}")
 
-        filepath_path = Path(filepath)
+        filepath = Path(filepath)
 
-        if not filepath_path.exists():
-            from app.services.error_messages import translate_error
+        if not filepath.exists():
+            from services.error_messages import translate_error
 
             user_msg, _ = translate_error(
                 FileNotFoundError(f"Fichier introuvable: {filepath}")
@@ -203,26 +192,26 @@ class ETLPaie:
             raise FileNotFoundError(user_msg)
 
         # Déterminer format
-        extension = filepath_path.suffix.lower()
+        extension = filepath.suffix.lower()
 
         if extension in [".xlsx", ".xls"]:
-            df = pd.read_excel(filepath_path)
+            df = pd.read_excel(filepath)
         elif extension == ".csv":
             # Tenter UTF-8 puis Windows-1252
             try:
-                df = pd.read_csv(filepath_path, encoding="utf-8")
+                df = pd.read_csv(filepath, encoding="utf-8")
             except UnicodeDecodeError:
                 logger.warning("UTF-8 échoué, tentative Windows-1252...")
-                df = pd.read_csv(filepath_path, encoding="windows-1252")
+                df = pd.read_csv(filepath, encoding="windows-1252")
         else:
-            from app.services.error_messages import translate_error
+            from services.error_messages import translate_error
 
             user_msg, _ = translate_error(
                 ValueError(f"Format non supporté: {extension}")
             )
             raise ValueError(user_msg)
 
-        logger.info(f"OK: {len(df)} lignes lues, {len(df.columns)} colonnes")
+        logger.info(f"✓ {len(df)} lignes lues, {len(df.columns)} colonnes")
         logger.info(f"  Colonnes: {list(df.columns)}")
 
         return df
@@ -253,26 +242,26 @@ class ETLPaie:
             for idx, col_source in enumerate(colonnes_sources):
                 if col_source in variantes:
                     mapping_result[df.columns[idx]] = cible
-                    logger.info(f"  OK: '{df.columns[idx]}' → '{cible}'")
+                    logger.info(f"  ✓ '{df.columns[idx]}' → '{cible}'")
                     break
             else:
                 # Aucun match trouvé
                 if config.get("obligatoire", False):
-                    logger.error(f"  FAIL: Colonne obligatoire manquante: '{cible}'")
+                    logger.error(f"  ✗ Colonne obligatoire manquante: '{cible}'")
                     logger.error(
                         f"    Variantes attendues: {config['variantes'][:3]}..."
                     )
                     # Message utilisateur simple
-                    from app.services.error_messages import translate_error
+                    from services.error_messages import translate_error
 
                     user_msg, _ = translate_error(
                         ValueError(f"Colonne obligatoire '{cible}' introuvable")
                     )
                     raise ValueError(user_msg)
                 else:
-                    logger.warning(f"  WARN: Colonne optionnelle absente: '{cible}'")
+                    logger.warning(f"  ⚠ Colonne optionnelle absente: '{cible}'")
 
-        logger.info(f"OK: {len(mapping_result)} colonnes mappées")
+        logger.info(f"✓ {len(mapping_result)} colonnes mappées")
         return mapping_result
 
     def renommer_colonnes(
@@ -349,7 +338,7 @@ class ETLPaie:
         raw = raw.replace("$", "").replace("CA", "").replace("CAD", "")
 
         # Retirer espaces (y compris insécables U+00A0 et U+202F)
-        raw = raw.replace("\u00A0", "").replace("\u202F", "")
+        raw = raw.replace("\u00a0", "").replace("\u202f", "")
         raw = re.sub(r"\s+", "", raw)
 
         # Gérer virgule comme décimale
@@ -451,7 +440,7 @@ class ETLPaie:
                 self.parser_date
             )
 
-        logger.info("OK: Transformations appliquées")
+        logger.info("✓ Transformations appliquées")
         return df_transformed
 
     # ========================================================================
@@ -515,17 +504,13 @@ class ETLPaie:
         nb_valides = df["is_valid"].sum()
         nb_rejetes = (~df["is_valid"]).sum()
 
-        logger.info(f"OK: {nb_valides} lignes valides, {nb_rejetes} rejetées")
+        logger.info(f"✓ {nb_valides} lignes valides, {nb_rejetes} rejetées")
 
         if nb_rejetes > 0:
             logger.warning("Exemples d'erreurs:")
             rejets = df[~df["is_valid"]].head(5)
             for idx, row in rejets.iterrows():
-                if isinstance(idx, int):
-                    row_label: object = idx + 2
-                else:
-                    row_label = idx
-                logger.warning(f"  Ligne {row_label}: {row['validation_errors']}")
+                logger.warning(f"  Ligne {idx+2}: {row['validation_errors']}")
 
         return df
 
@@ -545,17 +530,15 @@ class ETLPaie:
             date_paie_defaut: Date de paie par défaut si absente
         """
         logger.info("Chargement dans staging...")
-        self.connect()
-        conn = self._require_conn()
 
-        with conn.cursor() as cur:
+        with self.conn.cursor() as cur:
             # Nettoyer staging précédent
             cur.execute(
                 "DELETE FROM paie.stg_paie_transactions WHERE source_batch_id = %s",
                 (batch.batch_id,),
             )
 
-            for source_row_number, (_, row) in enumerate(df.iterrows(), start=2):
+            for idx, row in df.iterrows():
                 # Préparer valeurs
                 date_paie = row.get("date_paie_parsed") or date_paie_defaut
 
@@ -587,7 +570,7 @@ class ETLPaie:
                     (
                         batch.batch_id,
                         batch.nom_fichier,
-                        source_row_number,
+                        idx + 2,  # +2 pour header Excel
                         str(row.get("date_paie", "")),
                         str(row.get("matricule", "")),
                         str(row.get("nom_prenom", "")),
@@ -615,7 +598,7 @@ class ETLPaie:
                 (batch.batch_id,),
             )
 
-        logger.info(f"OK: {len(df)} lignes chargées dans staging")
+        logger.info(f"✓ {len(df)} lignes chargées dans staging")
 
     # ========================================================================
     # ÉTAPE 6: Upsert dimensions
@@ -629,10 +612,8 @@ class ETLPaie:
             batch_id: ID du batch
         """
         logger.info("Upsert dimensions...")
-        self.connect()
-        conn = self._require_conn()
 
-        with conn.cursor() as cur:
+        with self.conn.cursor() as cur:
             # dim_temps
             cur.execute(
                 """
@@ -658,7 +639,7 @@ class ETLPaie:
             """,
                 (batch_id,),
             )
-            logger.info(f"  OK: dim_temps: {cur.rowcount} insérées")
+            logger.info(f"  ✓ dim_temps: {cur.rowcount} insérées")
 
             # dim_employe (avec DISTINCT ON pour éviter les doublons)
             cur.execute(
@@ -678,7 +659,7 @@ class ETLPaie:
             """,
                 (batch_id,),
             )
-            logger.info(f"  OK: dim_employe: {cur.rowcount} upsertées")
+            logger.info(f"  ✓ dim_employe: {cur.rowcount} upsertées")
 
             # dim_code_paie (depuis catalogue YAML)
             for code, info in self.code_paie_catalog.items():
@@ -705,7 +686,7 @@ class ETLPaie:
                     ),
                 )
             logger.info(
-                f"  OK: dim_code_paie: {len(self.code_paie_catalog)} upsertées (catalogue)"
+                f"  ✓ dim_code_paie: {len(self.code_paie_catalog)} upsertées (catalogue)"
             )
 
             # Auto-créer les codes inconnus depuis staging (avec détection de catégorie)
@@ -741,7 +722,7 @@ class ETLPaie:
             nb_nouveaux = cur.rowcount
             if nb_nouveaux > 0:
                 logger.warning(
-                    f"  WARN: dim_code_paie: {nb_nouveaux} NOUVEAUX codes auto-créés"
+                    f"  ⚠ dim_code_paie: {nb_nouveaux} NOUVEAUX codes auto-créés"
                 )
 
             # dim_poste_budgetaire
@@ -755,9 +736,9 @@ class ETLPaie:
             """,
                 (batch_id,),
             )
-            logger.info(f"  OK: dim_poste_budgetaire: {cur.rowcount} insérées")
+            logger.info(f"  ✓ dim_poste_budgetaire: {cur.rowcount} insérées")
 
-        logger.info("OK: Dimensions upsertées")
+        logger.info("✓ Dimensions upsertées")
 
     # ========================================================================
     # ÉTAPE 7: Chargement fact
@@ -771,10 +752,8 @@ class ETLPaie:
             batch_id: ID du batch
         """
         logger.info("Chargement fact_paie...")
-        self.connect()
-        conn = self._require_conn()
 
-        with conn.cursor() as cur:
+        with self.conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO paie.fact_paie (
@@ -824,7 +803,7 @@ class ETLPaie:
             )
 
             nb_inserted = cur.rowcount
-            logger.info(f"OK: fact_paie: {nb_inserted} transactions insérées")
+            logger.info(f"✓ fact_paie: {nb_inserted} transactions insérées")
 
             return nb_inserted
 
@@ -835,13 +814,11 @@ class ETLPaie:
     def refresh_vues_materialisees(self):
         """Refresh toutes les vues matérialisées"""
         logger.info("Refresh vues matérialisées...")
-        self.connect()
-        conn = self._require_conn()
 
-        with conn.cursor() as cur:
+        with self.conn.cursor() as cur:
             cur.execute("SELECT paie.refresh_vues_materialisees()")
 
-        logger.info("OK: Vues matérialisées refreshed")
+        logger.info("✓ Vues matérialisées refreshed")
 
     # ========================================================================
     # ÉTAPE 9: Tests qualité
@@ -858,10 +835,7 @@ class ETLPaie:
 
         tests_ok = True
 
-        self.connect()
-        conn = self._require_conn()
-
-        with conn.cursor() as cur:
+        with self.conn.cursor() as cur:
             # Test 1: Cohérence Net
             cur.execute(
                 """
@@ -870,16 +844,15 @@ class ETLPaie:
                 WHERE ABS((gains_brut - deductions_totales) - net_a_payer) > 0.01
             """
             )
-            result = cur.fetchone()
-            nb_ecarts = int(result[0]) if result else 0
+            nb_ecarts = cur.fetchone()[0]
 
             if nb_ecarts > 0:
                 logger.warning(
-                    f"WARN: Test cohérence Net: {nb_ecarts} écarts détectés (arrondi acceptable)"
+                    f"⚠ Test cohérence Net: {nb_ecarts} écarts détectés (arrondi acceptable)"
                 )
                 # NE PAS mettre tests_ok = False (warning seulement)
             else:
-                logger.info("OK: Test cohérence Net: OK")
+                logger.info("✓ Test cohérence Net: OK")
 
             # Test 2: Gains positifs (WARNING seulement, pas CRITICAL)
             cur.execute(
@@ -890,15 +863,14 @@ class ETLPaie:
                 WHERE c.categorie_paie = 'Gains' AND f.montant_cents < 0
             """
             )
-            result = cur.fetchone()
-            nb_gains_negatifs = int(result[0]) if result else 0
+            nb_gains_negatifs = cur.fetchone()[0]
 
             if nb_gains_negatifs > 0:
                 logger.warning(
-                    f"WARN: Test gains: {nb_gains_negatifs} gains négatifs (ajustements acceptés)"
+                    f"⚠ Test gains: {nb_gains_negatifs} gains négatifs (ajustements acceptés)"
                 )
             else:
-                logger.info("OK: Test gains positifs: OK")
+                logger.info("✓ Test gains positifs: OK")
 
             # Test 3: Déductions négatives (WARNING seulement, pas CRITICAL)
             cur.execute(
@@ -910,15 +882,14 @@ class ETLPaie:
                 AND f.montant_cents > 0
             """
             )
-            result = cur.fetchone()
-            nb_deductions_positives = int(result[0]) if result else 0
+            nb_deductions_positives = cur.fetchone()[0]
 
             if nb_deductions_positives > 0:
                 logger.warning(
-                    f"WARN: Test déductions: {nb_deductions_positives} déductions positives (remboursements acceptés)"
+                    f"⚠ Test déductions: {nb_deductions_positives} déductions positives (remboursements acceptés)"
                 )
             else:
-                logger.info("OK: Test déductions négatives: OK")
+                logger.info("✓ Test déductions négatives: OK")
 
             # Test 4: Part employeur >= 0 (WARNING seulement)
             cur.execute(
@@ -928,16 +899,15 @@ class ETLPaie:
                 WHERE part_employeur_cents < 0
             """
             )
-            result = cur.fetchone()
-            nb_part_emp_neg = int(result[0]) if result else 0
+            nb_part_emp_neg = cur.fetchone()[0]
 
             if nb_part_emp_neg > 0:
                 logger.warning(
-                    f"WARN: Test part employeur: {nb_part_emp_neg} valeurs négatives (exceptions acceptées)"
+                    f"⚠ Test part employeur: {nb_part_emp_neg} valeurs négatives (exceptions acceptées)"
                 )
                 # NE PAS bloquer
             else:
-                logger.info("OK: Test part employeur: OK")
+                logger.info("✓ Test part employeur: OK")
 
         if tests_ok:
             logger.info("✅ Tous les tests qualité sont OK")
@@ -982,14 +952,12 @@ class ETLPaie:
         logger.info(f"Fichier: {batch.nom_fichier}")
         logger.info("=" * 80)
 
-        conn: Connection | None = None
         try:
             # Connexion
             self.connect()
-            conn = self._require_conn()
 
             # Créer enregistrement batch
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 cur.execute(
                     """
                     INSERT INTO paie.import_batches (
@@ -1039,20 +1007,20 @@ class ETLPaie:
             # TOUJOURS COMMIT - Les tests sont informatifs seulement
             if not tests_ok:
                 logger.warning(
-                    "WARN: Tests qualité avec anomalies, mais COMMIT quand même (flexible)"
+                    "⚠ Tests qualité avec anomalies, mais COMMIT quand même (flexible)"
                 )
                 batch.statut = "complete_avec_warnings"
             else:
                 batch.statut = "complete"
 
             # Commit dans tous les cas
-            conn.commit()
+            self.conn.commit()
             logger.info("✅ COMMIT réussi (mode flexible)")
 
             batch.completed_at = datetime.now()
 
             # Mettre à jour batch
-            with conn.cursor() as cur:
+            with self.conn.cursor() as cur:
                 cur.execute(
                     """
                     UPDATE paie.import_batches SET
@@ -1074,13 +1042,13 @@ class ETLPaie:
                         batch.batch_id,
                     ),
                 )
-                conn.commit()
+                self.conn.commit()
 
         except Exception as e:
             logger.error(f"❌ ERREUR: {e}", exc_info=True)
 
-            if conn:
-                conn.rollback()
+            if self.conn:
+                self.conn.rollback()
                 logger.info("ROLLBACK effectué")
 
             batch.statut = "echec"
@@ -1112,19 +1080,20 @@ def main():
     )
     parser.add_argument("--file", required=True, help="Chemin vers fichier Excel/CSV")
     parser.add_argument("--date-paie", help="Date de paie par défaut (YYYY-MM-DD)")
-    parser.add_argument("--dsn", help="DSN PostgreSQL (optionnel, sinon standard)")
+    parser.add_argument(
+        "--dsn", default=None, help="DSN PostgreSQL (utilise get_dsn() si non fourni)"
+    )
     parser.add_argument("--user", default="etl_paie", help="Utilisateur")
 
     args = parser.parse_args()
 
-    # Vérifier DSN
-    if args.dsn:
-        dsn = args.dsn
-    else:
+    # Utiliser get_dsn() si DSN non fourni
+    if not args.dsn:
         try:
-            dsn = standard_get_dsn()
-        except RuntimeError as exc:
-            logger.error(f"DSN manquant ou invalide: {exc}")
+            args.dsn = get_dsn()
+            logger.info("DSN obtenu depuis connection_standard.get_dsn()")
+        except RuntimeError as e:
+            logger.error(f"DSN manquant: {e}. Utiliser --dsn ou configurer PAYROLL_DSN")
             sys.exit(1)
 
     # Parser date
@@ -1133,7 +1102,7 @@ def main():
         date_paie = datetime.strptime(args.date_paie, "%Y-%m-%d").date()
 
     # Exécuter ETL
-    etl = ETLPaie(dsn)
+    etl = ETLPaie(args.dsn)
     batch = etl.importer_fichier(
         filepath=args.file, date_paie_defaut=date_paie, user=args.user
     )

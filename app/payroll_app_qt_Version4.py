@@ -965,7 +965,9 @@ class AppBridge(QObject):
                 FROM payroll.payroll_transactions 
                 WHERE pay_date = %(pay_date)s
             """
-            result_emp = self.provider.repo.run_query(sql_count_emp, {"pay_date": pay_date})
+            result_emp = self.provider.repo.run_query(
+                sql_count_emp, {"pay_date": pay_date}
+            )
             count_employees = result_emp[0][0] if result_emp else 0
 
             print(
@@ -1007,7 +1009,9 @@ class AppBridge(QObject):
                 )
             """
             self.provider.repo.run_query(sql_delete_emp, {"pay_date": pay_date})
-            print(f"  ✅ {count_employees} employés supprimés (liés à cette période uniquement)")
+            print(
+                f"  ✅ {count_employees} employés supprimés (liés à cette période uniquement)"
+            )
 
             # 3. Supprimer les transactions
             sql_delete_trans = (

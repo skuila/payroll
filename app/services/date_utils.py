@@ -11,11 +11,12 @@ Fonctions:
 - sanitize_date_range() : Filtre dates hors plage valide
 """
 
-import pandas as pd
-from typing import Tuple, Optional
 import logging
 from datetime import datetime
+from typing import Optional, Tuple
 
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ def detect_excel_date_system(
             (dates_1900 >= MIN_VALID_DATE) & (dates_1900 <= MAX_VALID_DATE)
         ]
         pct_1900 = (len(valid_1900) / len(valid_serials)) * 100
-    except Exception as _exc:
+    except:
         pct_1900 = 0
 
     # Test origine 1904 (1904-01-01)
@@ -115,7 +116,7 @@ def detect_excel_date_system(
             (dates_1904 >= MIN_VALID_DATE) & (dates_1904 <= MAX_VALID_DATE)
         ]
         pct_1904 = (len(valid_1904) / len(valid_serials)) * 100
-    except Exception as _exc:
+    except:
         pct_1904 = 0
 
     # Choisir l'origine avec le meilleur taux de dates valides
@@ -181,7 +182,7 @@ def parse_text_dates(series: pd.Series, dayfirst: bool = True) -> pd.Series:
                 if val1_int > 12 and 1 <= val2_int <= 12:
                     # Inverser: YYYY-DD-MM → YYYY-MM-DD
                     return f"{year}-{val2.zfill(2)}-{val1.zfill(2)}"
-            except Exception as _exc:
+            except:
                 pass
 
         return date_str
@@ -190,7 +191,7 @@ def parse_text_dates(series: pd.Series, dayfirst: bool = True) -> pd.Series:
     try:
         if cleaned.str.match(r"^\d{4}-\d{1,2}-\d{1,2}$").any():
             cleaned = cleaned.apply(fix_yyyy_dd_mm)
-    except Exception as _exc:
+    except:
         pass  # Pas grave si regex échoue
 
     # Parser avec pandas
@@ -219,7 +220,7 @@ def parse_mixed_dates(
 
     # Déjà datetime ?
     if is_already_datetime(series):
-        logger.info("Colonne déjà datetime, pas de conversion")
+        logger.info(f"Colonne déjà datetime, pas de conversion")
         return series, {"already_datetime": True, "total": total}
 
     # Séparer numéros et textes
@@ -463,7 +464,7 @@ def process_date_column(
     # Avertissement si taux de succès < 90%
     if full_stats["final_valid_pct"] < 90:
         logger.warning(
-            f"WARN:  Colonne '{column_name}': seulement {full_stats['final_valid_pct']}% de dates valides. "
+            f"⚠️  Colonne '{column_name}': seulement {full_stats['final_valid_pct']}% de dates valides. "
             f"Vérifiez le format de vos données."
         )
 

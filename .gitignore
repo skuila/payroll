@@ -1,0 +1,15 @@
+
+# Auto-added by cleanup script
+archive/legacy_non_standard/
+app/archive/
+app/backups/
+*.bak
+*.bak.auto
+RAPPORT_*.txt
+strict_ruff_output.txt
+top20_files.txt
+tmp*
+# Auto-added by cleanup script
+*.diff
+*.patch
+archive/
