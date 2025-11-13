@@ -10,7 +10,6 @@ from datetime import date
 from decimal import Decimal
 
 from .locale_fr_ca import parse_date_fr_ca, parse_number_fr_ca
-from datetime import datetime
 
 
 # ========== MAPPING EXACT (15 colonnes) ==========
@@ -171,7 +170,7 @@ class FastTrackImporter:
 
     def __init__(self, db_repo=None):
         self.db_repo = db_repo
-        self.current_run_id = None
+        self.current_run_id: Optional[int] = None
         self.alerts = []
 
     def import_dataframe(self, df, source_file: str) -> Dict:
@@ -237,12 +236,10 @@ class FastTrackImporter:
         rows_skipped = 0
         self.alerts = []
 
-        converted_rows = []
+        converted_rows: list[dict[str, object]] = []
 
         for row_idx, row in enumerate(rows_data, start=1):
-            converted_row = {"source_row_number": row_idx}
-
-            skip_row = False
+            converted_row: dict[str, object] = {"source_row_number": row_idx}
 
             # Convertir chaque champ
             for db_field, col_idx in mapping.items():
@@ -332,7 +329,7 @@ class FastTrackImporter:
             "run_id": self.current_run_id,
         }
 
-    def _create_run(self, source_file: str, total_rows: int) -> int:
+    def _create_run(self, source_file: str, total_rows: int) -> Optional[int]:
         """Crée un enregistrement import_runs"""
         sql = """
         INSERT INTO payroll.import_runs 

@@ -28,7 +28,7 @@ Date: 2025-10-21
 """
 
 import sys
-import yaml
+import yaml  # type: ignore[import]
 import pandas as pd
 import hashlib
 import re
@@ -45,6 +45,7 @@ from config.connection_standard import (
     get_dsn as standard_get_dsn,
     mask_dsn,
 )
+from psycopg import Connection
 
 # Logging
 logging.basicConfig(
@@ -110,7 +111,7 @@ class ETLPaie:
             conn_string: Chaîne de connexion PostgreSQL
         """
         self.conn_string = conn_string or standard_get_dsn()
-        self.conn = None
+        self.conn: Connection | None = None
         self.mapping_config = self._load_mapping_config()
         self.kpi_catalog = self._load_kpi_catalog()
         self.code_paie_catalog = self._build_code_paie_catalog()
@@ -165,6 +166,15 @@ class ETLPaie:
         if self.conn:
             self.conn.close()
             logger.info("OK: Déconnecté")
+            self.conn = None
+
+    def _require_conn(self) -> Connection:
+        """Retourne la connexion active ou lève une erreur claire."""
+        if self.conn is None:
+            raise RuntimeError(
+                "Connexion PostgreSQL absente. Appelez connect() avant cette opération."
+            )
+        return self.conn
 
     # ========================================================================
     # ÉTAPE 1: Lecture fichier source
@@ -182,9 +192,9 @@ class ETLPaie:
         """
         logger.info(f"Lecture fichier: {filepath}")
 
-        filepath = Path(filepath)
+        filepath_path = Path(filepath)
 
-        if not filepath.exists():
+        if not filepath_path.exists():
             from app.services.error_messages import translate_error
 
             user_msg, _ = translate_error(
@@ -193,17 +203,17 @@ class ETLPaie:
             raise FileNotFoundError(user_msg)
 
         # Déterminer format
-        extension = filepath.suffix.lower()
+        extension = filepath_path.suffix.lower()
 
         if extension in [".xlsx", ".xls"]:
-            df = pd.read_excel(filepath)
+            df = pd.read_excel(filepath_path)
         elif extension == ".csv":
             # Tenter UTF-8 puis Windows-1252
             try:
-                df = pd.read_csv(filepath, encoding="utf-8")
+                df = pd.read_csv(filepath_path, encoding="utf-8")
             except UnicodeDecodeError:
                 logger.warning("UTF-8 échoué, tentative Windows-1252...")
-                df = pd.read_csv(filepath, encoding="windows-1252")
+                df = pd.read_csv(filepath_path, encoding="windows-1252")
         else:
             from app.services.error_messages import translate_error
 
@@ -511,7 +521,11 @@ class ETLPaie:
             logger.warning("Exemples d'erreurs:")
             rejets = df[~df["is_valid"]].head(5)
             for idx, row in rejets.iterrows():
-                logger.warning(f"  Ligne {idx+2}: {row['validation_errors']}")
+                if isinstance(idx, int):
+                    row_label: object = idx + 2
+                else:
+                    row_label = idx
+                logger.warning(f"  Ligne {row_label}: {row['validation_errors']}")
 
         return df
 
@@ -531,15 +545,17 @@ class ETLPaie:
             date_paie_defaut: Date de paie par défaut si absente
         """
         logger.info("Chargement dans staging...")
+        self.connect()
+        conn = self._require_conn()
 
-        with self.conn.cursor() as cur:
+        with conn.cursor() as cur:
             # Nettoyer staging précédent
             cur.execute(
                 "DELETE FROM paie.stg_paie_transactions WHERE source_batch_id = %s",
                 (batch.batch_id,),
             )
 
-            for idx, row in df.iterrows():
+            for source_row_number, (_, row) in enumerate(df.iterrows(), start=2):
                 # Préparer valeurs
                 date_paie = row.get("date_paie_parsed") or date_paie_defaut
 
@@ -571,7 +587,7 @@ class ETLPaie:
                     (
                         batch.batch_id,
                         batch.nom_fichier,
-                        idx + 2,  # +2 pour header Excel
+                        source_row_number,
                         str(row.get("date_paie", "")),
                         str(row.get("matricule", "")),
                         str(row.get("nom_prenom", "")),
@@ -613,8 +629,10 @@ class ETLPaie:
             batch_id: ID du batch
         """
         logger.info("Upsert dimensions...")
+        self.connect()
+        conn = self._require_conn()
 
-        with self.conn.cursor() as cur:
+        with conn.cursor() as cur:
             # dim_temps
             cur.execute(
                 """
@@ -753,8 +771,10 @@ class ETLPaie:
             batch_id: ID du batch
         """
         logger.info("Chargement fact_paie...")
+        self.connect()
+        conn = self._require_conn()
 
-        with self.conn.cursor() as cur:
+        with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO paie.fact_paie (
@@ -815,8 +835,10 @@ class ETLPaie:
     def refresh_vues_materialisees(self):
         """Refresh toutes les vues matérialisées"""
         logger.info("Refresh vues matérialisées...")
+        self.connect()
+        conn = self._require_conn()
 
-        with self.conn.cursor() as cur:
+        with conn.cursor() as cur:
             cur.execute("SELECT paie.refresh_vues_materialisees()")
 
         logger.info("OK: Vues matérialisées refreshed")
@@ -836,7 +858,10 @@ class ETLPaie:
 
         tests_ok = True
 
-        with self.conn.cursor() as cur:
+        self.connect()
+        conn = self._require_conn()
+
+        with conn.cursor() as cur:
             # Test 1: Cohérence Net
             cur.execute(
                 """
@@ -845,7 +870,8 @@ class ETLPaie:
                 WHERE ABS((gains_brut - deductions_totales) - net_a_payer) > 0.01
             """
             )
-            nb_ecarts = cur.fetchone()[0]
+            result = cur.fetchone()
+            nb_ecarts = int(result[0]) if result else 0
 
             if nb_ecarts > 0:
                 logger.warning(
@@ -864,7 +890,8 @@ class ETLPaie:
                 WHERE c.categorie_paie = 'Gains' AND f.montant_cents < 0
             """
             )
-            nb_gains_negatifs = cur.fetchone()[0]
+            result = cur.fetchone()
+            nb_gains_negatifs = int(result[0]) if result else 0
 
             if nb_gains_negatifs > 0:
                 logger.warning(
@@ -883,7 +910,8 @@ class ETLPaie:
                 AND f.montant_cents > 0
             """
             )
-            nb_deductions_positives = cur.fetchone()[0]
+            result = cur.fetchone()
+            nb_deductions_positives = int(result[0]) if result else 0
 
             if nb_deductions_positives > 0:
                 logger.warning(
@@ -900,7 +928,8 @@ class ETLPaie:
                 WHERE part_employeur_cents < 0
             """
             )
-            nb_part_emp_neg = cur.fetchone()[0]
+            result = cur.fetchone()
+            nb_part_emp_neg = int(result[0]) if result else 0
 
             if nb_part_emp_neg > 0:
                 logger.warning(
@@ -953,12 +982,14 @@ class ETLPaie:
         logger.info(f"Fichier: {batch.nom_fichier}")
         logger.info("=" * 80)
 
+        conn: Connection | None = None
         try:
             # Connexion
             self.connect()
+            conn = self._require_conn()
 
             # Créer enregistrement batch
-            with self.conn.cursor() as cur:
+            with conn.cursor() as cur:
                 cur.execute(
                     """
                     INSERT INTO paie.import_batches (
@@ -997,7 +1028,7 @@ class ETLPaie:
             self.upsert_dimensions(batch.batch_id)
 
             # Étape 7: Charger fact
-            nb_inserted = self.charger_fact_paie(batch.batch_id)
+            self.charger_fact_paie(batch.batch_id)
 
             # Étape 8: Refresh vues
             self.refresh_vues_materialisees()
@@ -1015,13 +1046,13 @@ class ETLPaie:
                 batch.statut = "complete"
 
             # Commit dans tous les cas
-            self.conn.commit()
+            conn.commit()
             logger.info("✅ COMMIT réussi (mode flexible)")
 
             batch.completed_at = datetime.now()
 
             # Mettre à jour batch
-            with self.conn.cursor() as cur:
+            with conn.cursor() as cur:
                 cur.execute(
                     """
                     UPDATE paie.import_batches SET
@@ -1043,13 +1074,13 @@ class ETLPaie:
                         batch.batch_id,
                     ),
                 )
-                self.conn.commit()
+                conn.commit()
 
         except Exception as e:
             logger.error(f"❌ ERREUR: {e}", exc_info=True)
 
-            if self.conn:
-                self.conn.rollback()
+            if conn:
+                conn.rollback()
                 logger.info("ROLLBACK effectué")
 
             batch.statut = "echec"

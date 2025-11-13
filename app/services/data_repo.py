@@ -8,7 +8,7 @@ Usage:
 """
 
 import logging
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union, cast
 from contextlib import contextmanager
 import psycopg
 from psycopg_pool import ConnectionPool
@@ -81,6 +81,11 @@ class DataRepository:
             logger.exception("Erreur initialisation pool")
             raise
 
+    def _require_pool(self) -> ConnectionPool:
+        if self.pool is None:
+            raise RuntimeError("Connection pool non initialisé")
+        return self.pool
+
     def close(self) -> None:
         """Ferme le pool de connexions."""
         if self.pool:
@@ -96,14 +101,12 @@ class DataRepository:
             with repo.get_connection() as conn:
                 cursor = conn.execute("SELECT ...")
         """
-        if not self.pool:
-            raise RuntimeError("Connection pool non initialisé")
-
-        conn = self.pool.getconn()
+        pool = self._require_pool()
+        conn = pool.getconn()
         try:
             yield conn
         finally:
-            self.pool.putconn(conn)
+            pool.putconn(conn)
 
     def healthcheck(self) -> dict[str, Any]:
         """
@@ -119,9 +122,12 @@ class DataRepository:
                     result = cursor.fetchone()
 
                     if result and result[0] == 1:
+                        pool = self._require_pool()
+                        stats_raw = pool.get_stats()
+                        stats: Dict[str, Any] = cast(Dict[str, Any], stats_raw)
                         pool_stats = {
-                            "size": self.pool.get_stats().get("pool_size", 0),
-                            "available": self.pool.get_stats().get("pool_available", 0),
+                            "size": stats.get("pool_size", 0),
+                            "available": stats.get("pool_available", 0),
                         }
                         return {
                             "status": "ok",
@@ -169,7 +175,7 @@ class DataRepository:
     @staticmethod
     def run_execute_returning(
         conn, sql: str, params: Optional[Union[tuple, list, dict]] = None
-    ) -> tuple:
+    ) -> Optional[tuple[Any, ...]]:
         """DML avec RETURNING → fetchone + commit
 
         Accepts positional (tuple/list) or named (dict) parameters.
@@ -213,12 +219,11 @@ class DataRepository:
 
                 # DML avec RETURNING
                 elif "RETURNING" in sql.upper():
-                    result = self.run_execute_returning(conn, sql, params)
-                    return result
+                    return self.run_execute_returning(conn, sql, params)
 
                 # DML sans RETURNING
                 else:
-                    rowcount = self.run_execute(conn, sql, params)
+                    self.run_execute(conn, sql, params)
                     return []
 
         except Exception as e:

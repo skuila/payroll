@@ -190,8 +190,10 @@ class PayrollDataProvider:
         ):
             return [], []
         g = (
-            df.groupby(cat_col, dropna=False)[amount_col]
-            .apply(lambda s: pd.to_numeric(s, errors="coerce").fillna(0.0).sum())
+            df.groupby(cat_col, dropna=False)[amount_col]  # type: ignore[index]
+            .apply(  # type: ignore[attr-defined]
+                lambda s: pd.to_numeric(s, errors="coerce").fillna(0.0).sum()
+            )
             .sort_values(ascending=False)
         )
         g = g.head(topn)
@@ -396,7 +398,7 @@ class PayrollDataProvider:
         if not cat_col or cat_col not in df.columns:
             return []
 
-        result = []
+        result: List[Dict[str, Any]] = []
         for cat, group in df.groupby(cat_col):
             count = len(group)
             if amount_col and amount_col in group.columns:
@@ -408,7 +410,10 @@ class PayrollDataProvider:
             result.append({"category": str(cat), "amount": total, "count": count})
 
         # Trier par montant décroissant et limiter
-        result.sort(key=lambda x: abs(x["amount"]), reverse=True)
+        result.sort(
+            key=lambda item: abs(float(item["amount"])),
+            reverse=True,
+        )
         return result[:limit]
 
     def get_retirement_stats(self) -> Dict[str, Any]:
@@ -456,14 +461,17 @@ class PayrollDataProvider:
             pd.to_numeric(df_ret[amount_col], errors="coerce").fillna(0.0).sum()
         )
 
-        by_emp = []
+        by_emp: List[Dict[str, Any]] = []
         if emp_col and emp_col in df_ret.columns:
             for emp, group in df_ret.groupby(emp_col):
                 amt = float(
                     pd.to_numeric(group[amount_col], errors="coerce").fillna(0.0).sum()
                 )
                 by_emp.append({"name": str(emp), "amount": abs(amt)})
-            by_emp.sort(key=lambda x: x["amount"], reverse=True)
+            by_emp.sort(
+                key=lambda item: float(item["amount"]),
+                reverse=True,
+            )
 
         avg = total / len(df_ret) if len(df_ret) > 0 else 0.0
 
@@ -514,14 +522,17 @@ class PayrollDataProvider:
             pd.to_numeric(df_inv[amount_col], errors="coerce").fillna(0.0).sum()
         )
 
-        categories = []
+        categories: List[Dict[str, Any]] = []
         if cat_col and cat_col in df_inv.columns:
             for cat, group in df_inv.groupby(cat_col):
                 amt = float(
                     pd.to_numeric(group[amount_col], errors="coerce").fillna(0.0).sum()
                 )
                 categories.append({"name": str(cat), "value": abs(amt)})
-            categories.sort(key=lambda x: x["value"], reverse=True)
+            categories.sort(
+                key=lambda item: float(item["value"]),
+                reverse=True,
+            )
 
         return {"total": abs(total), "categories": categories[:5]}
 

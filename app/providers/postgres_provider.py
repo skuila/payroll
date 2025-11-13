@@ -299,7 +299,7 @@ class PostgresProvider(AbstractDataProvider):
                 year_int_local = int(period_str)
                 start = f"{year_int_local}-01-01"
                 end = f"{year_int_local + 1}-01-01"
-                params = (start, end)
+                params: tuple[str, ...] = (start, end)
             else:
                 params = (period_str,)
 

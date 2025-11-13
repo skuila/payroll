@@ -6,7 +6,7 @@
 # Aucune exception bloquante, tout passe en staging avec traçabilité
 
 import json
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from .transformers import apply_transforms
@@ -66,25 +66,28 @@ class StagingPipeline:
             is_pandas = isinstance(df, pd.DataFrame)
         except Exception as _exc:
             is_pandas = False
-            pd = None
+            pd = None  # type: ignore[assignment]
 
         if is_pandas:
-            headers = [str(h) for h in df.columns]
             rows_data = df.values.tolist()
         else:
             if not df or len(df) == 0:
                 return {"staging_data": [], "stats": {}, "issues": {}, "preview": []}
-            headers = [str(h) for h in df[0]]
             rows_data = df[1:]
 
         # ========== TRAITEMENT LIGNES ==========
 
-        staging_rows = []
-        issues_by_type = {}
-        transform_errors = []
+        staging_rows: List[Dict[str, Any]] = []
+        issues_by_type: Dict[str, List[Dict[str, Any]]] = {}
+        transform_errors: List[Dict[str, Any]] = []
 
         for row_idx, row in enumerate(rows_data):
-            staged_row = {"row_idx": row_idx, "raw": {}, "parsed": {}, "issues": []}
+            staged_row: Dict[str, Any] = {
+                "row_idx": row_idx,
+                "raw": {},
+                "parsed": {},
+                "issues": [],
+            }
 
             # Pour chaque type mappé
             for type_name, col_idx in mapping.items():
@@ -200,7 +203,7 @@ class StagingPipeline:
 
         rows_committed = 0
         rows_skipped = 0
-        errors = []
+        errors: List[Dict[str, Any]] = []
 
         for staged_row in self.staging_data:
             if staged_row["issues"]:

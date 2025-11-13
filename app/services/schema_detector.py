@@ -6,7 +6,7 @@
 # Support inversion colonnes (ex: montant ↔ poste_budgetaire)
 
 import re
-from typing import Dict, List, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 # Import du parseur neutre depuis le module parsers
 from app.services.parsers import parse_amount_neutral, parse_date_robust
@@ -92,7 +92,6 @@ def detect_schema(df, config: Dict) -> Dict:
     TH = config["thresholds"]
     LEX = config["headers_lexicon"]
     PAT = config["patterns"]
-    HINT = config.get("position_hints", {})
 
     # ========== ANALYSE COLONNES ==========
 
@@ -259,14 +258,16 @@ def detect_schema(df, config: Dict) -> Dict:
 
     # ========== ASSIGNATION GREEDY STABLE ==========
 
-    taken_cols = set()
-    mapping = {}
-    confidence = {}
-    alternatives = {}
+    taken_cols: set[int] = set()
+    mapping: Dict[str, Optional[int]] = {}
+    confidence: Dict[str, float] = {}
+    alternatives: Dict[str, List[Tuple[int, float]]] = {}
 
     for t in targets:
         # Trier colonnes par score décroissant
-        ranked = sorted([(j, score[t][j]) for j in range(n_cols)], key=lambda x: -x[1])
+        ranked: List[Tuple[int, float]] = sorted(
+            [(j, score[t][j]) for j in range(n_cols)], key=lambda x: -x[1]
+        )
 
         # Top 3 alternatives pour logging
         alternatives[t] = [(j, round(sc, 3)) for j, sc in ranked[:3]]
@@ -294,8 +295,9 @@ def detect_schema(df, config: Dict) -> Dict:
     for t in targets:
         c = confidence[t]
 
-        if mapping[t] is not None:
-            col_name = headers[mapping[t]]
+        mapped_idx = mapping[t]
+        if mapped_idx is not None:
+            col_name = headers[mapped_idx]
             if c >= TH["accept"]:
                 notes.append(f"{t}: OK: col '{col_name}' (confiance {c})")
             elif c >= TH["warn"]:

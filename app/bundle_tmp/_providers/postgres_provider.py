@@ -7,4 +7,6 @@ naming when running static analysis (mypy). Do not import from this path.
 # Intentionally minimal placeholder to avoid accidental imports.
 # Original implementation archived elsewhere in app/providers/postgres_provider.py.
 
-__all__ = []
+from typing import List
+
+__all__: List[str] = []

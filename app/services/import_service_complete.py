@@ -23,6 +23,7 @@ import logging
 import hashlib
 import csv
 import re
+import uuid
 from datetime import datetime
 from typing import Any, Optional, Callable
 from pathlib import Path
@@ -106,7 +107,7 @@ class ImportServiceComplete:
 
         batch_id = None
         checksum = None
-        period = pay_date.strftime("%Y-%m")
+        period = pay_date.strftime("%Y-%m-%d")
 
         try:
             # 1. Vérifier statut période
@@ -206,12 +207,17 @@ class ImportServiceComplete:
                 self.import_finished_callback(period, batch_id, len(signed_rows))
                 logger.info(f"📡 Signal import_finished émis pour période {period}")
 
+            cards = kpi_data.get("cards", {}) if kpi_data else {}
+            tables = kpi_data.get("tables", {}) if kpi_data else {}
+
             return {
                 "status": "success",
                 "batch_id": batch_id,
                 "rows_count": len(signed_rows),
                 "period": period,
-                "kpi": kpi_data.get("cards", {}) if kpi_data else {},
+                "kpi_cards": cards,
+                "kpi_tables": tables,
+                "kpi": kpi_data or {},
                 "message": f"Import réussi: {len(signed_rows)} lignes"
                 + (" — KPI actualisés" if kpi_data else " (KPI non disponibles)"),
             }
@@ -357,11 +363,11 @@ class ImportServiceComplete:
         INSERT INTO payroll.pay_periods (
             pay_date, pay_day, pay_month, pay_year, period_seq_in_year, status
         ) VALUES (
-            %(pay_date)s, 
-            %(pay_day)s, 
-            %(pay_month)s, 
-            %(pay_year)s,
-            %(period_seq)s,
+            %s, 
+            %s, 
+            %s, 
+            %s,
+            %s,
             'ouverte'
         )
         RETURNING period_id::text
@@ -369,13 +375,13 @@ class ImportServiceComplete:
 
         result = self.repo.execute_dml(
             sql_insert,
-            {
-                "pay_date": pay_date.date(),
-                "pay_day": pay_date.day,
-                "pay_month": pay_date.month,
-                "pay_year": pay_date.year,
-                "period_seq": period_seq,
-            },
+            (
+                pay_date.date(),
+                pay_date.day,
+                pay_date.month,
+                pay_date.year,
+                period_seq,
+            ),
             returning=True,
         )
 
@@ -537,8 +543,8 @@ class ImportServiceComplete:
         if df.empty:
             return 0
 
-        best_row = 0
-        best_score = 0
+        best_row: int = 0
+        best_score: float = 0.0
 
         for row_idx in range(min(10, len(df))):
             # Évaluer si cette ligne ressemble à des en-têtes
@@ -948,27 +954,34 @@ class ImportServiceComplete:
         self, df: pd.DataFrame, pay_date: datetime, source_file: str
     ) -> list[dict]:
         """Transforme DataFrame en liste de dicts avec parsing neutre."""
-        rows = []
-        staging_issues = []
+        rows: list[dict[str, Any]] = []
+        staging_issues: list[dict[str, Any]] = []
 
         for idx, row in df.iterrows():
             try:
                 # Parsing montants avec parseur neutre (noms français)
-                amount_employee = parse_amount_neutral(
+                amount_employee_opt: Optional[float] = parse_amount_neutral(
                     row.get("montant_employe"), f"Ligne {idx+1}"
                 )
+                amount_employee: float = (
+                    amount_employee_opt if amount_employee_opt is not None else 0.0
+                )
                 amount_employer_raw = row.get("part_employeur")
+                amount_employer_opt: Optional[float] = None
 
                 # Pour part_employeur, NaN/vide est NORMAL, ne pas logger de warning
                 if pd.isna(amount_employer_raw):
                     amount_employer = 0.0
                 else:
-                    amount_employer = parse_amount_neutral(
+                    amount_employer_opt = parse_amount_neutral(
                         amount_employer_raw, f"Ligne {idx+1}"
+                    )
+                    amount_employer = (
+                        amount_employer_opt if amount_employer_opt is not None else 0.0
                     )
 
                 # Si parsing échoue pour montant_employe (obligatoire), ajouter à staging
-                if amount_employee is None and "montant_employe" in row:
+                if amount_employee_opt is None and "montant_employe" in row:
                     val = row.get("montant_employe")
                     if not pd.isna(val):  # Seulement si ce n'est pas NaN
                         staging_issues.append(
@@ -982,7 +995,7 @@ class ImportServiceComplete:
                     amount_employee = 0.0  # Valeur par défaut
 
                 # Pour part_employeur, seulement warning si valeur présente mais invalide
-                if amount_employer is None:
+                if amount_employer_opt is None:
                     val_emp = row.get("part_employeur")
                     if not pd.isna(val_emp) and val_emp != "":
                         staging_issues.append(
@@ -1120,15 +1133,23 @@ class ImportServiceComplete:
         def transaction_fn(conn):
             # 1. Upserter dimensions
             employee_ids = self._upsert_employees(conn, signed_rows)
-            budget_post_ids = self._upsert_budget_posts(conn, signed_rows)
+            self._upsert_budget_posts(conn, signed_rows)
             self._upsert_pay_codes(conn, signed_rows)
 
-            # 2. Insérer transactions (batch)
-            self._insert_transactions_batch(
-                conn, signed_rows, period_id, pay_date, employee_ids, budget_post_ids
+            # 2. Insérer transactions dans payroll.payroll_transactions
+            self._insert_payroll_transactions(
+                conn,
+                signed_rows,
+                pay_date,
+                employee_ids,
+                file_name,
+                user_id,
             )
 
-            # 3. Créer import_batch
+            # 3. Insérer l'audit dans imported_payroll_master
+            self._insert_import_master_entries(conn, signed_rows, pay_date, file_name)
+
+            # 4. Créer import_batch
             batch_id = self._create_import_batch_tx(
                 conn,
                 file_name,
@@ -1139,6 +1160,9 @@ class ImportServiceComplete:
                 user_id,
                 "success",
             )
+
+            # 5. Attacher les transactions au batch
+            self._attach_transactions_to_batch(conn, batch_id, pay_date, file_name)
 
             return batch_id
 
@@ -1253,16 +1277,135 @@ class ImportServiceComplete:
 
         logger.info(f"OK: Pay codes upsertés: {len(pay_codes)}")
 
-    def _insert_transactions_batch(
+    def _insert_payroll_transactions(
         self,
         conn,
         rows: list[dict],
-        period_id: str,
         pay_date: datetime,
         employee_ids: dict,
-        budget_post_ids: dict,
+        file_name: str,
+        user_id: str,
     ) -> None:
-        """Insère les transactions en batch dans imported_payroll_master (noms normalisés)."""
+        """Insère les transactions normalisées dans payroll.payroll_transactions."""
+
+        pay_day = pay_date.day
+        pay_month = pay_date.month
+        pay_year = pay_date.year
+
+        sql = """
+        INSERT INTO payroll.payroll_transactions (
+            transaction_id,
+            employee_id,
+            pay_date,
+            pay_day,
+            pay_month,
+            pay_year,
+            pay_code,
+            amount_cents,
+            import_batch_id,
+            source_file,
+            source_row_no,
+            created_at,
+            created_by
+        ) VALUES (
+            %(transaction_id)s,
+            %(employee_id)s,
+            %(pay_date)s,
+            %(pay_day)s,
+            %(pay_month)s,
+            %(pay_year)s,
+            %(pay_code)s,
+            %(amount_cents)s,
+            NULL,
+            %(source_file)s,
+            %(source_row_no)s,
+            CURRENT_TIMESTAMP,
+            %(created_by)s
+        )
+        """
+
+        params_list = []
+
+        for row in rows:
+            matricule = row.get("matricule")
+            employee_id = employee_ids.get(matricule)
+            if not employee_id:
+                continue
+
+            pay_code = row.get("code_paie") or row.get("pay_code") or ""
+            amount_cents = row.get("amount_employee_norm_cents")
+            if amount_cents is None:
+                montant = (
+                    row.get("montant")
+                    or row.get("montant_employe")
+                    or row.get("montant_employe_norm")
+                    or 0
+                )
+                try:
+                    amount_cents = int(round(float(montant) * 100))
+                except Exception:
+                    amount_cents = 0
+
+            params_list.append(
+                {
+                    "employee_id": employee_id,
+                    "pay_date": pay_date.date(),
+                    "pay_day": pay_day,
+                    "pay_month": pay_month,
+                    "pay_year": pay_year,
+                    "pay_code": pay_code,
+                    "amount_cents": amount_cents,
+                    "source_file": row.get("source_file", file_name),
+                    "source_row_no": row.get(
+                        "source_row_no", row.get("numero_ligne", 0)
+                    ),
+                    "created_by": user_id,
+                    "transaction_id": str(uuid.uuid4()),
+                }
+            )
+
+        if not params_list:
+            logger.warning(
+                "WARN: aucune transaction à insérer dans payroll.payroll_transactions"
+            )
+            return
+
+        with conn.cursor() as cur:
+            cur.executemany(sql, params_list)
+
+        logger.info(f"OK: Transactions normalisées insérées: {len(params_list)}")
+
+    def _attach_transactions_to_batch(
+        self, conn, batch_id: str, pay_date: datetime, file_name: str
+    ) -> None:
+        """Attache les transactions insérées au batch créé."""
+
+        sql = """
+        UPDATE payroll.payroll_transactions
+        SET import_batch_id = %(batch_id)s
+        WHERE import_batch_id IS NULL
+          AND pay_date = %(pay_date)s
+          AND source_file = %(source_file)s
+        """
+
+        with conn.cursor() as cur:
+            cur.execute(
+                sql,
+                {
+                    "batch_id": batch_id,
+                    "pay_date": pay_date.date(),
+                    "source_file": file_name,
+                },
+            )
+
+    def _insert_import_master_entries(
+        self,
+        conn,
+        rows: list[dict],
+        pay_date: datetime,
+        file_name: str,
+    ) -> None:
+        """Insère les lignes d'audit dans imported_payroll_master (historique brut)."""
         sql = """
         INSERT INTO payroll.imported_payroll_master (
             numero_ligne, categorie_emploi, code_emploi, titre_emploi, date_paie,
@@ -1300,8 +1443,10 @@ class ImportServiceComplete:
                     "part_employeur": row.get("part_employeur", 0)
                     or 0,  # NUMERIC maintenant
                     "mnt_cmb": row.get("montant_combine", 0) or 0,  # NUMERIC maintenant
-                    "source_file": row.get("source_file", ""),
-                    "source_row_number": row.get("source_row_no", 0),
+                    "source_file": row.get("source_file", file_name),
+                    "source_row_number": row.get(
+                        "source_row_no", row.get("numero_ligne", 0)
+                    ),
                 }
             )
 
@@ -1362,21 +1507,21 @@ class ImportServiceComplete:
         INSERT INTO payroll.import_batches (
             file_name, checksum, period_id, pay_date, rows_count, status, error_message, imported_by
         ) VALUES (
-            %(file_name)s, %(checksum)s, %(period_id)s::uuid, %(pay_date)s, 0, 'error', %(error_message)s, %(imported_by)s::uuid
+            %s, %s, %s::uuid, %s, 0, 'error', %s, %s::uuid
         )
         RETURNING batch_id::text
         """
 
         result = self.repo.execute_dml(
             sql,
-            {
-                "file_name": file_name,
-                "checksum": checksum,
-                "period_id": period_id,
-                "pay_date": pay_date.date(),
-                "error_message": error_message,
-                "imported_by": user_id,
-            },
+            (
+                file_name,
+                checksum,
+                period_id,
+                pay_date.date(),
+                error_message,
+                user_id,
+            ),
             returning=True,
         )
 

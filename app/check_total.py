@@ -26,5 +26,9 @@ SELECT COUNT(*) as nb, SUM(agg.salaire_net) as total
 FROM agg
 LEFT JOIN stg USING (matricule)
 """
-rows = p.repo.run_query(sql)
+repo = p.repo
+if repo is None:
+    raise RuntimeError("Connexion base de données indisponible.")
+
+rows = repo.run_query(sql)
 print(rows[0])
