@@ -11,11 +11,10 @@ Fonctions:
 - sanitize_date_range() : Filtre dates hors plage valide
 """
 
-import pandas as pd
-from typing import Tuple, Optional
 import logging
-from datetime import datetime
+from typing import Optional, Tuple
 
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ def detect_excel_date_system(
         - pct_1904: Score système 1904
     """
     # Si flag Excel connu, l'utiliser directement
-    if workbook_flag == "True" or workbook_flag == True:
+    if workbook_flag in ("True", True):
         return {
             "system": "1904",
             "origin": "1904-01-01",

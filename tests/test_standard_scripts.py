@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-from pathlib import Path
 
 from app.scripts.standardized import check_connection, db_overview, export_employees
 
