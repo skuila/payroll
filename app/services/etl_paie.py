@@ -30,19 +30,18 @@ Date: 2025-10-21
 import argparse
 import hashlib
 import logging
-import os
 import re
 import sys
 import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-import psycopg
 import yaml
+
+from config.connection_standard import get_dsn, open_connection
 
 # Logging
 logging.basicConfig(
@@ -153,8 +152,11 @@ class ETLPaie:
     def connect(self):
         """Établit la connexion PostgreSQL"""
         logger.info("Connexion à PostgreSQL...")
-        self.conn = psycopg.connect(self.conn_string)
-        self.conn.autocommit = False  # Transaction manuelle
+        # Utiliser l'API standard si conn_string n'est pas fourni
+        if not self.conn_string:
+            self.conn_string = get_dsn()
+        # Utiliser open_connection avec dsn_override si nécessaire
+        self.conn = open_connection(autocommit=False, dsn_override=self.conn_string)
         logger.info("✓ Connecté")
 
     def disconnect(self):
@@ -994,7 +996,7 @@ class ETLPaie:
             self.upsert_dimensions(batch.batch_id)
 
             # Étape 7: Charger fact
-            nb_inserted = self.charger_fact_paie(batch.batch_id)
+            self.charger_fact_paie(batch.batch_id)
 
             # Étape 8: Refresh vues
             self.refresh_vues_materialisees()
@@ -1079,16 +1081,20 @@ def main():
     parser.add_argument("--file", required=True, help="Chemin vers fichier Excel/CSV")
     parser.add_argument("--date-paie", help="Date de paie par défaut (YYYY-MM-DD)")
     parser.add_argument(
-        "--dsn", default=os.getenv("PAYROLL_DSN"), help="DSN PostgreSQL"
+        "--dsn", default=None, help="DSN PostgreSQL (utilise get_dsn() si non fourni)"
     )
     parser.add_argument("--user", default="etl_paie", help="Utilisateur")
 
     args = parser.parse_args()
 
-    # Vérifier DSN
+    # Utiliser get_dsn() si DSN non fourni
     if not args.dsn:
-        logger.error("DSN manquant. Utiliser --dsn ou PAYROLL_DSN")
-        sys.exit(1)
+        try:
+            args.dsn = get_dsn()
+            logger.info("DSN obtenu depuis connection_standard.get_dsn()")
+        except RuntimeError as e:
+            logger.error(f"DSN manquant: {e}. Utiliser --dsn ou configurer PAYROLL_DSN")
+            sys.exit(1)
 
     # Parser date
     date_paie = None
