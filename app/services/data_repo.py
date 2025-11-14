@@ -5,6 +5,7 @@ Usage:
     repo = DataRepository(connection_string)
     result = repo.run_query("SELECT * FROM core.employees WHERE matricule = %s", ('1234',))
     repo.run_tx(lambda conn: conn.execute("INSERT INTO ..."))
+    count = repo.delete_orphan_employees()  # Supprime uniquement les employés orphelins
 """
 
 import logging
@@ -119,10 +120,13 @@ class DataRepository:
                     result = cursor.fetchone()
 
                     if result and result[0] == 1:
-                        pool_stats = {
-                            "size": self.pool.get_stats().get("pool_size", 0),
-                            "available": self.pool.get_stats().get("pool_available", 0),
-                        }
+                        pool_stats = {}
+                        if self.pool:
+                            stats = self.pool.get_stats()
+                            pool_stats = {
+                                "size": stats.get("pool_size", 0),
+                                "available": stats.get("pool_available", 0),
+                            }
                         return {
                             "status": "ok",
                             "message": "Database connection healthy",
@@ -169,7 +173,7 @@ class DataRepository:
     @staticmethod
     def run_execute_returning(
         conn, sql: str, params: Optional[Union[tuple, list, dict]] = None
-    ) -> tuple:
+    ) -> Optional[tuple]:
         """DML avec RETURNING → fetchone + commit
 
         Accepts positional (tuple/list) or named (dict) parameters.
@@ -213,12 +217,14 @@ class DataRepository:
 
                 # DML avec RETURNING
                 elif "RETURNING" in sql.upper():
-                    result = self.run_execute_returning(conn, sql, params)
-                    return result
+                    returning_result = self.run_execute_returning(conn, sql, params)
+                    # run_execute_returning retourne un tuple, on le retourne tel quel
+                    # (la méthode run_query peut retourner Any pour compatibilité)
+                    return returning_result
 
                 # DML sans RETURNING
                 else:
-                    rowcount = self.run_execute(conn, sql, params)
+                    self.run_execute(conn, sql, params)
                     return []
 
         except Exception as e:
@@ -364,6 +370,68 @@ class DataRepository:
                 f"Erreur execute_many: {e}\nSQL: {sql}\nParams count: {len(params_list)}"
             )
             raise
+
+    def delete_orphan_employees(self) -> int:
+        """
+        Supprime UNIQUEMENT les employés orphelins (sans transactions dans aucune période).
+
+        Cette méthode garantit que :
+        - Seuls les employés qui n'ont plus aucune transaction sont supprimés
+        - Les employés utilisés dans d'autres périodes sont conservés
+        - Respecte les contraintes de clés étrangères
+
+        Returns:
+            Nombre d'employés orphelins supprimés
+
+        Example:
+            count = repo.delete_orphan_employees()
+            logger.info(f"{count} employés orphelins supprimés")
+        """
+        # Compter AVANT suppression pour avoir le nombre exact
+        sql_count = """
+            SELECT COUNT(*)
+            FROM core.employees 
+            WHERE employee_id IS NOT NULL
+            AND employee_id NOT IN (
+                SELECT DISTINCT employee_id 
+                FROM payroll.payroll_transactions
+                WHERE employee_id IS NOT NULL
+            )
+        """
+        count_result = self.run_query(sql_count, {}, fetch_one=True)
+        # run_query avec fetch_one=True retourne directement le tuple (ou None)
+        # Pour COUNT(*), c'est (count,) ou None
+        if count_result is None:
+            count_before = 0
+        elif isinstance(count_result, (list, tuple)) and len(count_result) > 0:
+            # count_result est un tuple: (count,)
+            count_value = (
+                count_result[0] if isinstance(count_result[0], (int, float)) else 0
+            )
+            count_before = int(count_value)
+        else:
+            count_before = 0
+
+        if count_before == 0:
+            logger.debug("Aucun employé orphelin à supprimer")
+            return 0
+
+        # Exécuter la suppression
+        sql_delete = """
+            DELETE FROM core.employees 
+            WHERE employee_id IS NOT NULL
+            AND employee_id NOT IN (
+                SELECT DISTINCT employee_id 
+                FROM payroll.payroll_transactions
+                WHERE employee_id IS NOT NULL
+            )
+        """
+        self.run_query(sql_delete, {})
+
+        logger.info(
+            f"Suppression de {count_before} employés orphelins (sans transactions dans aucune période)"
+        )
+        return count_before
 
 
 # ========================================

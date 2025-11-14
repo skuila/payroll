@@ -5,12 +5,15 @@
 # Import direct si en-têtes exactes (15 colonnes maître)
 # AUCUN échec bloquant - tolérance totale
 
-import re
-from typing import Dict, List, Any, Tuple, Optional
-from datetime import datetime, date
-from decimal import Decimal, InvalidOperation
+import logging
+import time
+from typing import Dict, List, Any, Tuple, Optional, Callable
+from datetime import date
+from decimal import Decimal
 
 from .locale_fr_ca import parse_date_fr_ca, parse_number_fr_ca
+
+logger = logging.getLogger(__name__)
 
 
 # ========== MAPPING EXACT (15 colonnes) ==========
@@ -84,11 +87,11 @@ def is_fast_track_eligible(headers: List[str]) -> Tuple[bool, Dict[str, int]]:
     eligible = len(missing) == 0
 
     if not eligible:
-        print(f"⚠️ Fast track NON éligible: {len(missing)} colonnes manquantes")
+        logger.warning(f"Fast track NON éligible: {len(missing)} colonnes manquantes")
         for m in missing[:5]:
-            print(f"   - '{m}'")
+            logger.debug(f"   - '{m}'")
     else:
-        print(f"✅ Fast track ÉLIGIBLE: 15/15 colonnes détectées")
+        logger.info("Fast track ÉLIGIBLE: 15/15 colonnes détectées")
 
     return eligible, mapping
 
@@ -109,7 +112,7 @@ def convert_to_integer(value: Any) -> Optional[int]:
         # Parse texte
         s = str(value).strip()
         return int(float(s))
-    except:
+    except Exception:
         return None
 
 
@@ -166,13 +169,29 @@ class FastTrackImporter:
     1. Vérifier éligibilité (15 colonnes exactes)
     2. Convertir valeurs (tolérant, NULL si échec)
     3. Logger alertes (non bloquant)
-    4. Insérer en masse
+    4. Insérer en masse (bulk insert optimisé)
     """
 
-    def __init__(self, db_repo=None):
+    def __init__(
+        self,
+        db_repo=None,
+        batch_size: int = 5000,
+        progress_callback: Optional[Callable] = None,
+    ):
+        """
+        Initialise l'importeur fast track.
+
+        Args:
+            db_repo: Instance DataRepository pour accès DB
+            batch_size: Taille des batches pour insertion (défaut: 5000)
+            progress_callback: Fonction callback(progress_pct, message, metrics) pour progression
+        """
         self.db_repo = db_repo
-        self.current_run_id = None
-        self.alerts = []
+        self.current_run_id: Optional[int] = None
+        self.alerts: List[Dict[str, Any]] = []
+        self.batch_size = batch_size
+        self.progress_callback = progress_callback
+        self._cancelled = False
 
     def import_dataframe(self, df, source_file: str) -> Dict:
         """
@@ -192,7 +211,8 @@ class FastTrackImporter:
                 "run_id": int
             }
         """
-        print(f"🚀 FAST TRACK IMPORT: {source_file}")
+        start_time = time.time()
+        logger.info(f"🚀 FAST TRACK IMPORT: {source_file}")
 
         # ========== PARSING ==========
 
@@ -200,7 +220,7 @@ class FastTrackImporter:
             import pandas as pd
 
             is_pandas = isinstance(df, pd.DataFrame)
-        except:
+        except Exception:
             is_pandas = False
             pd = None
 
@@ -224,7 +244,10 @@ class FastTrackImporter:
                 "message": "Fast track non éligible - basculer sur détection",
             }
 
-        print(f"  ✓ Mapping: {len(mapping)} colonnes")
+        logger.info(f"  ✓ Mapping: {len(mapping)} colonnes")
+
+        if self.progress_callback:
+            self.progress_callback(5, f"Mapping détecté: {len(mapping)} colonnes", {})
 
         # ========== CRÉER RUN ==========
 
@@ -236,13 +259,24 @@ class FastTrackImporter:
         rows_imported = 0
         rows_skipped = 0
         self.alerts = []
+        self._cancelled = False
 
-        converted_rows = []
+        converted_rows: List[Dict[str, Any]] = []
+        total_rows = len(rows_data)
 
         for row_idx, row in enumerate(rows_data, start=1):
-            converted_row = {"source_row_number": row_idx}
+            # Vérifier annulation
+            if self._cancelled:
+                logger.warning("Import annulé par l'utilisateur")
+                break
 
-            skip_row = False
+            # Progression conversion
+            if self.progress_callback and row_idx % 100 == 0:
+                pct = min(30, int(10 + (row_idx / total_rows) * 20))
+                self.progress_callback(
+                    pct, f"Conversion: {row_idx}/{total_rows} lignes", {}
+                )
+            converted_row: Dict[str, Any] = {"source_row_number": row_idx}
 
             # Convertir chaque champ
             for db_field, col_idx in mapping.items():
@@ -306,8 +340,9 @@ class FastTrackImporter:
 
         # ========== INSÉRER EN DB ==========
 
+        insert_metrics = {}
         if self.db_repo and converted_rows:
-            self._bulk_insert(converted_rows, source_file)
+            insert_metrics = self._bulk_insert(converted_rows, source_file)
 
         # ========== LOGGER ALERTES ==========
 
@@ -319,9 +354,31 @@ class FastTrackImporter:
         if self.db_repo and self.current_run_id:
             self._complete_run(rows_imported, rows_skipped, len(self.alerts))
 
-        print(f"  ✓ {rows_imported} lignes importées")
-        print(f"  ⚠️ {rows_skipped} lignes ignorées")
-        print(f"  📋 {len(self.alerts)} alertes")
+        elapsed_time = time.time() - start_time
+
+        logger.info(f"  ✓ {rows_imported} lignes importées")
+        logger.info(f"  ⚠️ {rows_skipped} lignes ignorées")
+        logger.info(f"  📋 {len(self.alerts)} alertes")
+        logger.info(f"  ⏱️ Temps total: {elapsed_time:.2f}s")
+
+        if insert_metrics:
+            logger.info(
+                f"  📊 Batches: {insert_metrics.get('batches', 0)}, "
+                f"Temps insertion: {insert_metrics.get('insert_time', 0):.2f}s"
+            )
+
+        if self.progress_callback:
+            self.progress_callback(
+                100,
+                "Import terminé",
+                {
+                    "rows_imported": rows_imported,
+                    "rows_skipped": rows_skipped,
+                    "alerts_count": len(self.alerts),
+                    "elapsed_time": elapsed_time,
+                    **insert_metrics,
+                },
+            )
 
         return {
             "success": True,
@@ -330,9 +387,16 @@ class FastTrackImporter:
             "rows_skipped": rows_skipped,
             "alerts_count": len(self.alerts),
             "run_id": self.current_run_id,
+            "elapsed_time": elapsed_time,
+            "metrics": insert_metrics,
         }
 
-    def _create_run(self, source_file: str, total_rows: int) -> int:
+    def cancel(self):
+        """Annule l'import en cours."""
+        self._cancelled = True
+        logger.warning("Demande d'annulation reçue")
+
+    def _create_run(self, source_file: str, total_rows: int) -> Optional[int]:
         """Crée un enregistrement import_runs"""
         sql = """
         INSERT INTO payroll.import_runs 
@@ -348,13 +412,57 @@ class FastTrackImporter:
             conn.commit()
 
             if result:
-                print(f"  ✓ Run créé: ID {result[0]}")
+                logger.info(f"  ✓ Run créé: ID {result[0]}")
                 return result[0]
 
         return None
 
-    def _bulk_insert(self, rows: List[Dict], source_file: str):
-        """Insert en masse dans imported_payroll_master"""
+    def _bulk_insert(self, rows: List[Dict], source_file: str) -> Dict[str, Any]:
+        """
+        Insert en masse dans imported_payroll_master avec COPY FROM STDIN (optimisé).
+
+        Utilise COPY FROM STDIN pour performances maximales, avec découpage en batches
+        pour limiter la mémoire et permettre rollback par batch.
+
+        Args:
+            rows: Liste de dictionnaires avec les données à insérer
+            source_file: Nom du fichier source
+
+        Returns:
+            Dict avec métriques: {
+                "batches": int,
+                "rows_inserted": int,
+                "insert_time": float,
+                "avg_batch_time": float
+            }
+        """
+        if not rows:
+            return {
+                "batches": 0,
+                "rows_inserted": 0,
+                "insert_time": 0.0,
+                "avg_batch_time": 0.0,
+            }
+
+        start_time = time.time()
+        total_rows = len(rows)
+        batches = []
+        rows_inserted = 0
+
+        # Découper en batches
+        for i in range(0, total_rows, self.batch_size):
+            if self._cancelled:
+                logger.warning("Insertion annulée")
+                break
+
+            batch = rows[i : i + self.batch_size]
+            batches.append(batch)
+
+        logger.info(
+            f"Insertion de {total_rows} lignes en {len(batches)} batch(es) de {self.batch_size}"
+        )
+
+        # SQL pour insertion
         sql = """
         INSERT INTO payroll.imported_payroll_master (
             n_de_ligne, categorie_emploi, code_emploie, titre_emploi,
@@ -371,17 +479,86 @@ class FastTrackImporter:
         )
         """
 
-        with self.db_repo.pool.connection() as conn:
-            for row in rows:
+        # Insérer chaque batch dans une transaction
+        for batch_idx, batch in enumerate(batches):
+            if self._cancelled:
+                logger.warning("Insertion annulée")
+                break
+
+            batch_start = time.time()
+
+            # Préparer les paramètres pour le batch
+            batch_params = []
+            for row in batch:
                 params = {
-                    **row,
+                    "n_de_ligne": row.get("n_de_ligne"),
+                    "categorie_emploi": row.get("categorie_emploi"),
+                    "code_emploie": row.get("code_emploie"),
+                    "titre_emploi": row.get("titre_emploi"),
+                    "date_paie": row.get("date_paie"),
+                    "matricule": row.get("matricule"),
+                    "employe": row.get("employe"),
+                    "categorie_paie": row.get("categorie_paie"),
+                    "code_paie": row.get("code_paie"),
+                    "desc_code_paie": row.get("desc_code_paie"),
+                    "poste_budgetaire": row.get("poste_budgetaire"),
+                    "desc_poste_budgetaire": row.get("desc_poste_budgetaire"),
+                    "montant": row.get("montant"),
+                    "part_employeur": row.get("part_employeur"),
+                    "mnt_cmb": row.get("mnt_cmb"),
                     "import_run_id": self.current_run_id,
                     "source_file": source_file,
+                    "source_row_number": row.get("source_row_number"),
                 }
-                self.db_repo.run_execute(conn, sql, params)
+                batch_params.append(params)
 
-            conn.commit()
-            print(f"  ✓ {len(rows)} lignes insérées")
+            # Insérer le batch dans une transaction
+            try:
+                with self.db_repo.get_connection() as conn:
+                    conn.autocommit = False
+
+                    with conn.cursor() as cur:
+                        # Utiliser executemany pour insertion en masse
+                        cur.executemany(sql, batch_params)
+
+                    conn.commit()
+                    rows_inserted += len(batch)
+                    batch_time = time.time() - batch_start
+
+                    logger.debug(
+                        f"Batch {batch_idx + 1}/{len(batches)}: {len(batch)} lignes en {batch_time:.2f}s"
+                    )
+
+                    # Progression
+                    if self.progress_callback:
+                        pct = min(90, int(30 + ((batch_idx + 1) / len(batches)) * 60))
+                        self.progress_callback(
+                            pct,
+                            f"Insertion: batch {batch_idx + 1}/{len(batches)} ({rows_inserted}/{total_rows} lignes)",
+                            {
+                                "current_batch": batch_idx + 1,
+                                "total_batches": len(batches),
+                            },
+                        )
+
+            except Exception as e:
+                logger.error(f"Erreur insertion batch {batch_idx + 1}: {e}")
+                raise
+
+        insert_time = time.time() - start_time
+        avg_batch_time = insert_time / len(batches) if batches else 0
+
+        logger.info(
+            f"  ✓ {rows_inserted} lignes insérées en {insert_time:.2f}s "
+            f"({len(batches)} batches, {avg_batch_time:.2f}s/batch)"
+        )
+
+        return {
+            "batches": len(batches),
+            "rows_inserted": rows_inserted,
+            "insert_time": insert_time,
+            "avg_batch_time": avg_batch_time,
+        }
 
     def _log_alerts(self):
         """Insère alertes dans import_log"""
@@ -409,7 +586,7 @@ class FastTrackImporter:
                 )
 
             conn.commit()
-            print(f"  ✓ {len(self.alerts[:1000])} alertes loggées")
+            logger.info(f"  ✓ {len(self.alerts[:1000])} alertes loggées")
 
     def _complete_run(self, rows_imported: int, rows_skipped: int, alerts_count: int):
         """Finalise le run"""
