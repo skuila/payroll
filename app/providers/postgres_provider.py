@@ -232,54 +232,44 @@ class PostgresProvider(AbstractDataProvider):
             logger = logging.getLogger(__name__)
             logger.warning(f"Impossible de configurer les paramètres de connexion: {e}")
 
-    def get_kpis(self, period: Optional[str] = None) -> Dict[str, Any]:
+    def get_kpis(self, pay_date: Optional[str] = None) -> Dict[str, Any]:
         """
         Récupère les KPI depuis la nouvelle structure référentiel.
 
         Architecture: core.employees (DIM) + payroll.payroll_transactions (FACT)
 
-        Filtres période:
-            - Mois: '2025-08' → TO_CHAR(pay_date, 'YYYY-MM') = '2025-08'
-            - Date: '2025-08-28' → pay_date = '2025-08-28'
-            - Année: '2025' → pay_date >= '2025-01-01' AND pay_date < '2026-01-01'
+        Args:
+            pay_date: Date de paie exacte au format YYYY-MM-DD (ex: '2025-08-28')
+                     Si None, utilise la dernière date de paie disponible
 
         Returns:
-            Dict avec: salaire_net_total, masse_salariale, nb_employes, deductions, net_moyen
+            Dict avec: salaire_net_total, masse_salariale, nb_employes, deductions, net_moyen, pay_date
         """
         if not self.repo:
-            return self._mock_kpis(period)
+            return self._mock_kpis(pay_date)
         assert self.repo is not None
 
         try:
-            period_str = period or "2024"
+            # Si pas de date fournie, récupérer la dernière date de paie
+            if not pay_date:
+                sql_last_date = """
+                SELECT MAX(pay_date)::text
+                FROM payroll.payroll_transactions
+                """
+                result_last = self.repo.run_query(sql_last_date, fetch_one=True)
+                if result_last and result_last[0]:
+                    pay_date = result_last[0]
+                else:
+                    return self._mock_kpis(None)
 
-            # Convertir format MM/YYYY vers YYYY-MM si nécessaire
-            if "/" in period_str and len(period_str.split("/")) == 2:
-                month, year = period_str.split("/")
-                if len(month) <= 2 and len(year) == 4:
-                    period_str = f"{year}-{month.zfill(2)}"
-
-            # Détecter format période
-            is_month = len(period_str) == 7 and period_str.count("-") == 1  # YYYY-MM
-            is_date = len(period_str) == 10 and period_str.count("-") == 2  # YYYY-MM-DD
-            is_year = len(period_str) == 4 and period_str.isdigit()  # YYYY
-
-            # Construire filtre de période (PAS de LIKE sur dates)
-            if is_date:
-                # Date exacte
-                period_filter = "t.pay_date = %s::date"
-            elif is_month:
-                # Mois via TO_CHAR
-                period_filter = "TO_CHAR(t.pay_date, 'YYYY-MM') = %s"
-            elif is_year:
-                # Année via bornes de dates (utiliser placeholders pour binding)
-                period_filter = "t.pay_date >= %s::date AND t.pay_date < %s::date"
-            else:
-                # Fallback pour format non reconnu - utiliser une approche plus simple
-                period_filter = "TO_CHAR(t.pay_date, 'YYYY-MM') = %s"
+            # Normaliser la date (accepter DD/MM/YYYY ou YYYY-MM-DD)
+            pay_date_str = self._normalize_pay_date(pay_date)
+            if not pay_date_str:
+                return self._mock_kpis(pay_date)
 
             # Requête sur nouvelle structure (core.employees + payroll.payroll_transactions)
-            sql = f"""
+            # Utiliser TO_DATE pour garantir le format correct
+            sql = """
             SELECT
               -- Salaire net total (tous montants)
               COALESCE(SUM(t.amount_cents), 0) / 100.0 AS salaire_net_total,
@@ -290,20 +280,10 @@ class PostgresProvider(AbstractDataProvider):
               -- Déductions (montants négatifs)
               COALESCE(SUM(CASE WHEN t.amount_cents < 0 THEN t.amount_cents ELSE 0 END), 0) / 100.0 AS deductions
             FROM payroll.payroll_transactions t
-            WHERE {period_filter}
+            WHERE t.pay_date = %(pay_date)s::date
             """
 
-            # Build params depending on period filter type to avoid binding mismatches
-            if is_year:
-                # year_int must be computed here to avoid static analysis / scoping warnings
-                year_int_local = int(period_str)
-                start = f"{year_int_local}-01-01"
-                end = f"{year_int_local + 1}-01-01"
-                params: tuple[str, ...] = (start, end)
-            else:
-                params = (period_str,)
-
-            result = self.repo.run_query(sql, params)
+            result = self.repo.run_query(sql, {"pay_date": pay_date_str})
 
             if result and len(result) > 0:
                 row = result[0]
@@ -318,18 +298,19 @@ class PostgresProvider(AbstractDataProvider):
                     "nb_employes": nb_emp,  # Employés uniques depuis référentiel
                     "deductions": deductions,
                     "net_moyen": salaire_net_total / nb_emp if nb_emp > 0 else 0,
-                    "period": period_str,
+                    "pay_date": pay_date_str,
+                    "period": pay_date_str,  # Compatibilité avec code existant
                     "source": "referentiel_employees",  # Nouvelle source
                 }
             else:
-                return self._mock_kpis(period_str)
+                return self._mock_kpis(pay_date_str)
 
         except Exception:
             logger = logging.getLogger(__name__)
             logger.exception("Erreur get_kpis PostgreSQL")
-            return self._mock_kpis(period)
+            return self._mock_kpis(pay_date)
 
-    def _mock_kpis(self, period: Optional[str]) -> Dict[str, Any]:
+    def _mock_kpis(self, pay_date: Optional[str]) -> Dict[str, Any]:
         """Fallback mock data si erreur"""
         return {
             "masse_salariale": 0,
@@ -337,40 +318,78 @@ class PostgresProvider(AbstractDataProvider):
             "deductions": 0,
             "salaire_net_total": 0,
             "net_moyen": 0,
-            "period": period or "2024",
+            "pay_date": pay_date or "2025-08-28",
+            "period": pay_date or "2025-08-28",  # Compatibilité
             "source": "mock_fallback",
         }
 
     @staticmethod
-    def _parse_period_input(period: Optional[str]) -> tuple[str, Optional[str]]:
-        """Normalise la période au format attendu par les vues KPI."""
-        if not period:
-            return ("periode_paie", None)
+    def _normalize_pay_date(date_str: Optional[str]) -> Optional[str]:
+        """
+        Normalise une date de paie au format YYYY-MM-DD.
 
-        period = period.strip()
+        Formats acceptés:
+        - YYYY-MM-DD (ex: '2025-08-28')
+        - DD/MM/YYYY (ex: '28/08/2025')
+        - DD-MM-YYYY (ex: '28-08-2025')
 
-        # Formats acceptés : MM/YYYY, DD/MM/YYYY, YYYY-MM, YYYY-MM-DD
-        if "/" in period:
-            parts = period.split("/")
-            if len(parts) == 2:
-                # MM/YYYY → periode_paie = YYYY-MM
-                month, year = parts
-                return ("periode_paie", f"{year}-{month.zfill(2)}")
-            if len(parts) == 3:
-                # DD/MM/YYYY → date_paie = YYYY-MM-DD
-                day, month, year = parts
-                return ("date_paie", f"{year}-{month.zfill(2)}-{day.zfill(2)}")
+        Returns:
+            Date au format YYYY-MM-DD ou None si format invalide
+        """
+        if not date_str:
+            return None
 
-        if len(period) == 7 and period[4] == "-":
-            # YYYY-MM
-            return ("periode_paie", period)
+        date_str = date_str.strip()
 
-        if len(period) == 10 and period[4] == "-" and period[7] == "-":
-            # YYYY-MM-DD
-            return ("date_paie", period)
+        # Déjà au format YYYY-MM-DD
+        if len(date_str) == 10 and date_str.count("-") == 2:
+            try:
+                # Valider que c'est une date valide
+                from datetime import datetime
 
-        # Fallback → période mensuelle
-        return ("periode_paie", period)
+                datetime.strptime(date_str, "%Y-%m-%d")
+                return date_str
+            except ValueError:
+                return None
+
+        # Format DD/MM/YYYY
+        if "/" in date_str and len(date_str.split("/")) == 3:
+            try:
+                from datetime import datetime
+
+                parts = date_str.split("/")
+                if len(parts[0]) == 2 and len(parts[1]) == 2 and len(parts[2]) == 4:
+                    dt = datetime.strptime(date_str, "%d/%m/%Y")
+                    return dt.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+
+        # Format DD-MM-YYYY
+        if "-" in date_str and len(date_str.split("-")) == 3:
+            try:
+                from datetime import datetime
+
+                parts = date_str.split("-")
+                if len(parts[0]) == 2 and len(parts[1]) == 2 and len(parts[2]) == 4:
+                    dt = datetime.strptime(date_str, "%d-%m-%Y")
+                    return dt.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+
+        return None
+
+    @staticmethod
+    def _parse_pay_date_input(pay_date: Optional[str]) -> Optional[str]:
+        """
+        Normalise une date de paie au format YYYY-MM-DD.
+
+        Args:
+            pay_date: Date de paie dans différents formats
+
+        Returns:
+            Date au format YYYY-MM-DD ou None si format invalide
+        """
+        return PostgresProvider._normalize_pay_date(pay_date)
 
     @staticmethod
     def _safe_float(value: Any) -> float:
@@ -379,13 +398,19 @@ class PostgresProvider(AbstractDataProvider):
         except Exception:
             return 0.0
 
-    def get_kpi_details(self, period: Optional[str]) -> Dict[str, Any]:
-        """Retourne les détails KPI sans passer par l'API FastAPI."""
+    def get_kpi_details(self, pay_date: Optional[str]) -> Dict[str, Any]:
+        """
+        Retourne les détails KPI sans passer par l'API FastAPI.
+
+        Args:
+            pay_date: Date de paie exacte au format YYYY-MM-DD (ex: '2025-08-28')
+        """
         empty = {
             "codes_paie": [],
             "postes_budgetaires": [],
             "categories_emploi": [],
-            "period": period or "N/A",
+            "pay_date": pay_date or "N/A",
+            "period": pay_date or "N/A",  # Compatibilité
             "source": "database",
         }
 
@@ -393,30 +418,31 @@ class PostgresProvider(AbstractDataProvider):
             return empty
         assert self.repo is not None
 
-        column, value = self._parse_period_input(period or "")
-        if not value:
+        # Normaliser la date de paie
+        pay_date_normalized = self._normalize_pay_date(pay_date) if pay_date else None
+        if not pay_date_normalized:
             return empty
 
-        params = {"periode": value}
+        params = {"pay_date": pay_date_normalized}
 
         try:
-            # Codes de paie
-            sql_codes = f"""
+            # Codes de paie - utiliser date_paie au lieu de periode
+            sql_codes = """
                 SELECT 
-                    {column}::text AS periode,
+                    date_paie::text AS date_paie,
                     code_paie,
                     libelle_paie,
                     categorie_paie,
                     montant_total,
                     nb_transactions
-                FROM paie.v_kpi_par_code_paie
-                WHERE {column} = %(periode)s
+                FROM payroll.v_kpi_par_code_paie
+                WHERE date_paie = %(pay_date)s::date
                 ORDER BY ABS(montant_total) DESC
             """
             codes_rows = self.repo.run_query(sql_codes, params) or []
             codes = [
                 {
-                    "periode": value,
+                    "pay_date": row[0],
                     "code_paie": row[1],
                     "libelle_code": row[2],
                     "categorie_paie": row[3],
@@ -426,10 +452,10 @@ class PostgresProvider(AbstractDataProvider):
                 for row in codes_rows
             ]
 
-            # Postes budgétaires
-            sql_postes = f"""
+            # Postes budgétaires - utiliser date_paie au lieu de periode
+            sql_postes = """
                 SELECT 
-                    {column}::text AS periode,
+                    date_paie::text AS date_paie,
                     poste_budgetaire,
                     libelle_poste,
                     nb_employes,
@@ -437,14 +463,14 @@ class PostgresProvider(AbstractDataProvider):
                     gains_brut,
                     deductions_totales,
                     net_a_payer
-                FROM paie.v_kpi_par_poste_budgetaire
-                WHERE {column} = %(periode)s
+                FROM payroll.v_kpi_par_poste_budgetaire
+                WHERE date_paie = %(pay_date)s::date
                 ORDER BY cout_total DESC
             """
             postes_rows = self.repo.run_query(sql_postes, params) or []
             postes = [
                 {
-                    "periode": value,
+                    "pay_date": row[0],
                     "poste_budgetaire": row[1],
                     "libelle_poste": row[2],
                     "nb_employes": int(row[3] or 0),
@@ -456,10 +482,10 @@ class PostgresProvider(AbstractDataProvider):
                 for row in postes_rows
             ]
 
-            # Catégories d'emploi
-            sql_categories = f"""
+            # Catégories d'emploi - utiliser date_paie au lieu de periode
+            sql_categories = """
                 SELECT 
-                    {column}::text AS periode,
+                    date_paie::text AS date_paie,
                     categorie_emploi,
                     nb_employes,
                     gains_brut,
@@ -467,14 +493,14 @@ class PostgresProvider(AbstractDataProvider):
                     net_a_payer,
                     part_employeur,
                     cout_total
-                FROM paie.v_kpi_par_categorie_emploi
-                WHERE {column} = %(periode)s
+                FROM payroll.v_kpi_par_categorie_emploi
+                WHERE date_paie = %(pay_date)s::date
                 ORDER BY cout_total DESC
             """
             categories_rows = self.repo.run_query(sql_categories, params) or []
             categories = [
                 {
-                    "periode": value,
+                    "pay_date": row[0],
                     "categorie_emploi": row[1],
                     "nb_employes": int(row[2] or 0),
                     "gains_brut": self._safe_float(row[3]),
@@ -490,7 +516,8 @@ class PostgresProvider(AbstractDataProvider):
                 "codes_paie": codes,
                 "postes_budgetaires": postes,
                 "categories_emploi": categories,
-                "period": value,
+                "pay_date": pay_date_normalized,
+                "period": pay_date_normalized,  # Compatibilité
                 "source": "database",
             }
         except Exception:
@@ -516,9 +543,16 @@ class PostgresProvider(AbstractDataProvider):
             offset = max(0, offset)
             filters = filters or {}
 
-            period_filter = filters.get("period", "")
+            pay_date_filter = filters.get(
+                "pay_date", filters.get("period", "")
+            )  # Compatibilité
             matricule_filter = filters.get("matricule", "")
             categorie_filter = filters.get("categorie", "")
+
+            # Normaliser la date de paie si fournie
+            pay_date_normalized = None
+            if pay_date_filter:
+                pay_date_normalized = self._normalize_pay_date(pay_date_filter)
 
             # Requête sur nouvelle structure
             sql = """
@@ -531,7 +565,7 @@ class PostgresProvider(AbstractDataProvider):
             FROM payroll.payroll_transactions t
             JOIN core.employees e ON t.employee_id = e.employee_id
             WHERE 1=1
-                AND (%(period)s = '' OR TO_CHAR(t.pay_date, 'YYYY-MM') = %(period)s)
+                AND (%(pay_date)s::date IS NULL OR t.pay_date = %(pay_date)s::date)
                 AND (%(matricule)s = '' OR e.matricule_norm = %(matricule)s)
                 AND (%(categorie)s = '' OR t.pay_code ILIKE '%%' || %(categorie)s || '%%')
             ORDER BY t.pay_date DESC, e.matricule_norm
@@ -544,13 +578,13 @@ class PostgresProvider(AbstractDataProvider):
             FROM payroll.payroll_transactions t
             JOIN core.employees e ON t.employee_id = e.employee_id
             WHERE 1=1
-                AND (%(period)s = '' OR TO_CHAR(t.pay_date, 'YYYY-MM') = %(period)s)
+                AND (%(pay_date)s::date IS NULL OR t.pay_date = %(pay_date)s::date)
                 AND (%(matricule)s = '' OR e.matricule_norm = %(matricule)s)
                 AND (%(categorie)s = '' OR t.pay_code ILIKE '%%' || %(categorie)s || '%%')
             """
 
             params = {
-                "period": period_filter,
+                "pay_date": pay_date_normalized,
                 "matricule": matricule_filter,
                 "categorie": categorie_filter,
                 "limit": limit,
