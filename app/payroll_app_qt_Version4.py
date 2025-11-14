@@ -2650,10 +2650,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.web_view)
 
         # WebChannel pour communication Python-JavaScript
-        self.web_channel = QWebChannel()
-        self.bridge = AppBridge(self)
-        self.web_channel.registerObject("AppBridge", self.bridge)
-        self.web_view.page().setWebChannel(self.web_channel)
+        self.web_channel = None
+        self.app_bridge = None
+        self._setup_web_channel()
 
         # Neutraliser caches pour garantir données fraîches
         try:
@@ -2701,6 +2700,29 @@ class MainWindow(QMainWindow):
             """
             self.web_view.setHtml(error_html)
             print(f"❌ Tabler non trouvé: {tabler_path}")
+
+    def _setup_web_channel(self):
+        """Initialise QWebChannel et enregistre AppBridge si possible."""
+        if getattr(self, "web_view", None) is None:
+            print("⚠️ Impossible d'initialiser QWebChannel: web_view absent")
+            return
+
+        try:
+            self.app_bridge = AppBridge(self)
+        except Exception as exc:
+            self.app_bridge = None
+            print(f"❌ Création AppBridge échouée: {exc}")
+            return
+
+        try:
+            channel = QWebChannel()
+            channel.registerObject("AppBridge", self.app_bridge)
+            self.web_view.page().setWebChannel(channel)
+            self.web_channel = channel
+            print("✅ AppBridge enregistré via QWebChannel")
+        except Exception as exc:
+            self.web_channel = None
+            print(f"❌ AppBridge registration failed: {exc}")
 
 
 if __name__ == "__main__":

@@ -1,329 +1,259 @@
 
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-  <title>Employés - PayrollAnalyzer</title>
-  <!-- Tabler CSS local -->
-    <link href="./dist/css/tabler.min.css?1692870487" rel="stylesheet"/>
-    <link href="./dist/css/tabler-vendors.min.css?1692870487" rel="stylesheet"/>
-    <!-- DataTables CSS local -->
-    <link href="./dist/libs/datatables/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
-    <link href="./dist/libs/datatables/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
-    <link href="./dist/libs/datatables/css/responsive.bootstrap5.min.css" rel="stylesheet"/>
-    <link href="./dist/libs/datatables/css/fixedHeader.bootstrap5.min.css" rel="stylesheet"/>
-  <link href="./employees.css" rel="stylesheet"/>
-    <style>
-    :root {
-      --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aperçu Liste Employés — PayrollAnalyzer</title>
+
+  <!-- Tabler CSS (CDN) -->
+  <link href="https://unpkg.com/tabler@1.0.0-beta8/dist/css/tabler.min.css" rel="stylesheet" />
+
+  <!-- DataTables CSS -->
+  <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+  <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" rel="stylesheet" />
+
+  <style>
     body {
-      font-feature-settings: "cv03", "cv04", "cv11";
+      background: #f4f6fb;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
     }
-    </style>
-  </head>
-  <body>
-    <div class="page">
-      <!-- Sidebar -->
-      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
-        <div class="container-fluid">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <h1 class="navbar-brand navbar-brand-autodark">
-            <a href="./index.html">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2"/><path d="M14 8h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5m2 0v1.5m0 -9v1.5"/></svg>
-              PayrollAnalyzer
-            </a>
-          </h1>
-          <div class="collapse navbar-collapse" id="sidebar-menu">
-            <ul class="navbar-nav pt-lg-3">
-              <li class="nav-item"><a class="nav-link" href="./index.html"><span class="nav-link-title">Accueil</span></a></li>
-            <li class="nav-item active"><a class="nav-link" href="./employees.html"><span class="nav-link-title">Employés</span></a></li>
-            <li class="nav-item"><a class="nav-link" href="./database.html"><span class="nav-link-title">Base de données</span></a></li>
-              <li class="nav-item"><a class="nav-link" href="./assistant.html"><span class="nav-link-title">Assistant IA</span></a></li>
-              <li class="nav-item"><a class="nav-link" href="./import.html"><span class="nav-link-title">Importer</span></a></li>
-            </ul>
-          </div>
+
+    .badge-actif {
+      background-color: #037c17;
+      color: #fff;
+      padding: .35rem .6rem;
+      border-radius: .5rem;
+    }
+
+    .badge-inactif {
+      background-color: #b46b6b;
+      color: #fff;
+      padding: .35rem .6rem;
+      border-radius: .5rem;
+    }
+
+    .row-uppercase {
+      background-color: #fff0f0 !important;
+    }
+
+    .spark-canvas {
+      width: 120px;
+      height: 36px;
+      display: block;
+    }
+
+    .arrow-up {
+      color: #16a34a;
+      font-weight: 700;
+    }
+
+    .arrow-down {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    .arrow-neutral {
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .legend {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #475569;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="page">
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div class="container-xl">
+          <h2 class="page-title">Liste des employés — Aperçu</h2>
+          <div class="page-subtitle text-muted">Exemple visuel & prototype local</div>
         </div>
-      </aside>
-      
-    <!-- Page content -->
-      <div class="page-wrapper">
-      <!-- Sticky Header -->
-      <div class="page-header d-print-none sticky-top bg-white border-bottom" id="page-header">
-          <div class="container-xl">
-            <div class="row g-2 align-items-center">
-              <div class="col">
-                <h2 class="page-title">Gestion des Employés</h2>
-              <div class="text-muted mt-1">Nouvelles recrues et effectif par période</div>
-              </div>
-              <div class="col-auto ms-auto d-print-none">
-              <div class="btn-list toolbar">
-                <div class="input-group" style="width: 260px;">
-                  <span class="input-group-text">
-                    <i class="ti ti-calendar"></i>
-                  </span>
-                  <input type="date" class="form-control" id="pay-date" aria-label="Date de paie">
-                  <button class="btn btn-primary" id="btn-apply-date">Afficher</button>
-                </div>
-              </div>
+      </div>
+
+
+      <div class="container-xl mt-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+
+
+            <div class="controls">
+              <label for="pay-date" class="form-label me-2">Date de paie :</label>
+              <input type="date" id="pay-date" class="form-control" style="width:160px" />
+              <button id="btn-apply-date" class="btn btn-primary">Afficher</button>
+              <div style="flex:1"></div>
+              <div>
+                <select id="filter-statut" class="form-select">
+                  <option value="all">Tous</option>
+                  <option value="actif">Actifs</option>
+                  <option value="inactif">Anciens</option>
+                </select>
               </div>
             </div>
+
+
+            <div class="table-responsive">
+              <table id="tbl-employees" class="table table-bordered table-hover w-100">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Matricule</th>
+                    <th>Statut</th>
+                    <th>Catégorie</th>
+                    <th>Titre</th>
+                    <th class="text-end">Salaire net ($)</th>
+                    <th class="text-center">Δ %</th>
+                    <th>Trend</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+
+            <div class="legend">
+              <strong>Note :</strong> les lignes en <span style="background:#fff0f0">rose</span> signifient que le nom est entièrement en MAJUSCULES (signalé). Karim Benmoussa (exemple) est montré comme actif.
+            </div>
+
+
           </div>
         </div>
-        
-        <div class="page-body">
-          <!-- === Début Contenu Employés (STYLE TABLER STRICT) === -->
-          <div class="container mt-4">
-
-            <style>
-              /* Palette Tabler / contraintes de style spécifiques à cette page */
-              body { background-color: #f5f7fb; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-              .table thead { background-color: #d0e3fa; color: #1e293b; }
-              .badge-actif { background-color: #037c17; }
-              .badge-inactif { background-color: #b46b6b; }
-            </style>
-
-            <!-- Filtres et KPIs supprimés: on garde uniquement la barre de recherche native DataTables -->
-          
-          <!-- Tableau -->
-            <div class="card shadow-sm">
-                  <div class="table-responsive">
-                <table id="tbl-employees" class="table table-bordered table-hover mb-0 w-100">
-                      <thead>
-                        <tr>
-                          <th>Nom</th>
-                          <th>Matricule</th>
-                          <th>Catégorie d'emploi</th>
-                          <th>Titre d'emploi</th>
-                          <th class="text-end">Total à payer ($)</th>
-                        </tr>
-                      </thead>
-                  <tbody></tbody>
-                      <tfoot>
-                        <tr>
-                          <th></th>
-                          <th></th>
-                          <th></th>
-                          <th class="text-end">Total net:</th>
-                          <th class="text-end" id="employees-total-cell"></th>
-                        </tr>
-                      </tfoot>
-                    </table>
-                    <div id="emp-debug" class="small text-muted p-2"></div>
       </div>
     </div>
-    
-            <!-- Script page (DataTables + AppBridge) -->
-            <script>
-              (function(){
-                console.log('[Employees] Script chargé');
-                const NF = new Intl.NumberFormat('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  </div>
 
-                async function getLastPayDate(){
-                  try {
-                    if (!window.appBridge || !window.appBridge.execute_sql) {
-                      console.warn('[Employees] AppBridge non disponible pour getLastPayDate');
-                      return null;
-                    }
-                    const raw = await window.appBridge.execute_sql("SELECT MAX(pay_date)::text FROM payroll.payroll_transactions");
-                    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                    console.log('[Employees] Dernière date de paie:', parsed);
-                    return (parsed && parsed.rows && parsed.rows[0] && parsed.rows[0][0]) ? parsed.rows[0][0] : null;
-                  } catch (e) { 
-                    console.error('[Employees] Erreur getLastPayDate:', e);
-                    return null;
-                  }
-                }
 
-                let fromDate = null;
-                let toDate = null;
-
-                function buildSql(){
-                  const d = (document.getElementById('pay-date') && document.getElementById('pay-date').value)
-                            || fromDate
-                            || new Date().toISOString().slice(0,10);
-                  const sql = `WITH agg AS (
-                       SELECT 
-                         e.employee_id,
-                         COALESCE(e.nom_complet, e.nom_norm || ', ' || COALESCE(e.prenom_norm, '')) AS nom,
-                         COALESCE(e.matricule_norm, '') AS matricule,
-                         COALESCE(SUM(t.amount_cents) / 100.0, 0.0) AS salaire_net
-                       FROM payroll.payroll_transactions t
-                       JOIN core.employees e ON e.employee_id = t.employee_id
-                       WHERE t.pay_date = DATE '${d}'
-                       GROUP BY
-                         e.employee_id,
-                         e.nom_complet,
-                         e.nom_norm,
-                         e.prenom_norm,
-                         e.matricule_norm
-                     ),
-                     stg AS (
-                       SELECT
-                         COALESCE(matricule::text, '') AS matricule,
-                         MAX(categorie_emploi) AS categorie_emploi,
-                         MAX(titre_emploi) AS titre_emploi
-                       FROM paie.stg_paie_transactions
-                       WHERE date_paie = DATE '${d}'
-                         AND is_valid = TRUE
-                       GROUP BY COALESCE(matricule::text, '')
-                     )
-                     SELECT
-                       agg.nom,
-                       agg.matricule,
-                       COALESCE(stg.categorie_emploi, '') AS categorie_emploi,
-                       COALESCE(stg.titre_emploi, '') AS titre_emploi,
-                       agg.salaire_net AS total_a_payer
-                     FROM agg
-                     LEFT JOIN stg ON stg.matricule = agg.matricule
-                     ORDER BY agg.nom`;
-                  console.log('[Employees] SQL pour date:', d);
-                  return sql;
-                }
-
-                async function waitForDataTables(timeout = 8000) {
-                  const start = Date.now();
-                  while (true) {
-                    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
-                      console.log('[Employees] DataTables disponible');
-                      return true;
-                    }
-                    if (Date.now() - start > timeout) {
-                      throw new Error('DataTables non chargé après attente');
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                  }
-                }
-
-                let dt;
-                async function loadTable(){
-                  console.log('[Employees] loadTable() appelée');
-                  
-                  try {
-                    await waitForDataTables();
-                  } catch(err) {
-                    console.error('[Employees] DataTables absent ou retardé:', err);
-                    const dbg = document.getElementById('emp-debug');
-                    if (dbg) dbg.textContent = 'Erreur: DataTables non chargé';
-                    return;
-                  }
-
-                  const $ = window.jQuery;
-                  if (dt && $.fn.DataTable.isDataTable('#tbl-employees')) {
-                    console.log('[Employees] Rechargement de la table existante');
-                    dt.ajax.reload(null, false);
-                    return;
-                  }
-                  
-                  console.log('[Employees] Initialisation DataTable avec AppBridge');
-                  dt = await window.DataTablesHelper.initWithAppBridge(
-                    '#tbl-employees',
-                    buildSql,
-                    [
-                      { title: 'Nom', data: 0 },
-                      { title: 'Matricule', data: 1 },
-                      { title: "Catégorie d'emploi", data: 2 },
-                      { title: "Titre d'emploi", data: 3 },
-                      { title: 'Total à payer ($)', data: 4, className: 'text-end', render: window.DataTablesHelper.formatCurrency }
-                    ],
-                    {
-                      drawCallback: function(settings) {
-                        try {
-                          const api = this.api();
-                          const dataRows = api.rows({search: 'applied'}).data().toArray();
-                          const rowsCount = dataRows.length;
-                          let sum = 0;
-                          dataRows.forEach(r => sum += Number(r[4] || 0));
-                          const dbg = document.getElementById('emp-debug');
-                          if (dbg) dbg.textContent = `Lignes: ${rowsCount} — Somme brute: ${NF.format(sum)}`;
-                          console.log('[Employees] Affichage:', rowsCount, 'lignes, total:', sum);
-                        } catch (e) {
-                          console.error('[Employees] Erreur drawCallback:', e);
-                        }
-                      },
-                      footerCallback: function(row, data, start, end, display) {
-                        const api = this.api();
-                        const dataRows = api.rows({search: 'applied'}).data().toArray();
-                        let totalNet = 0;
-                        dataRows.forEach(row => {
-                          totalNet += Number(row[4] || 0);
-                        });
-                        $(api.column(4).footer()).html(`<strong>${window.DataTablesHelper.formatCurrency(totalNet)}</strong>`);
-                      },
-                      buttons: ['excelHtml5', 'csvHtml5', 'pdfHtml5', 'print', 'pageLength']
-                    }
-                  );
-                  
-                  console.log('[Employees] DataTable initialisée avec succès');
-                }
-
-                document.addEventListener('DOMContentLoaded', async function(){
-                  console.log('[Employees] DOMContentLoaded');
-                  
-                  if (typeof qt !== 'undefined' && qt.webChannelTransport) {
-                    console.log('[Employees] QWebChannel disponible, connexion...');
-                    new QWebChannel(qt.webChannelTransport, async function(channel){
-                      window.appBridge = channel.objects.AppBridge;
-                      console.log('[Employees] AppBridge connecté');
-                      
-                      const lastDate = await getLastPayDate();
-                      const d = lastDate || new Date().toISOString().slice(0,10);
-                      const inp = document.getElementById('pay-date');
-                      if (inp) {
-                        inp.value = d;
-                        console.log('[Employees] Date initialisée:', d);
-                      }
-                      fromDate = d;
-                      toDate = d;
-                      await loadTable();
-                    });
-                  } else {
-                    console.warn('[Employees] QWebChannel non disponible');
-                    const dbg = document.getElementById('emp-debug');
-                    if (dbg) dbg.textContent = 'Application non connectée (QWebChannel manquant)';
-                  }
-                  
-                  // Bouton "Afficher"
-                  const btn = document.getElementById('btn-apply-date');
-                  if (btn) {
-                    btn.addEventListener('click', function(){
-                      console.log('[Employees] Bouton Afficher cliqué');
-                      loadTable();
-                    });
-                  }
-                  
-                  // Bouton actualiser (si présent)
-                  const refresh = document.getElementById('btn-refresh');
-                  if (refresh) {
-                    refresh.addEventListener('click', function(){
-                      console.log('[Employees] Bouton Actualiser cliqué');
-                      loadTable();
-                    });
-                  }
-                });
-              })();
-            </script>
-          </div>
-          <!-- === Fin Contenu Employés === -->
+  <div class="modal modal-blur fade" id="modalDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">Historique salaire</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
         </div>
-        
+        <div class="modal-body">
+          <canvas id="modalChart" style="width:100%;height:320px"></canvas>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+        </div>
       </div>
     </div>
-    
-  <!-- Toast container -->
-  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11000;">
-    <div id="toast-container"></div>
-    </div>
-    
-  <!-- Scripts -->
-  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-  <script src="./js/api-client.js?v=20251107"></script>
-  <!-- DataTables loader (charge jQuery, DataTables et extensions via CDN si nécessaire) -->
-  <script src="./dist/libs/datatables/loader.js?v=20251107"></script>
-  <script src="./js/datatables-helper.js?v=20251108"></script>
-  <script src="./dist/js/tabler.min.js?1692870487"></script>
-  </body>
+  </div>
+
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://unpkg.com/tabler@1.0.0-beta8/dist/js/tabler.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+
+  <script>
+    (function () {
+      const sampleEmployees = [
+        { employee_id: 1, nom: "Karim Benmoussa", matricule: "K001", statut: "actif", categorie: "Comptabilité", titre: "Agent comptable", salaire_net: 4520.00, salaire_prev: 4300.00, salary_trend: [{ date: "2024-11-01", value: 4200 }, { date: "2024-12-01", value: 4300 }, { date: "2025-01-01", value: 4520 }] },
+        { employee_id: 2, nom: "KARIM BENMOUSSA", matricule: "K001", statut: "inactif", categorie: "Comptabilité", titre: "Ancien agent", salaire_net: 0, salaire_prev: 1200, salary_trend: [{ date: "2024-11-01", value: 1200 }, { date: "2024-12-01", value: 0 }, { date: "2025-01-01", value: 0 }] },
+        { employee_id: 3, nom: "Luc Tremblay", matricule: "L220", statut: "inactif", categorie: "Technique", titre: "Technicien", salaire_net: 900.00, salaire_prev: 1000.00, salary_trend: [{ date: "2024-11-01", value: 950 }, { date: "2024-12-01", value: 1000 }, { date: "2025-01-01", value: 900 }] },
+        { employee_id: 4, nom: "Sophie Roy", matricule: "S333", statut: "actif", categorie: "Administration", titre: "Chef bureau", salaire_net: 4200.50, salaire_prev: 4100.00, salary_trend: [{ date: "2024-11-01", value: 3900 }, { date: "2024-12-01", value: 4100 }, { date: "2025-01-01", value: 4200.5 }] }
+      ];
+
+
+      function fmtMoney(n) { return new Intl.NumberFormat('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n)); }
+      function computeDeltaPct(cur, prev) { cur = Number(cur || 0); prev = Number(prev || 0); if (prev === 0) { if (cur === 0) return { pct: 0, dir: 'neutral' }; return { pct: 100, dir: 'up' } } const pct = ((cur - prev) / Math.abs(prev)) * 100; return { pct: pct, dir: (pct > 0.1 ? 'up' : (pct < -0.1 ? 'down' : 'neutral')) }; }
+      function renderDelta(cur, prev) { const d = computeDeltaPct(cur, prev); const pctStr = (Math.abs(d.pct) >= 1 || d.pct === 0) ? d.pct.toFixed(1) + '%' : d.pct.toFixed(2) + '%'; if (d.dir === 'up') return `<span class="arrow-up">▲ ${pctStr}</span>`; if (d.dir === 'down') return `<span class="arrow-down">▼ ${pctStr}</span>`; return `<span class="arrow-neutral">— ${pctStr}</span>`; }
+
+
+      function createSparkline(canvasId, trend) { const node = document.getElementById(canvasId); if (!node) return; node.width = 140; node.height = 36; const ctx = node.getContext('2d'); new Chart(ctx, { type: 'line', data: { labels: trend.map(t => t.date), datasets: [{ data: trend.map(t => t.value), borderColor: '#0b69ff', backgroundColor: 'rgba(11,105,255,0.08)', tension: 0.3, pointRadius: 0 }] }, options: { responsive: false, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtMoney(ctx.parsed.y) } } } } }); }
+
+
+      let modalChart = null; function openModalHistory(title, trend) { document.getElementById('modalTitle').textContent = `Historique salaire — ${title}`; const ctx = document.getElementById('modalChart').getContext('2d'); if (modalChart) modalChart.destroy(); modalChart = new Chart(ctx, { type: 'line', data: { labels: trend.map(t => t.date), datasets: [{ label: 'Salaire net', data: trend.map(t => t.value), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.08)', tension: 0.2 }] }, options: { plugins: { tooltip: { callbacks: { label: ctx => fmtMoney(ctx.parsed.y) } } } } }); new tabler.Core.Modal(document.getElementById('modalDetail')).show(); }
+
+
+      function prepareRows(data) { return data.map(r => { const isUpper = String(r.nom).trim() === String(r.nom).trim().toUpperCase(); const deltaHtml = renderDelta(r.salaire_net, r.salaire_prev); return { employee_id: r.employee_id, nom: r.nom, matricule: r.matricule, statut: r.statut, categorie: r.categorie, titre: r.titre, salaire_net: r.salaire_net, salaire_prev: r.salaire_prev, deltaHtml: deltaHtml, salary_trend: r.salary_trend, is_upper: isUpper }; }); }
+
+
+      let table = null; function initDataTable(rows) {
+        if (table) { table.clear().rows.add(rows).draw(); return; }
+        table = $('#tbl-employees').DataTable({
+          data: rows, columns: [
+            { data: 'nom', render: (d, t, r) => `<a href="#" class="emp-link" data-id="${r.employee_id}">${d}</a>` },
+            { data: 'matricule' },
+            { data: 'statut', render: d => d === 'actif' ? '<span class="badge-actif">Actif</span>' : '<span class="badge-inactif">Ancien</span>' },
+            { data: 'categorie' },
+            { data: 'titre' },
+            { data: 'salaire_net', className: 'text-end', render: d => fmtMoney(d) },
+            { data: null, className: 'text-center', render: (d, t, r) => r.deltaHtml },
+            { data: 'salary_trend', orderable: false, searchable: false, render: (trend, t, r) => `<canvas id="spark_${r.employee_id}" class="spark-canvas"></canvas>` },
+            { data: null, render: (d, t, r) => `<div class="btn-group"><button class="btn btn-sm btn-outline-primary btn-detail" data-id="${r.employee_id}">Détails</button></div>` }
+          ],
+          createdRow: function (row, data) {
+            if (data.is_upper) $(row).addClass('row-uppercase');
+            setTimeout(() => {
+              createSparkline(`spark_${data.employee_id}`, data.salary_trend);
+            }, 40);
+          },
+          dom: 'Bfrtip',
+          buttons: ['excelHtml5', 'csvHtml5', 'print'],
+          pageLength: 10,
+          responsive: true
+        });
+        $('#tbl-employees tbody').on('click', '.btn-detail', function () {
+          const id = $(this).data('id');
+          const rowData = table.rows().data().toArray().find(r => r.employee_id == id);
+          if (rowData) openModalHistory(rowData.nom, rowData.salary_trend);
+        });
+        $('#tbl-employees tbody').on('click', '.emp-link', function (e) {
+          e.preventDefault();
+          const id = $(this).data('id');
+          const rowData = table.rows().data().toArray().find(r => r.employee_id == id);
+          if (rowData) openModalHistory(rowData.nom, rowData.salary_trend);
+        });
+      }
+
+
+      document.addEventListener('DOMContentLoaded', async function () {
+        document.getElementById('pay-date').value = '2025-01-01';
+        const rows = prepareRows(sampleEmployees);
+        initDataTable(rows);
+        document.getElementById('filter-statut').addEventListener('change', function () {
+          const v = this.value;
+          if (v === 'all') {
+            table.column(2).search('').draw();
+          } else {
+            table.column(2).search(v === 'actif' ? 'Actif' : 'Ancien').draw();
+          }
+        });
+        document.getElementById('btn-apply-date').addEventListener('click', function () {
+          const rows = prepareRows(sampleEmployees);
+          initDataTable(rows);
+        });
+      });
+
+
+    })();
+  </script>
+
+</body>
+
 </html>
