@@ -247,9 +247,9 @@
                           <div class="card-body">
                             <h4 class="card-title mb-3">
                               <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2 text-warning" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
-                              Supprimer TOUT
+                              Supprimer une période
                             </h4>
-                            <p class="text-secondary small mb-3">Supprime TOUT : période + transactions + employés (avec traçabilité)</p>
+                            <p class="text-secondary small mb-3">Supprime la période, ses transactions et les employés orphelins uniquement (avec traçabilité)</p>
                             
                             <div class="mb-3">
                               <label class="form-label">Sélectionner la période</label>
@@ -265,7 +265,7 @@
                             
                             <button class="btn btn-warning w-100" onclick="deletePeriod()">
                               <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
-                              SUPPRIMER TOUT
+                              SUPPRIMER LA PÉRIODE
                             </button>
                           </div>
                         </div>
@@ -622,23 +622,27 @@
         
         const selectedText = select.options[select.selectedIndex].text;
         
-        if (!confirm(`⚠️⚠️⚠️ ATTENTION - SUPPRESSION TOTALE ⚠️⚠️⚠️\n\nCette action va supprimer:\n• La période: ${selectedText}\n• TOUTES les transactions\n• TOUS les employés\n\nCette action est IRRÉVERSIBLE !\n\nÊtes-vous ABSOLUMENT sûr ?`)) {
+        if (!confirm(`⚠️⚠️⚠️ ATTENTION - SUPPRESSION DE PÉRIODE ⚠️⚠️⚠️\n\nCette action va supprimer:\n• La période: ${selectedText}\n• TOUTES les transactions de cette période\n• Les employés orphelins (sans transactions dans d'autres périodes)\n\nLes employés utilisés dans d'autres périodes seront CONSERVÉS.\n\nCette action est IRRÉVERSIBLE !\n\nÊtes-vous ABSOLUMENT sûr ?`)) {
           return;
         }
         
         // Double confirmation
-        if (!confirm(`⚠️ DERNIÈRE CONFIRMATION\n\nVous allez TOUT supprimer:\n${selectedText}\n+ Toutes les transactions\n+ Tous les employés\n\nConfirmez ?`)) {
+        if (!confirm(`⚠️ DERNIÈRE CONFIRMATION\n\nVous allez supprimer:\n${selectedText}\n+ Toutes les transactions de cette période\n+ Les employés orphelins uniquement\n\nLes employés avec transactions dans d'autres périodes seront conservés.\n\nConfirmez ?`)) {
           return;
         }
         
-        log('warning', `Suppression TOTALE de ${selectedText}...`);
+        log('warning', `Suppression de la période ${selectedText}...`);
         
         try {
           const result = await callBridge('delete_period', period_id);
           
           if (result.success) {
-            alert(`✅ Suppression TOTALE réussie\n\nPériode: ${result.pay_date}\nTransactions: ${result.deleted_count}\nEmployés: ${result.employees_deleted}\n\nToutes les données ont été supprimées.`);
-            log('success', `TOUT supprimé: ${result.pay_date}, ${result.deleted_count} transactions, ${result.employees_deleted} employés`);
+            const employeesInfo = result.employees_in_period 
+              ? `\nEmployés dans la période: ${result.employees_in_period}\nEmployés orphelins supprimés: ${result.employees_deleted}\nEmployés conservés: ${result.employees_in_period - result.employees_deleted}`
+              : `\nEmployés orphelins supprimés: ${result.employees_deleted}`;
+            
+            alert(`✅ Suppression réussie\n\nPériode: ${result.pay_date}\nTransactions supprimées: ${result.deleted_count}${employeesInfo}\n\n${result.message || 'La période a été supprimée avec succès.'}`);
+            log('success', `Période supprimée: ${result.pay_date}, ${result.deleted_count} transactions, ${result.employees_deleted} employés orphelins supprimés`);
             await refreshAll();
           } else {
             alert(`❌ Erreur lors de la suppression:\n${result.error}`);

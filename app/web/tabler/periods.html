@@ -311,16 +311,20 @@
       }
       
       async function deletePeriod(periodId, payDate) {
-        if (!confirm(`⚠️ SUPPRIMER la période du ${window.fmtDate(payDate)} ?\n\nCette action est irréversible.`)) return;
+        if (!confirm(`⚠️ SUPPRIMER la période du ${window.fmtDate(payDate)} ?\n\nCette action va supprimer:\n• La période\n• Toutes les transactions de cette période\n• Les employés orphelins (sans transactions dans d'autres périodes)\n\nLes employés utilisés dans d'autres périodes seront CONSERVÉS.\n\nCette action est irréversible.`)) return;
         
         try {
           const result = await callBridge('delete_period', periodId);
           
           if (result.success) {
-            alert('✓ Période supprimée avec succès !');
+            const detailMessage = result.employees_in_period 
+              ? `\n\nTransactions supprimées: ${result.deleted_count}\nEmployés orphelins supprimés: ${result.employees_deleted}\nEmployés conservés: ${result.employees_in_period - result.employees_deleted}`
+              : `\n\nTransactions supprimées: ${result.deleted_count}\nEmployés orphelins supprimés: ${result.employees_deleted}`;
+            
+            alert(`✓ Période supprimée avec succès !${detailMessage}`);
             loadPeriods();
           } else {
-            alert('❌ Erreur: ' + result.message);
+            alert('❌ Erreur: ' + (result.error || result.message || 'Erreur inconnue'));
           }
         } catch (error) {
           console.error('Erreur suppression période:', error);

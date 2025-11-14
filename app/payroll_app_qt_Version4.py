@@ -16,10 +16,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
-from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtCore import (
+# noqa: E402 - Imports PyQt6 après load_dotenv() car nécessaire pour charger .env avant
+from PyQt6.QtWidgets import QApplication, QMainWindow  # noqa: E402
+from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: E402
+from PyQt6.QtWebChannel import QWebChannel  # noqa: E402
+from PyQt6.QtCore import (  # noqa: E402
     Qt,
     QCoreApplication,
     QUrl,
@@ -28,7 +29,7 @@ from PyQt6.QtCore import (
     QThread,
     pyqtSignal,
 )
-from PyQt6.QtWebEngineCore import QWebEngineProfile
+from PyQt6.QtWebEngineCore import QWebEngineProfile  # noqa: E402
 
 # Import API client pour source de vérité unique
 
@@ -253,10 +254,14 @@ def parse_excel_date_robust(date_value, row_idx):
 class AppBridge(QObject):
     """Pont Python ↔ JavaScript pour communiquer avec l'UI Tabler - Source de vérité PostgreSQL"""
 
+    # Signal de progression pour l'import
+    importProgress = pyqtSignal(int, str, dict)  # (percent, message, metrics)
+
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
         self.current_user = None  # Session utilisateur
+        self.current_importer = None  # Référence à l'importeur en cours pour annulation
 
         # Utiliser PostgresProvider comme source de vérité unique
         try:
@@ -269,19 +274,31 @@ class AppBridge(QObject):
 
         print("✅ Provider PostgreSQL actif - accès direct aux données réelles")
 
+    @pyqtSlot()
+    def cancelImport(self):
+        """Annule l'import en cours."""
+        if self.current_importer and hasattr(self.current_importer, "cancel"):
+            self.current_importer.cancel()
+            print("⚠️ Annulation de l'import demandée")
+
     @pyqtSlot(result=str)
     def ping(self):
         """Test connexion WebChannel"""
         return json.dumps({"status": "ok", "message": "WebChannel actif"})
 
     @pyqtSlot(str, result=str)
-    def get_kpis(self, period=""):
-        """Récupère les KPI depuis PostgreSQL"""
+    def get_kpis(self, pay_date=""):
+        """
+        Récupère les KPI depuis PostgreSQL
+
+        Args:
+            pay_date: Date de paie exacte au format YYYY-MM-DD (ex: '2025-08-28')
+        """
         try:
             if not self.provider:
                 raise RuntimeError("Provider PostgreSQL non disponible")
 
-            kpis = self.provider.get_kpis(period)
+            kpis = self.provider.get_kpis(pay_date)
 
             print(f"✅ KPIs envoyés (PostgreSQL): {kpis}")
             return json.dumps(kpis)
@@ -294,15 +311,20 @@ class AppBridge(QObject):
                 "nb_employes": 295,
                 "deductions": -433705.65,
                 "net_moyen": 1825.09,
-                "period": period or "2025-08-28",
+                "period": pay_date or "2025-08-28",
                 "source": "Fallback_Real",
             }
             return json.dumps(kpis)
 
     @pyqtSlot(str, result=str)
-    def get_kpi(self, period=""):
-        """Alias compatible UI (employees.js attend get_kpi)"""
-        return self.get_kpis(period)
+    def get_kpi(self, pay_date=""):
+        """
+        Alias compatible UI (employees.js attend get_kpi)
+
+        Args:
+            pay_date: Date de paie exacte au format YYYY-MM-DD (ex: '2025-08-28')
+        """
+        return self.get_kpis(pay_date)
 
     @pyqtSlot(result=str)
     def refresh_kpis(self):
@@ -342,6 +364,7 @@ class AppBridge(QObject):
                 }
             )
 
+    @pyqtSlot(int, int, str, result=str)
     def get_table(self, offset=0, limit=50, filters="{}"):
         """Récupère les données paginées (PostgreSQL réel)"""
         try:
@@ -930,7 +953,11 @@ class AppBridge(QObject):
         try:
             print(f"🗑️  Suppression COMPLÈTE de la période ID: {period_id}...")
 
-            # Récupérer les infos de la période avant suppression
+            # ============================================================
+            # ÉTAPE 1: Récupérer TOUTES les informations AVANT suppression
+            # ============================================================
+
+            # Récupérer les infos complètes de la période avant suppression
             sql_info = """
             SELECT pay_date::text, pay_year, pay_month, status, 
                    period_seq_in_year, created_at, closed_at
@@ -948,18 +975,24 @@ class AppBridge(QObject):
             pay_year = info_result[0][1]
             pay_month = info_result[0][2]
             status = info_result[0][3]
+            period_seq_in_year = info_result[0][4] if len(info_result[0]) > 4 else None
+
             print(
                 f"  📅 Période: {pay_date} (année: {pay_year}, mois: {pay_month}, statut: {status})"
             )
 
-            # Compter avant suppression
-            sql_count_trans = "SELECT COUNT(*) FROM payroll.payroll_transactions WHERE pay_date = %(pay_date)s"
+            # Compter les transactions AVANT suppression (pour audit)
+            sql_count_trans = """
+                SELECT COUNT(*) 
+                FROM payroll.payroll_transactions 
+                WHERE pay_date = %(pay_date)s
+            """
             result_trans = self.provider.repo.run_query(
                 sql_count_trans, {"pay_date": pay_date}
             )
             count_transactions = result_trans[0][0] if result_trans else 0
 
-            # Compter UNIQUEMENT les employés liés à cette période
+            # Compter les employés liés à cette période
             sql_count_emp = """
                 SELECT COUNT(DISTINCT employee_id) 
                 FROM payroll.payroll_transactions 
@@ -968,20 +1001,53 @@ class AppBridge(QObject):
             result_emp = self.provider.repo.run_query(
                 sql_count_emp, {"pay_date": pay_date}
             )
-            count_employees = result_emp[0][0] if result_emp else 0
+            count_employees_in_period = result_emp[0][0] if result_emp else 0
 
-            print(
-                f"  📊 À supprimer: {count_transactions} transactions, {count_employees} employés"
+            # Compter les employés orphelins AVANT suppression (qui n'ont des transactions QUE dans cette période)
+            # Ce sont les employés qui seront orphelins après suppression de cette période
+            sql_count_orphans_before = """
+                SELECT COUNT(DISTINCT pt.employee_id)
+                FROM payroll.payroll_transactions pt
+                WHERE pt.pay_date = %(pay_date)s
+                AND pt.employee_id IS NOT NULL
+                AND pt.employee_id NOT IN (
+                    SELECT DISTINCT employee_id 
+                    FROM payroll.payroll_transactions
+                    WHERE pay_date != %(pay_date)s
+                    AND employee_id IS NOT NULL
+                )
+            """
+            result_orphans_before = self.provider.repo.run_query(
+                sql_count_orphans_before, {"pay_date": pay_date}
+            )
+            count_employees_orphans_before = (
+                result_orphans_before[0][0] if result_orphans_before else 0
             )
 
-            # 1. Créer une trace dans la table d'audit
+            print(f"  📊 À supprimer: {count_transactions} transactions")
+            print(
+                f"  👤 Employés dans cette période: {count_employees_in_period} (dont {count_employees_orphans_before} deviendront orphelins)"
+            )
+
+            # ============================================================
+            # ÉTAPE 2: Créer la trace d'audit AVANT toute suppression
+            # ============================================================
+
+            # Construire une note détaillée pour l'audit
+            notes_audit = (
+                f"Période supprimée: {pay_date} | "
+                f"Employés dans période: {count_employees_in_period} | "
+                f"Employés orphelins: {count_employees_orphans_before} | "
+                f"Séquence année: {period_seq_in_year or 'N/A'}"
+            )
+
             try:
                 sql_audit = """
                 INSERT INTO payroll.deleted_periods_audit 
                 (period_id, pay_date, pay_year, pay_month, status, 
-                 transactions_count, deleted_at, deleted_by)
-                VALUES (%(period_id)s, %(pay_date)s, %(pay_year)s, %(pay_month)s, 
-                        %(status)s, %(count)s, NOW(), 'user')
+                 transactions_count, deleted_at, deleted_by, notes)
+                VALUES (%(period_id)s, %(pay_date)s::date, %(pay_year)s, %(pay_month)s, 
+                        %(status)s, %(transactions_count)s, NOW(), %(deleted_by)s, %(notes)s)
                 """
                 self.provider.repo.run_query(
                     sql_audit,
@@ -991,36 +1057,88 @@ class AppBridge(QObject):
                         "pay_year": pay_year,
                         "pay_month": pay_month,
                         "status": status,
-                        "count": count_transactions,
+                        "transactions_count": count_transactions,
+                        "deleted_by": "user",  # TODO: Remplacer par l'utilisateur réel si disponible
+                        "notes": notes_audit,
                     },
                 )
-                print("  ✅ Trace d'audit créée")
-            except Exception as audit_error:
-                print(f"  ⚠️ Audit non disponible: {audit_error}")
-
-            # 2. Supprimer UNIQUEMENT les employés associés à cette période
-            # IMPORTANT: Faire AVANT de supprimer les transactions !
-            sql_delete_emp = """
-                DELETE FROM core.employees 
-                WHERE employee_id IN (
-                    SELECT DISTINCT employee_id 
-                    FROM payroll.payroll_transactions 
-                    WHERE pay_date = %(pay_date)s
+                print(
+                    f"  ✅ Trace d'audit créée (period_id: {period_id}, transactions: {count_transactions})"
                 )
-            """
-            self.provider.repo.run_query(sql_delete_emp, {"pay_date": pay_date})
-            print(
-                f"  ✅ {count_employees} employés supprimés (liés à cette période uniquement)"
-            )
+            except Exception as audit_error:
+                # Log détaillé de l'erreur mais ne pas bloquer la suppression
+                import traceback
 
-            # 3. Supprimer les transactions
+                error_details = traceback.format_exc()
+                print(f"  ⚠️  ERREUR lors de la création de l'audit: {audit_error}")
+                print(f"  ⚠️  Détails: {error_details}")
+                print("  ⚠️  La suppression continuera malgré l'erreur d'audit")
+                # Ne pas lever l'exception pour permettre la suppression de continuer
+
+            # ============================================================
+            # ÉTAPE 3: Supprimer les transactions (AVANT les employés)
+            # Contrainte FK: fk_employee ON DELETE RESTRICT
+            # ============================================================
+            # IMPORTANT: On doit supprimer les transactions AVANT les employés
+            # car fk_employee a ON DELETE RESTRICT qui empêche la suppression
+            # d'un employé s'il est référencé par des transactions.
             sql_delete_trans = (
                 "DELETE FROM payroll.payroll_transactions WHERE pay_date = %(pay_date)s"
             )
             self.provider.repo.run_query(sql_delete_trans, {"pay_date": pay_date})
             print(f"  ✅ {count_transactions} transactions supprimées")
 
-            # 4. Supprimer la période de pay_periods
+            # ============================================================
+            # ÉTAPE 4: Supprimer les données dans imported_payroll_master
+            # Pas de contrainte FK vers pay_periods (table de staging)
+            # ============================================================
+            sql_delete_imported = """
+                DELETE FROM payroll.imported_payroll_master 
+                WHERE date_paie = %(pay_date)s
+            """
+            self.provider.repo.run_query(sql_delete_imported, {"pay_date": pay_date})
+            print("  ✅ Données supprimées dans imported_payroll_master")
+
+            # ============================================================
+            # ÉTAPE 5: Supprimer les batches d'import liés à cette période
+            # Contrainte FK: fk_import_batch ON DELETE SET NULL
+            # ============================================================
+            # IMPORTANT: On supprime les batches APRÈS les transactions.
+            # Bien que fk_import_batch ait ON DELETE SET NULL (non-bloquant),
+            # on supprime d'abord les transactions pour éviter des références
+            # orphelines temporaires. L'ordre est logique et sûr.
+            sql_delete_batches = """
+                DELETE FROM payroll.import_batches 
+                WHERE pay_date = %(pay_date)s OR period_id = %(period_id)s
+            """
+            self.provider.repo.run_query(
+                sql_delete_batches, {"pay_date": pay_date, "period_id": period_id}
+            )
+            print("  ✅ Batches d'import supprimés")
+
+            # ============================================================
+            # ÉTAPE 6: Supprimer les employés orphelins
+            # Contrainte FK: fk_employee ON DELETE RESTRICT
+            # ============================================================
+            # IMPORTANT: On supprime UNIQUEMENT les employés qui n'ont plus
+            # aucune transaction dans aucune période. Cela respecte la
+            # contrainte fk_employee ON DELETE RESTRICT car on ne supprime
+            # que les employés non référencés.
+            # Utilise la méthode standardisée du repository.
+            count_employees_orphans_deleted = (
+                self.provider.repo.delete_orphan_employees()
+            )
+            print(
+                f"  ✅ {count_employees_orphans_deleted} employés orphelins supprimés (sans transactions dans aucune période)"
+            )
+
+            # ============================================================
+            # ÉTAPE 7: Supprimer la période de pay_periods (DERNIÈRE ÉTAPE)
+            # Pas de contrainte FK bloquante (les transactions sont déjà supprimées)
+            # ============================================================
+            # IMPORTANT: On supprime la période EN DERNIER car toutes les
+            # données dépendantes ont déjà été supprimées. Cela garantit
+            # la cohérence globale de la base de données.
             sql_delete_period = (
                 "DELETE FROM payroll.pay_periods WHERE period_id = %(period_id)s"
             )
@@ -1033,9 +1151,10 @@ class AppBridge(QObject):
                 {
                     "success": True,
                     "deleted_count": count_transactions,
-                    "employees_deleted": count_employees,
+                    "employees_deleted": count_employees_orphans_deleted,
+                    "employees_in_period": count_employees_in_period,
                     "pay_date": pay_date,
-                    "message": f"Période {pay_date}, {count_transactions} transactions et {count_employees} employés supprimés",
+                    "message": f"Période {pay_date} supprimée: {count_transactions} transactions et {count_employees_orphans_deleted} employés orphelins supprimés ({count_employees_in_period - count_employees_orphans_deleted} employés conservés car utilisés dans d'autres périodes)",
                 }
             )
 
@@ -1048,7 +1167,7 @@ class AppBridge(QObject):
 
     @pyqtSlot(result=str)
     def delete_all_data(self):
-        """Supprime TOUTES les données (transactions + employés)"""
+        """Supprime TOUTES les données (transactions + employés + données importées + batches)"""
         if not self.provider or not self.provider.repo:
             return json.dumps({"success": False, "error": "DB non disponible"})
 
@@ -1060,19 +1179,31 @@ class AppBridge(QObject):
             result_trans = self.provider.repo.run_query(sql_count_trans, {})
             count_transactions = result_trans[0][0] if result_trans else 0
 
-            sql_count_emp = "SELECT COUNT(*) FROM core.employees"
-            result_emp = self.provider.repo.run_query(sql_count_emp, {})
-            count_employees = result_emp[0][0] if result_emp else 0
-
-            # Supprimer les transactions
+            # 1. Supprimer les transactions (AVANT les employés pour respecter FK)
             sql_delete_trans = "DELETE FROM payroll.payroll_transactions"
             self.provider.repo.run_query(sql_delete_trans, {})
             print(f"  ✅ {count_transactions} transactions supprimées")
 
-            # Supprimer les employés
-            sql_delete_emp = "DELETE FROM core.employees"
-            self.provider.repo.run_query(sql_delete_emp, {})
-            print(f"  ✅ {count_employees} employés supprimés")
+            # 2. Supprimer les données dans imported_payroll_master
+            sql_delete_imported = "DELETE FROM payroll.imported_payroll_master"
+            self.provider.repo.run_query(sql_delete_imported, {})
+            print("  ✅ Données supprimées dans imported_payroll_master")
+
+            # 3. Supprimer les batches d'import
+            sql_delete_batches = "DELETE FROM payroll.import_batches"
+            self.provider.repo.run_query(sql_delete_batches, {})
+            print("  ✅ Batches d'import supprimés")
+
+            # 4. Supprimer les périodes
+            sql_delete_periods = "DELETE FROM payroll.pay_periods"
+            self.provider.repo.run_query(sql_delete_periods, {})
+            print("  ✅ Périodes supprimées")
+
+            # 5. Supprimer les employés orphelins (après les transactions)
+            # Note: Comme toutes les transactions sont supprimées, tous les employés deviennent orphelins
+            # On utilise la méthode standardisée pour garantir la cohérence
+            count_employees_deleted = self.provider.repo.delete_orphan_employees()
+            print(f"  ✅ {count_employees_deleted} employés orphelins supprimés")
 
             print("✅ Base de données vidée avec succès")
 
@@ -1080,7 +1211,7 @@ class AppBridge(QObject):
                 {
                     "success": True,
                     "transactions_deleted": count_transactions,
-                    "employees_deleted": count_employees,
+                    "employees_deleted": count_employees_deleted,
                 }
             )
 
@@ -1178,43 +1309,6 @@ class AppBridge(QObject):
 
             traceback.print_exc()
             return json.dumps({"error": str(e), "rows": [], "total": 0})
-
-    @pyqtSlot(str, result=str)
-    def execute_sql(self, sql):
-        """Exécute une requête SQL SELECT (pour stats uniquement)"""
-        if not self.provider or not self.provider.repo:
-            return json.dumps({"error": "DB non disponible", "rows": []})
-
-        try:
-            # Sécurité: N'autoriser que les SELECT
-            sql_upper = sql.strip().upper()
-            if not sql_upper.startswith("SELECT"):
-                return json.dumps(
-                    {"error": "Seules les requêtes SELECT sont autorisées", "rows": []}
-                )
-
-            result = self.provider.repo.run_query(sql, {})
-
-            rows = []
-            if result:
-                for row in result:
-                    json_row = []
-                    for val in row:
-                        if isinstance(val, (datetime, date)):
-                            json_row.append(str(val))
-                        elif isinstance(val, Decimal):
-                            json_row.append(float(val))
-                        elif val is None:
-                            json_row.append(None)
-                        else:
-                            json_row.append(val)
-                    rows.append(json_row)
-
-            return json.dumps({"rows": rows})
-
-        except Exception as e:
-            print(f"❌ Erreur execute_sql: {e}")
-            return json.dumps({"error": str(e), "rows": []})
 
     @pyqtSlot(str, str, result=str)
     def add_period(self, pay_date, status="ouverte"):
@@ -2188,9 +2282,19 @@ class AppBridge(QObject):
             from services.import_service_complete import ImportServiceComplete
             from services.kpi_snapshot_service import KPISnapshotService
 
-            # Initialiser le service robuste
+            # Callback de progression qui émet le signal
+            def progress_callback(percent, message, metrics):
+                """Callback qui émet le signal de progression vers le frontend"""
+                # S'assurer que metrics est un dict sérialisable
+                metrics_dict = metrics if isinstance(metrics, dict) else {}
+                # Émettre le signal (sera sérialisé automatiquement par PyQt)
+                self.importProgress.emit(percent, message or "", metrics_dict)
+
+            # Initialiser le service robuste avec callback de progression
             kpi_service = KPISnapshotService(self.provider.repo)
-            import_service = ImportServiceComplete(self.provider.repo, kpi_service)
+            import_service = ImportServiceComplete(
+                self.provider.repo, kpi_service, progress_callback=progress_callback
+            )
 
             # Créer fichier temporaire avec gestion des verrous Windows
             with tempfile.NamedTemporaryFile(
@@ -2204,6 +2308,9 @@ class AppBridge(QObject):
                 temp_path = temp_file.name
 
             try:
+                # Stocker la référence pour annulation
+                self.current_importer = import_service
+
                 # Utiliser le service robuste
                 result = import_service.import_payroll_file(
                     file_path=temp_path,
@@ -2211,6 +2318,9 @@ class AppBridge(QObject):
                     user_id="00000000-0000-0000-0000-000000000000",  # UUID par défaut pour Qt app
                     apply_sign_policy=apply_sign_correction,  # Appliquer ou non la correction des signes
                 )
+
+                # Nettoyer la référence
+                self.current_importer = None
 
                 if result["status"] == "success":
                     return json.dumps(
@@ -2478,41 +2588,6 @@ class AppBridge(QObject):
 
             traceback.print_exc()
             return json.dumps([])
-
-    @pyqtSlot(str, result=str)
-    def get_kpi(self, period_id):
-        """Calcule les KPI pour une période donnée"""
-        if not self.provider:
-            return json.dumps(
-                {"total": 0, "nouveaux": 0, "sorties": 0, "churn": 0.0, "prev": None}
-            )
-
-        try:
-            kpi = self.provider.get_kpi(period_id)
-            return json.dumps(kpi)
-        except Exception as e:
-            print(f"❌ Erreur get_kpi: {e}")
-            return json.dumps(
-                {"total": 0, "nouveaux": 0, "sorties": 0, "churn": 0.0, "prev": None}
-            )
-
-    @pyqtSlot(str, str, int, int, result=str)
-    @pyqtSlot(str, str, int, int, result=str)
-    def list_employees(self, period_id, filters_json, page, page_size):
-        """Liste les employés avec filtres et pagination"""
-        if not self.provider:
-            return json.dumps({"items": [], "total": 0})
-
-        try:
-            filters = json.loads(filters_json) if filters_json else {}
-            result = self.provider.list_employees(period_id, filters, page, page_size)
-            return json.dumps(result)
-        except Exception as e:
-            print(f"❌ Erreur list_employees: {e}")
-            import traceback
-
-            traceback.print_exc()
-            return json.dumps({"items": [], "total": 0})
 
     @pyqtSlot(int, result=str)
     def get_employee_detail(self, employee_id):

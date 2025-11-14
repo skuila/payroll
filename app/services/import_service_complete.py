@@ -4,7 +4,7 @@ Import Service Complet: Gestion complète de l'import de fichiers de paie Excel
 Pipeline complet: Import → KPI Snapshot → Signal WebChannel
 
 Responsabilités:
-- Validation période (ouverte/fermée)
+- Validation date de paie (ouverte/fermée)
 - Calcul checksum + détection doublons
 - Parsing Excel + normalisation colonnes
 - Mapping lignes -> dimensions (employees, pay_codes, budget_posts)
@@ -22,12 +22,9 @@ Usage:
 import logging
 import hashlib
 import csv
-import io
 import re
-import os
-import tempfile
 from datetime import datetime
-from typing import Any, Optional, Callable, Dict, List, Tuple
+from typing import Any, Optional, Callable
 from pathlib import Path
 import pandas as pd
 from unidecode import unidecode
@@ -49,6 +46,7 @@ class ImportServiceComplete:
         repo: DataRepository,
         kpi_service: KPISnapshotService,
         import_finished_callback: Optional[Callable] = None,
+        progress_callback: Optional[Callable] = None,
     ):
         """
         Initialise le service d'import complet.
@@ -57,10 +55,18 @@ class ImportServiceComplete:
             repo: Instance de DataRepository
             kpi_service: Instance de KPISnapshotService
             import_finished_callback: Fonction callback(period, batch_id, rows) appelée après import
+            progress_callback: Fonction callback(percent, message, metrics) pour progression
         """
         self.repo = repo
         self.kpi_service = kpi_service
         self.import_finished_callback = import_finished_callback
+        self.progress_callback = progress_callback
+        self._cancelled = False
+
+    def cancel(self):
+        """Annule l'import en cours."""
+        self._cancelled = True
+        logger.warning("Annulation de l'import demandée")
 
     # ========================
     # POINT D'ENTRÉE PRINCIPAL
@@ -109,11 +115,22 @@ class ImportServiceComplete:
 
         batch_id = None
         checksum = None
-        period = pay_date.strftime("%Y-%m")
+        pay_date_str = pay_date.strftime(
+            "%Y-%m-%d"
+        )  # Date exacte (YYYY-MM-DD) pour les KPI
 
         try:
-            # 1. Vérifier statut période
+            self._cancelled = False
+
+            # Progression initiale
+            if self.progress_callback:
+                self.progress_callback(5, "Vérification de la date de paie...", {})
+
+            # 1. Vérifier statut date de paie
             period_id = self._check_period_status(pay_date)
+
+            if self.progress_callback:
+                self.progress_callback(10, "Calcul du checksum...", {})
 
             # 2. Calculer checksum
             checksum = self._calculate_file_checksum(file_path)
@@ -122,9 +139,17 @@ class ImportServiceComplete:
             # 3. Vérifier doublon (désactivé temporairement pour permettre les tests)
             # self._check_duplicate_import(period_id, checksum)
 
+            if self.progress_callback:
+                self.progress_callback(15, "Parsing du fichier Excel...", {})
+
             # 4. Parser Excel avec détection automatique des en-têtes
             df = self._parse_excel_robust(file_path)
             logger.info(f"📊 Fichier parsé: {len(df)} lignes")
+
+            if self.progress_callback:
+                self.progress_callback(
+                    20, f"Fichier parsé: {len(df)} lignes", {"total_rows": len(df)}
+                )
 
             # 4.5. Nettoyage du DataFrame
             df = clean_payroll_excel_df(df)
@@ -132,11 +157,35 @@ class ImportServiceComplete:
                 raise ValueError("Fichier Excel invalide ou vide après nettoyage.")
             logger.info(f"🧹 Fichier nettoyé: {len(df)} lignes restantes")
 
+            if self.progress_callback:
+                self.progress_callback(
+                    25, f"Fichier nettoyé: {len(df)} lignes restantes", {}
+                )
+
             # 5. Normaliser + mapper
+            if self.progress_callback:
+                self.progress_callback(30, "Normalisation des colonnes...", {})
+
             df_normalized = self._normalize_columns_fallback(df)
+
+            if self.progress_callback:
+                self.progress_callback(40, "Mapping des lignes...", {})
+
             mapped_rows = self._map_rows(df_normalized, pay_date, Path(file_path).name)
 
+            if self.progress_callback:
+                self.progress_callback(
+                    50,
+                    f"{len(mapped_rows)} lignes mappées",
+                    {"mapped_rows": len(mapped_rows)},
+                )
+
             # 6. Appliquer sign_policy (optionnel selon choix utilisateur)
+            if self.progress_callback:
+                self.progress_callback(
+                    55, "Application de la politique de signes...", {}
+                )
+
             if apply_sign_policy:
                 logger.info("✅ Application de la politique de signes automatique")
                 signed_rows = self._apply_sign_policy(mapped_rows)
@@ -172,9 +221,15 @@ class ImportServiceComplete:
                 signed_rows = mapped_rows
 
             # 7. Valider
+            if self.progress_callback:
+                self.progress_callback(60, "Validation des données...", {})
+
             self._validate_rows(signed_rows)
 
             # 8-10. Transaction atomique: upsert dimensions + insert transactions + create batch
+            if self.progress_callback:
+                self.progress_callback(65, "Insertion en base de données...", {})
+
             batch_id = self._import_transaction(
                 signed_rows,
                 period_id,
@@ -184,15 +239,25 @@ class ImportServiceComplete:
                 user_id,
             )
 
+            if self.progress_callback:
+                self.progress_callback(
+                    85,
+                    f"Insertion terminée: {len(signed_rows)} lignes",
+                    {"rows_inserted": len(signed_rows)},
+                )
+
             logger.info(
                 f"✅ Import réussi: batch_id={batch_id}, rows={len(signed_rows)}"
             )
 
             # 11. Invalider et recalculer KPI (hors transaction)
-            logger.info(f"🔄 Recalcul KPI pour période {period}...")
+            if self.progress_callback:
+                self.progress_callback(90, "Recalcul des KPI...", {})
+
+            logger.info(f"🔄 Recalcul KPI pour date de paie {pay_date_str}...")
             kpi_data = None  # Initialiser pour éviter UnboundLocalError
             try:
-                kpi_data = self.kpi_service.invalidate_and_recalc_kpi(period)
+                kpi_data = self.kpi_service.invalidate_and_recalc_kpi(pay_date_str)
                 logger.info(
                     f"✅ KPI recalculés: {kpi_data['cards']['nb_employes']} employés, "
                     f"{kpi_data['cards']['masse_salariale']:.2f}$ masse salariale"
@@ -202,18 +267,30 @@ class ImportServiceComplete:
                 # Continue quand même, les données sont importées
 
             # 12. Refresh vues matérialisées (async)
+            if self.progress_callback:
+                self.progress_callback(95, "Rafraîchissement des vues...", {})
+
             self._refresh_materialized_views()
 
             # 13. Émettre signal import_finished
             if self.import_finished_callback:
-                self.import_finished_callback(period, batch_id, len(signed_rows))
-                logger.info(f"📡 Signal import_finished émis pour période {period}")
+                self.import_finished_callback(pay_date_str, batch_id, len(signed_rows))
+                logger.info(
+                    f"📡 Signal import_finished émis pour date de paie {pay_date_str}"
+                )
+
+            if self.progress_callback:
+                self.progress_callback(
+                    100,
+                    "Import terminé avec succès",
+                    {"rows_inserted": len(signed_rows), "batch_id": batch_id},
+                )
 
             return {
                 "status": "success",
                 "batch_id": batch_id,
                 "rows_count": len(signed_rows),
-                "period": period,
+                "pay_date": pay_date_str,
                 "kpi": kpi_data.get("cards", {}) if kpi_data else {},
                 "message": f"Import réussi: {len(signed_rows)} lignes"
                 + (" — KPI actualisés" if kpi_data else " (KPI non disponibles)"),
@@ -251,7 +328,7 @@ class ImportServiceComplete:
 
     def _check_period_status(self, pay_date: datetime) -> str:
         """
-        Vérifie que la période est ouverte et retourne period_id.
+        Vérifie que la date de paie est ouverte et retourne period_id.
         Utilise la fonction SQL payroll.ensure_period() pour création atomique (thread-safe).
 
         Args:
@@ -261,7 +338,7 @@ class ImportServiceComplete:
             period_id (UUID as string)
 
         Raises:
-            ImportError: Si période fermée
+            ImportError: Si date de paie fermée
         """
         # Utiliser ensure_period() SQL (atomique avec advisory lock)
         sql_ensure = """
@@ -274,12 +351,12 @@ class ImportServiceComplete:
 
         if not result:
             raise ImportError(
-                f"❌ Impossible de créer/récupérer la période pour {pay_date.date()}"
+                f"❌ Impossible de créer/récupérer la date de paie pour {pay_date.date()}"
             )
 
         period_id = result[0]
         logger.info(
-            f"✓ Période {pay_date.date()} obtenue via ensure_period() (period_id={period_id[:8]}...)"
+            f"✓ Date de paie {pay_date.date()} obtenue via ensure_period() (period_id={period_id[:8]}...)"
         )
 
         # Vérifier le statut (ouverte/fermée)
@@ -297,15 +374,15 @@ class ImportServiceComplete:
             status = status_result[0]
             if status != "ouverte":
                 raise ImportError(
-                    f"❌ Période {pay_date.date()} est {status}, écriture interdite"
+                    f"❌ Date de paie {pay_date.date()} est {status}, écriture interdite"
                 )
-            logger.info(f"✓ Période ouverte, import autorisé")
+            logger.info(f"✓ Date de paie ouverte, import autorisé")
 
         return period_id
 
     def _create_pay_period(self, pay_date: datetime) -> str:
-        """Crée une période de paie manquante."""
-        # Vérifier d'abord si une période existe déjà pour cette date
+        """Crée une date de paie manquante."""
+        # Vérifier d'abord si une date de paie existe déjà
         sql_check = """
         SELECT period_id::text, status
         FROM payroll.pay_periods
@@ -320,10 +397,10 @@ class ImportServiceComplete:
             period_id, status = result[0], result[1]
             if status != "ouverte":
                 raise ImportError(
-                    f"❌ Période {pay_date.date()} existe mais est {status}, écriture interdite"
+                    f"❌ Date de paie {pay_date.date()} existe mais est {status}, écriture interdite"
                 )
             logger.info(
-                f"✓ Période {pay_date.date()} existe déjà (period_id={period_id[:8]}...)"
+                f"✓ Date de paie {pay_date.date()} existe déjà (period_id={period_id[:8]}...)"
             )
             return period_id
 
@@ -384,7 +461,7 @@ class ImportServiceComplete:
 
         period_id = result[0]["period_id"]
         logger.info(
-            f"✅ Période créée: {pay_date.date()} (period_id={period_id[:8]}..., seq={period_seq})"
+            f"✅ Date de paie créée: {pay_date.date()} (period_id={period_id[:8]}..., seq={period_seq})"
         )
         return period_id
 
@@ -1171,21 +1248,46 @@ class ImportServiceComplete:
                 prenom = " ".join(parts[1:]) if len(parts) > 1 else ""
                 nom_norm = unidecode(nom.lower().strip())
                 prenom_norm = unidecode(prenom.lower().strip())
+                nom_complet = nom_employe
             else:
                 nom = matricule
                 prenom = ""
                 nom_norm = matricule.lower()
                 prenom_norm = ""
+                nom_complet = matricule
 
-            # Upsert avec noms français
+            # Normaliser matricule (similaire à compute_employee_key)
+            matricule_clean = re.sub(r"[^0-9A-Za-z\-]", "", matricule).strip()
+            if matricule_clean and matricule_clean.isdigit():
+                # Retirer zéros en tête
+                matricule_clean = matricule_clean.lstrip("0") or matricule_clean
+
+            # Upsert avec employee_key (colonne UNIQUE dans core.employees)
+            # Utilise le schéma standard : employee_key, matricule_norm, nom_norm, prenom_norm
             sql = """
-            INSERT INTO core.employees (matricule, nom, prenom, nom_norm, prenom_norm, statut)
-            VALUES (%(matricule)s, %(nom)s, %(prenom)s, %(nom_norm)s, %(prenom_norm)s, 'actif')
-            ON CONFLICT (matricule) DO UPDATE SET
-                nom = EXCLUDED.nom,
-                prenom = EXCLUDED.prenom,
+            INSERT INTO core.employees (
+                employee_key,
+                matricule_norm,
+                matricule_raw,
+                nom_norm,
+                prenom_norm,
+                nom_complet,
+                statut
+            ) VALUES (
+                core.compute_employee_key(%(matricule)s, %(nom_complet)s),
+                %(matricule_norm)s,
+                %(matricule_raw)s,
+                %(nom_norm)s,
+                %(prenom_norm)s,
+                %(nom_complet)s,
+                'actif'
+            )
+            ON CONFLICT (employee_key) DO UPDATE SET
                 nom_norm = EXCLUDED.nom_norm,
                 prenom_norm = EXCLUDED.prenom_norm,
+                nom_complet = EXCLUDED.nom_complet,
+                matricule_norm = EXCLUDED.matricule_norm,
+                matricule_raw = EXCLUDED.matricule_raw,
                 updated_at = CURRENT_TIMESTAMP
             RETURNING employee_id::text
             """
@@ -1197,8 +1299,11 @@ class ImportServiceComplete:
                         "matricule": matricule,
                         "nom": nom,
                         "prenom": prenom,
+                        "matricule_norm": matricule_clean if matricule_clean else None,
+                        "matricule_raw": matricule,
                         "nom_norm": nom_norm,
                         "prenom_norm": prenom_norm,
+                        "nom_complet": nom_complet,
                     },
                 )
                 employee_id = cur.fetchone()[0]
@@ -1280,6 +1385,9 @@ class ImportServiceComplete:
 
         params_list = []
         for row in rows:
+            if self._cancelled:
+                raise InterruptedError("Import annulé par l'utilisateur")
+
             params_list.append(
                 {
                     # Paramètres correspondant aux colonnes de imported_payroll_master
@@ -1306,8 +1414,36 @@ class ImportServiceComplete:
                 }
             )
 
+        # Découper en batches de 5000 pour progression
+        batch_size = 5000
+        total_rows = len(params_list)
+        batches = [
+            params_list[i : i + batch_size] for i in range(0, total_rows, batch_size)
+        ]
+
         with conn.cursor() as cur:
-            cur.executemany(sql, params_list)
+            for batch_idx, batch in enumerate(batches):
+                if self._cancelled:
+                    raise InterruptedError("Import annulé par l'utilisateur")
+
+                cur.executemany(sql, batch)
+
+                # Progression pour l'insertion (65% à 85%)
+                if self.progress_callback:
+                    inserted = (batch_idx + 1) * len(batch)
+                    pct = (
+                        65 + int((inserted / total_rows) * 20) if total_rows > 0 else 85
+                    )
+                    self.progress_callback(
+                        pct,
+                        f"Insertion: {inserted}/{total_rows} lignes (batch {batch_idx + 1}/{len(batches)})",
+                        {
+                            "rows_inserted": inserted,
+                            "total_rows": total_rows,
+                            "current_batch": batch_idx + 1,
+                            "total_batches": len(batches),
+                        },
+                    )
 
         logger.info(f"✓ Transactions insérées: {len(params_list)}")
 
@@ -1393,8 +1529,25 @@ class ImportServiceComplete:
 
         for view in views:
             try:
-                logger.info(f"🔄 Refresh {view}...")
-                self.repo.run_query(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view}")
-                logger.info(f"✅ {view} refreshed")
+                # Vérifier si la vue existe avant de la rafraîchir
+                check_sql = """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_matviews 
+                    WHERE schemaname = %(schema)s AND matviewname = %(view)s
+                )
+                """
+                schema, view_name = view.split(".")
+                exists = self.repo.run_query(
+                    check_sql, {"schema": schema, "view": view_name}, fetch_one=True
+                )
+
+                if exists and exists[0]:
+                    logger.info(f"🔄 Refresh {view}...")
+                    self.repo.run_query(
+                        f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view}"
+                    )
+                    logger.info(f"✅ {view} refreshed")
+                else:
+                    logger.debug(f"⏩ Vue {view} n'existe pas, ignorée")
             except Exception as e:
                 logger.warning(f"⚠️ Erreur refresh {view}: {e}")

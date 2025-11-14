@@ -24,6 +24,9 @@ def confirmer_suppression():
     print()
     print("Cette opération va supprimer:")
     print("  • Toutes les transactions de paie (payroll.payroll_transactions)")
+    print("  • Toutes les données importées (payroll.imported_payroll_master)")
+    print("  • Tous les batches d'import (payroll.import_batches)")
+    print("  • Toutes les périodes (payroll.pay_periods)")
     print("  • Tous les employés (core.employees)")
     print()
     print("⚠️  CETTE OPÉRATION EST IRRÉVERSIBLE !")
@@ -48,6 +51,21 @@ def compter_donnees():
         nb_transactions = result[0][0] if result else 0
         print(f"  • Transactions de paie: {nb_transactions}")
 
+        # Compter les données importées
+        result = run_select("SELECT COUNT(*) FROM payroll.imported_payroll_master")
+        nb_imported = result[0][0] if result else 0
+        print(f"  • Données importées: {nb_imported}")
+
+        # Compter les batches
+        result = run_select("SELECT COUNT(*) FROM payroll.import_batches")
+        nb_batches = result[0][0] if result else 0
+        print(f"  • Batches d'import: {nb_batches}")
+
+        # Compter les périodes
+        result = run_select("SELECT COUNT(*) FROM payroll.pay_periods")
+        nb_periods = result[0][0] if result else 0
+        print(f"  • Périodes: {nb_periods}")
+
         # Compter les employés
         result = run_select("SELECT COUNT(*) FROM core.employees")
         nb_employes = result[0][0] if result else 0
@@ -64,7 +82,7 @@ def compter_donnees():
 
 
 def vider_tables():
-    """Vide toutes les tables principales."""
+    """Vide toutes les tables principales dans l'ordre correct (respect des FK)."""
     print()
     print("🗑️  SUPPRESSION EN COURS...")
     print("-" * 70)
@@ -72,26 +90,78 @@ def vider_tables():
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                # 1. Supprimer les transactions de paie
+                # 1. Supprimer les transactions de paie (AVANT les employés pour respecter FK)
                 print("  1. Suppression des transactions de paie...")
                 cur.execute("DELETE FROM payroll.payroll_transactions")
                 nb_transactions = cur.rowcount
                 print(f"     ✅ {nb_transactions} transactions supprimées")
 
-                # 2. Supprimer les employés
-                print("  2. Suppression des employés...")
-                cur.execute("DELETE FROM core.employees")
-                nb_employes = cur.rowcount
-                print(f"     ✅ {nb_employes} employés supprimés")
+                # 2. Supprimer les données dans imported_payroll_master
+                print("  2. Suppression des données importées...")
+                cur.execute("DELETE FROM payroll.imported_payroll_master")
+                nb_imported = cur.rowcount
+                print(
+                    f"     ✅ {nb_imported} lignes supprimées dans imported_payroll_master"
+                )
 
-                # 3. Réinitialiser les séquences si nécessaire
-                print("  3. Réinitialisation des séquences...")
+                # 3. Supprimer les batches d'import
+                print("  3. Suppression des batches d'import...")
+                cur.execute("DELETE FROM payroll.import_batches")
+                nb_batches = cur.rowcount
+                print(f"     ✅ {nb_batches} batches supprimés")
+
+                # 4. Supprimer les périodes
+                print("  4. Suppression des périodes...")
+                cur.execute("DELETE FROM payroll.pay_periods")
+                nb_periods = cur.rowcount
+                print(f"     ✅ {nb_periods} périodes supprimées")
+
+                # 5. Supprimer les employés orphelins (après les transactions)
+                # Note: Comme toutes les transactions sont supprimées, tous les employés deviennent orphelins
+                # On utilise la logique standardisée pour garantir la cohérence
+                print("  5. Suppression des employés orphelins...")
+                # Compter AVANT suppression
                 cur.execute(
                     """
-                    SELECT setval('payroll.payroll_transactions_id_seq', 1, false);
+                    SELECT COUNT(*)
+                    FROM core.employees 
+                    WHERE employee_id IS NOT NULL
+                    AND employee_id NOT IN (
+                        SELECT DISTINCT employee_id 
+                        FROM payroll.payroll_transactions
+                        WHERE employee_id IS NOT NULL
+                    )
                 """
                 )
-                print("     ✅ Séquences réinitialisées")
+                nb_employes = cur.fetchone()[0] if cur.rowcount > 0 else 0
+
+                # Supprimer les employés orphelins
+                cur.execute(
+                    """
+                    DELETE FROM core.employees 
+                    WHERE employee_id IS NOT NULL
+                    AND employee_id NOT IN (
+                        SELECT DISTINCT employee_id 
+                        FROM payroll.payroll_transactions
+                        WHERE employee_id IS NOT NULL
+                    )
+                """
+                )
+                print(
+                    f"     ✅ {nb_employes} employés orphelins supprimés (sans transactions dans aucune période)"
+                )
+
+                # 6. Réinitialiser les séquences si nécessaire
+                print("  6. Réinitialisation des séquences...")
+                try:
+                    cur.execute(
+                        """
+                        SELECT setval('payroll.payroll_transactions_id_seq', 1, false);
+                    """
+                    )
+                    print("     ✅ Séquences réinitialisées")
+                except Exception as seq_error:
+                    print(f"     ⚠️  Réinitialisation séquences: {seq_error}")
 
             # Commit la transaction
             conn.commit()
@@ -119,15 +189,36 @@ def verifier_suppression():
         result = run_select("SELECT COUNT(*) FROM payroll.payroll_transactions")
         nb_transactions = result[0][0] if result else 0
 
+        # Vérifier les données importées
+        result = run_select("SELECT COUNT(*) FROM payroll.imported_payroll_master")
+        nb_imported = result[0][0] if result else 0
+
+        # Vérifier les batches
+        result = run_select("SELECT COUNT(*) FROM payroll.import_batches")
+        nb_batches = result[0][0] if result else 0
+
+        # Vérifier les périodes
+        result = run_select("SELECT COUNT(*) FROM payroll.pay_periods")
+        nb_periods = result[0][0] if result else 0
+
         # Vérifier les employés
         result = run_select("SELECT COUNT(*) FROM core.employees")
         nb_employes = result[0][0] if result else 0
 
         print(f"  • Transactions restantes: {nb_transactions}")
+        print(f"  • Données importées restantes: {nb_imported}")
+        print(f"  • Batches restants: {nb_batches}")
+        print(f"  • Périodes restantes: {nb_periods}")
         print(f"  • Employés restants: {nb_employes}")
         print("-" * 70)
 
-        if nb_transactions == 0 and nb_employes == 0:
+        if (
+            nb_transactions == 0
+            and nb_imported == 0
+            and nb_batches == 0
+            and nb_periods == 0
+            and nb_employes == 0
+        ):
             print("✅ Les tables sont vides")
             return True
         else:
@@ -147,9 +238,29 @@ def main():
     print("=" * 70)
 
     # 1. Compter les données actuelles
-    nb_transactions, nb_employes = compter_donnees()
+    compter_donnees()
 
-    if nb_transactions == 0 and nb_employes == 0:
+    # Vérifier si toutes les tables sont vides (utilise compter_donnees mais vérifie toutes les tables)
+    from config.connection_standard import run_select
+
+    result = run_select("SELECT COUNT(*) FROM payroll.payroll_transactions")
+    nb_transactions = result[0][0] if result else 0
+    result = run_select("SELECT COUNT(*) FROM payroll.imported_payroll_master")
+    nb_imported = result[0][0] if result else 0
+    result = run_select("SELECT COUNT(*) FROM payroll.import_batches")
+    nb_batches = result[0][0] if result else 0
+    result = run_select("SELECT COUNT(*) FROM payroll.pay_periods")
+    nb_periods = result[0][0] if result else 0
+    result = run_select("SELECT COUNT(*) FROM core.employees")
+    nb_employes = result[0][0] if result else 0
+
+    if (
+        nb_transactions == 0
+        and nb_imported == 0
+        and nb_batches == 0
+        and nb_periods == 0
+        and nb_employes == 0
+    ):
         print("ℹ️  Les tables sont déjà vides. Rien à faire.")
         return 0
 

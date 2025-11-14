@@ -94,12 +94,63 @@
                 Lancer l'import
               </button>
               
+              <!-- Bandeau de progression -->
               <div id="progress-section" class="mt-3" style="display:none;">
-                <div class="progress">
-                  <div id="progress-bar" class="progress-bar progress-bar-indeterminate bg-primary"></div>
-                        </div>
-                <div id="progress-log" class="mt-2 text-secondary small"></div>
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Import en cours</h3>
+                    <div class="card-actions">
+                      <button class="btn btn-danger btn-sm" id="btn-cancel" onclick="cancelImport()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                        Annuler
+                      </button>
                     </div>
+                  </div>
+                  <div class="card-body">
+                    <!-- Barre de progression -->
+                    <div class="mb-3">
+                      <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Progression</span>
+                        <span class="text-secondary" id="progress-percent">0%</span>
+                      </div>
+                      <div class="progress">
+                        <div id="progress-bar" class="progress-bar bg-primary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Métriques -->
+                    <div class="row mb-3">
+                      <div class="col-md-4">
+                        <div class="text-secondary small">Lignes traitées</div>
+                        <div class="h3 mb-0" id="metric-rows">0 / 0</div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="text-secondary small">Batches</div>
+                        <div class="h3 mb-0" id="metric-batches">0</div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="text-secondary small">Temps écoulé</div>
+                        <div class="h3 mb-0" id="metric-time">0s</div>
+                      </div>
+                    </div>
+                    
+                    <!-- Journal d'import -->
+                    <div class="mb-0">
+                      <div class="d-flex justify-content-between mb-2">
+                        <h4 class="card-title">Journal d'import</h4>
+                        <button class="btn btn-sm btn-secondary" id="btn-download-log" onclick="downloadLog()" style="display:none;">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 11l5 5l5 -5" /><path d="M12 4l0 12" /></svg>
+                          Télécharger
+                        </button>
+                      </div>
+                      <div id="progress-log" class="bg-dark text-white p-3 rounded" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.875rem;">
+                        <div class="text-success">[INFO] Préparation de l'import...</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
                     
                       </div>
                     </div>
@@ -138,12 +189,32 @@
   <script>
     let bridge = null;
     let selectedFile = null;
+    let importInProgress = false;
+    let importLog = [];
+    let importStartTime = null;
+    let progressInterval = null;
     
     // Initialiser QWebChannel
       new QWebChannel(qt.webChannelTransport, function(channel) {
       bridge = channel.objects.AppBridge || channel.objects.bridge;
       console.log('✅ Bridge connecté');
       loadImportHistory();
+      
+      // Connecter le signal de progression
+      if (bridge.importProgress) {
+        bridge.importProgress.connect(function(percent, message, metrics) {
+          try {
+            const metricsObj = typeof metrics === 'string' ? JSON.parse(metrics) : (metrics || {});
+            updateProgress(percent, message, metricsObj);
+          } catch (e) {
+            console.error('Erreur parsing métriques:', e);
+            updateProgress(percent, message, {});
+          }
+        });
+        console.log('✅ Signal importProgress connecté');
+      } else {
+        console.warn('⚠️ Signal importProgress non disponible');
+      }
     });
     
     // Gestion fichier
@@ -165,6 +236,105 @@
       document.getElementById('btn-import').disabled = !(hasFile && hasDate);
     });
     
+    function addLogEntry(type, message) {
+      const logDiv = document.getElementById('progress-log');
+      const timestamp = new Date().toLocaleTimeString('fr-CA');
+      const colors = {
+        'INFO': 'text-info',
+        'SUCCESS': 'text-success',
+        'WARNING': 'text-warning',
+        'ERROR': 'text-danger'
+      };
+      const color = colors[type] || 'text-white';
+      const entry = `<div class="${color}">[${timestamp}] [${type}] ${message}</div>`;
+      logDiv.innerHTML += entry;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      importLog.push({timestamp, type, message});
+    }
+    
+    function updateProgress(percent, message, metrics) {
+      const progressBar = document.getElementById('progress-bar');
+      const progressPercent = document.getElementById('progress-percent');
+      
+      progressBar.style.width = percent + '%';
+      progressBar.setAttribute('aria-valuenow', percent);
+      progressPercent.textContent = percent + '%';
+      
+      if (message) {
+        addLogEntry('INFO', message);
+      }
+      
+      if (metrics && typeof metrics === 'object') {
+        // Lignes traitées
+        if (metrics.rows_inserted !== undefined && metrics.total_rows !== undefined) {
+          document.getElementById('metric-rows').textContent = 
+            `${metrics.rows_inserted} / ${metrics.total_rows}`;
+        } else if (metrics.rows_imported !== undefined && metrics.total_rows !== undefined) {
+          document.getElementById('metric-rows').textContent = 
+            `${metrics.rows_imported} / ${metrics.total_rows}`;
+        } else if (metrics.mapped_rows !== undefined) {
+          document.getElementById('metric-rows').textContent = 
+            `${metrics.mapped_rows} lignes`;
+        } else if (metrics.total_rows !== undefined) {
+          document.getElementById('metric-rows').textContent = 
+            `0 / ${metrics.total_rows}`;
+        }
+        
+        // Batches
+        if (metrics.current_batch !== undefined && metrics.total_batches !== undefined) {
+          document.getElementById('metric-batches').textContent = 
+            `${metrics.current_batch} / ${metrics.total_batches}`;
+        } else if (metrics.total_batches !== undefined) {
+          document.getElementById('metric-batches').textContent = 
+            `${metrics.total_batches} batch(es)`;
+        }
+        
+        // Temps écoulé
+        if (metrics.elapsed_time !== undefined) {
+          document.getElementById('metric-time').textContent = 
+            Math.round(metrics.elapsed_time) + 's';
+        }
+      }
+    }
+    
+    function updateElapsedTime() {
+      if (importStartTime && importInProgress) {
+        const elapsed = Math.floor((Date.now() - importStartTime) / 1000);
+        document.getElementById('metric-time').textContent = elapsed + 's';
+      }
+    }
+    
+    function cancelImport() {
+      if (!importInProgress) return;
+      
+      if (confirm('Êtes-vous sûr de vouloir annuler l\'import en cours ?')) {
+        if (bridge && bridge.cancelImport) {
+          bridge.cancelImport();
+        }
+        addLogEntry('WARNING', 'Annulation demandée par l\'utilisateur...');
+        importInProgress = false;
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
+        document.getElementById('btn-import').disabled = false;
+        document.getElementById('btn-cancel').disabled = true;
+      }
+    }
+    
+    function downloadLog() {
+      const logText = importLog.map(entry => 
+        `[${entry.timestamp}] [${entry.type}] ${entry.message}`
+      ).join('\n');
+      
+      const blob = new Blob([logText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `import_log_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
     async function startImport() {
       if (!selectedFile) {
         showToast('Erreur', 'Sélectionnez un fichier', 'danger');
@@ -177,9 +347,28 @@
         return;
       }
       
+      // Réinitialiser
+      importInProgress = true;
+      importLog = [];
+      importStartTime = Date.now();
+      document.getElementById('progress-log').innerHTML = '';
+      document.getElementById('progress-bar').style.width = '0%';
+      document.getElementById('progress-percent').textContent = '0%';
+      document.getElementById('metric-rows').textContent = '0 / 0';
+      document.getElementById('metric-batches').textContent = '0';
+      document.getElementById('metric-time').textContent = '0s';
+      document.getElementById('btn-download-log').style.display = 'none';
+      
       // Désactiver bouton
       document.getElementById('btn-import').disabled = true;
+      document.getElementById('btn-cancel').disabled = false;
       document.getElementById('progress-section').style.display = 'block';
+      
+      // Démarrer mise à jour du temps
+      progressInterval = setInterval(updateElapsedTime, 1000);
+      
+      addLogEntry('INFO', 'Démarrage de l\'import...');
+      updateProgress(5, 'Lecture du fichier...', {});
       
       try {
         // Lire fichier en Base64 pour passage via WebChannel
@@ -189,34 +378,65 @@
           const fileContent = e.target.result.split(',')[1]; // Base64
           const applySignCorrection = document.getElementById('apply-sign-correction').checked;
           
-          // Appeler bridge Python avec option de correction des signes
-          const result = await bridge.confirm_import(fileContent, selectedFile.name, applySignCorrection);
-          const data = JSON.parse(result);
+          addLogEntry('INFO', `Fichier: ${selectedFile.name} (${formatBytes(selectedFile.size)})`);
+          addLogEntry('INFO', `Correction des signes: ${applySignCorrection ? 'OUI' : 'NON'}`);
           
-          if (data.success) {
-            showToast('Import réussi', `${data.rows_inserted || 0} lignes importées`, 'success');
+          updateProgress(10, 'Envoi au serveur...', {});
+          
+          try {
+            // Appeler bridge Python avec option de correction des signes
+            const result = await bridge.confirm_import(fileContent, selectedFile.name, applySignCorrection);
+            const data = JSON.parse(result);
             
-            // Rafraîchir historique
-            setTimeout(() => {
-              loadImportHistory();
+            if (data.success) {
+              addLogEntry('SUCCESS', `Import terminé: ${data.rows_count || 0} lignes importées`);
+              updateProgress(100, 'Import terminé avec succès', {
+                rows_imported: data.rows_count || 0,
+                total_rows: data.rows_count || 0
+              });
+              
+              document.getElementById('btn-download-log').style.display = 'inline-block';
+              showToast('Import réussi', `${data.rows_count || 0} lignes importées`, 'success');
+              
+              // Rafraîchir historique
+              setTimeout(() => {
+                loadImportHistory();
+                importInProgress = false;
+                if (progressInterval) {
+                  clearInterval(progressInterval);
+                }
+                document.getElementById('btn-import').disabled = false;
+                document.getElementById('btn-cancel').disabled = true;
+                document.getElementById('file-input').value = '';
+                selectedFile = null;
+                document.getElementById('file-preview').style.display = 'none';
+              }, 2000);
+            } else {
+              addLogEntry('ERROR', data.message || 'Import échoué');
+              const errorMsg = data.message || 'Import échoué';
+              const solution = data.solution ? `\n\nSolution : ${data.solution}` : '';
+              showToast('Erreur', errorMsg + solution, 'danger');
+              importInProgress = false;
+              if (progressInterval) {
+                clearInterval(progressInterval);
+              }
               document.getElementById('progress-section').style.display = 'none';
               document.getElementById('btn-import').disabled = false;
-              document.getElementById('file-input').value = '';
-              selectedFile = null;
-              document.getElementById('file-preview').style.display = 'none';
-            }, 2000);
-          } else {
-            // Afficher le message d'erreur utilisateur (déjà traduit par le backend)
-            const errorMsg = data.message || 'Import échoué';
-            const solution = data.solution ? `\n\nSolution : ${data.solution}` : '';
-            showToast('Erreur', errorMsg + solution, 'danger');
-            document.getElementById('progress-section').style.display = 'none';
-            document.getElementById('btn-import').disabled = false;
+              document.getElementById('btn-download-log').style.display = 'inline-block';
+            }
+          } catch (e) {
+            addLogEntry('ERROR', 'Erreur lors de l\'import: ' + e.message);
+            throw e;
           }
         };
         
         reader.onerror = function() {
+          addLogEntry('ERROR', 'Impossible de lire le fichier');
           showToast('Erreur', 'Impossible de lire le fichier. Vérifiez que le fichier n\'est pas corrompu.', 'danger');
+          importInProgress = false;
+          if (progressInterval) {
+            clearInterval(progressInterval);
+          }
           document.getElementById('progress-section').style.display = 'none';
           document.getElementById('btn-import').disabled = false;
         };
@@ -225,9 +445,15 @@
         
       } catch (e) {
         console.error('Erreur import:', e);
+        addLogEntry('ERROR', 'Erreur inattendue: ' + e.message);
         showToast('Erreur', 'Une erreur inattendue s\'est produite. Vérifiez la console pour plus de détails.', 'danger');
+        importInProgress = false;
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
         document.getElementById('progress-section').style.display = 'none';
         document.getElementById('btn-import').disabled = false;
+        document.getElementById('btn-download-log').style.display = 'inline-block';
       }
     }
     
