@@ -8,7 +8,7 @@ import logging
 import os
 import re
 import sys
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
@@ -621,6 +621,27 @@ class PostgresProvider(AbstractDataProvider):
             net = [float(row[2] or 0) for row in rows]
             tx = [int(row[3] or 0) for row in rows]
 
+            category_reference_date = pay_date_str or (labels[-1] if labels else None)
+            category_labels: List[str] = []
+            category_values: List[int] = []
+            if category_reference_date:
+                sql_categories = """
+                SELECT 
+                    COALESCE(NULLIF(e.categorie_emploi, ''), 'Non classé') AS categorie,
+                    COUNT(DISTINCT e.employee_id) AS nb_membres
+                FROM payroll.payroll_transactions t
+                JOIN core.employees e ON e.employee_id = t.employee_id
+                WHERE t.pay_date = %(pay_date)s::date
+                GROUP BY 1
+                ORDER BY nb_membres DESC
+                """
+                cat_rows = self.repo.run_query(
+                    sql_categories, {"pay_date": category_reference_date}
+                )
+                if cat_rows:
+                    category_labels = [row[0] for row in cat_rows]
+                    category_values = [int(row[1] or 0) for row in cat_rows]
+
             return {
                 "revenue": {
                     "labels": labels,
@@ -630,6 +651,11 @@ class PostgresProvider(AbstractDataProvider):
                 "active": {"labels": labels, "values": tx, "name": "Transactions"},
                 "net": {"labels": labels, "values": net, "name": "Salaire net"},
                 "purchases": {"labels": labels, "values": tx, "name": "Transactions"},
+                "categories": {
+                    "labels": category_labels,
+                    "values": category_values,
+                    "name": "Catégorie d'emploi",
+                },
             }
         except Exception:
             logger = logging.getLogger(__name__)
