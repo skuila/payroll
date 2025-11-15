@@ -772,6 +772,7 @@
       document.addEventListener("DOMContentLoaded", function () {
       	window.ApexCharts && (new ApexCharts(document.getElementById('chart-revenue-bg'), {
       		chart: {
+                id: "dashboard-revenue",
       			type: "area",
       			fontFamily: 'inherit',
       			height: 40.0,
@@ -861,6 +862,7 @@
       document.addEventListener("DOMContentLoaded", function () {
       	window.ApexCharts && (new ApexCharts(document.getElementById('chart-active-users'), {
       		chart: {
+                id: "dashboard-active",
       			type: "area",
       			fontFamily: 'inherit',
       			height: 40.0,
@@ -926,6 +928,7 @@
       document.addEventListener("DOMContentLoaded", function () {
       	window.ApexCharts && (new ApexCharts(document.getElementById('chart-demo-area'), {
       		chart: {
+                id: "dashboard-net",
       			type: "area",
       			fontFamily: 'inherit',
       			height: 240,
@@ -998,6 +1001,7 @@
       document.addEventListener("DOMContentLoaded", function () {
       	window.ApexCharts && (new ApexCharts(document.getElementById('chart-development-activity'), {
       		chart: {
+                id: "dashboard-purchases",
       			type: "area",
       			fontFamily: 'inherit',
       			height: 192,
@@ -1087,10 +1091,12 @@
               const pingResult = JSON.parse(result);
             console.log('✓ Ping:', pingResult.message);
             
-            // Charger les données
-              setTimeout(() => {
-            loadKpis();
-            loadTable(0, 50);
+          // Charger les données (auto-sélection dernière période)
+              setTimeout(async () => {
+            const activeDate = await resolveActivePayDate();
+            await loadKpis(activeDate);
+            await loadDashboardCharts(activeDate);
+            await loadTable(0, 50, activeDate);
               }, 100);
             }).catch(error => {
               console.error('❌ Erreur ping:', error);
@@ -1100,16 +1106,37 @@
           }
         });
       });
+
+      async function resolveActivePayDate() {
+        try {
+          if (!window.appBridge) {
+            console.warn('⚠️ appBridge absent, aucune période active');
+            return null;
+          }
+          const raw = await Promise.resolve(window.appBridge.get_active_pay_date());
+          const info = JSON.parse(raw);
+          const payDate = info && info.pay_date ? info.pay_date : null;
+          if (!payDate) {
+            console.warn('⚠️ Aucune période active détectée (base vide)');
+          } else {
+            console.log(`✓ Période active détectée: ${payDate} (source: ${info.source || 'unknown'})`);
+          }
+          return payDate;
+        } catch (error) {
+          console.error('❌ resolveActivePayDate:', error);
+          return null;
+        }
+      }
       
       // Charger les KPI depuis Python
-      async function loadKpis(period = "2025-08") {
+      async function loadKpis(period) {
         try {
           if (!window.appBridge) {
             console.error('❌ AppBridge non disponible');
             return;
           }
           
-          const kpisJson = await Promise.resolve(window.appBridge.get_kpis(period));
+          const kpisJson = await Promise.resolve(window.appBridge.get_kpis(period || ""));
           const kpis = JSON.parse(kpisJson);
           console.log('✓ KPI chargés:', kpis);
           
@@ -1147,14 +1174,15 @@
       }
       
       // Charger le tableau depuis Python
-      async function loadTable(offset, limit) {
+      async function loadTable(offset, limit, payDate) {
         try {
           if (!window.appBridge) {
             console.error('❌ AppBridge non disponible');
             return;
           }
           
-          const tableJson = await Promise.resolve(window.appBridge.get_table(offset, limit, "{}"));
+          const filters = payDate ? JSON.stringify({ pay_date: payDate }) : "{}";
+          const tableJson = await Promise.resolve(window.appBridge.get_table(offset, limit, filters));
           const data = JSON.parse(tableJson);
           console.log('✓ Table chargée:', data.rows.length, 'lignes');
           
@@ -1230,6 +1258,46 @@
             tbody.appendChild(tr);
           });
         }
+      }
+    </script>
+    <script>
+      const DASHBOARD_CHART_IDS = {
+        revenue: "dashboard-revenue",
+        active: "dashboard-active",
+        net: "dashboard-net",
+        purchases: "dashboard-purchases",
+      };
+
+      async function loadDashboardCharts(payDate) {
+        try {
+          if (!window.appBridge) {
+            console.warn('⚠️ AppBridge indisponible, graphiques statiques');
+            return;
+          }
+          const raw = await Promise.resolve(window.appBridge.get_dashboard_charts(payDate || ""));
+          const data = JSON.parse(raw);
+          updateDashboardChart("revenue", data.revenue);
+          updateDashboardChart("active", data.active);
+          updateDashboardChart("net", data.net);
+          updateDashboardChart("purchases", data.purchases);
+        } catch (error) {
+          console.error('Erreur chargement graphiques dynamiques:', error);
+        }
+      }
+
+      function updateDashboardChart(key, payload) {
+        if (!window.ApexCharts || !payload) {
+          return;
+        }
+        const chartId = DASHBOARD_CHART_IDS[key];
+        if (!chartId) return;
+        const labels = payload.labels || [];
+        const values = payload.values || [];
+        const seriesName = payload.name || key;
+        ApexCharts.exec(chartId, "updateOptions", {
+          labels,
+          series: [{ name: seriesName, data: values }],
+        }).catch((err) => console.warn(`⚠️ Impossible de mettre à jour ${chartId}:`, err));
       }
     </script>
   </body>

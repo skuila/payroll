@@ -1,25 +1,23 @@
 """
-KPI Snapshot Service: Calcul, invalidation et récupération des KPI par période
+KPI Snapshot Service: Calcul, invalidation et récupération des KPI par date de paie
 
 Responsabilités:
-- Calculer les KPI pour une période donnée depuis payroll_transactions
+- Calculer les KPI pour une date de paie donnée depuis payroll_transactions
 - Stocker les KPI dans kpi_snapshot (JSONB)
 - Invalider (recalculer) les KPI après import
 - Fournir les KPI pour l'UI (cartes + tables)
 
 Usage:
     service = KPISnapshotService(repo)
-    service.invalidate_and_recalc_kpi('2025-01')
-    kpi = service.get_kpi('2025-01')
+    service.invalidate_and_recalc_kpi('2025-08-28')  # Date exacte YYYY-MM-DD
+    kpi = service.get_kpi('2025-08-28')
 """
 
-import logging
 import json
-from datetime import datetime
-from typing import Any, Optional
-from decimal import Decimal
+import logging
+from typing import Any
 
-from services.data_repo import DataRepository
+from app.services.data_repo import DataRepository
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +38,9 @@ class KPISnapshotService:
     # POINT D'ENTRÉE PRINCIPAL
     # ========================
 
-    def invalidate_and_recalc_kpi(self, period: str) -> dict[str, Any]:
+    def invalidate_and_recalc_kpi(self, pay_date: str) -> dict[str, Any]:
         """
-        Invalide et recalcule les KPI pour une période donnée.
+        Invalide et recalcule les KPI pour une date de paie donnée.
 
         Étapes:
         1. Calculer les KPI depuis payroll_transactions
@@ -50,56 +48,56 @@ class KPISnapshotService:
         3. Insérer le nouveau snapshot
 
         Args:
-            period: Période au format YYYY-MM (ex: '2025-01')
+            pay_date: Date de paie au format YYYY-MM-DD (ex: '2025-08-28')
 
         Returns:
             dict avec les KPI calculés
         """
-        logger.info(f"Invalidation + recalcul KPI pour période: {period}")
+        logger.info(f"Invalidation + recalcul KPI pour date de paie: {pay_date}")
 
         try:
             # 1. Calculer les KPI
-            kpi_data = self._calculate_kpi(period)
+            kpi_data = self._calculate_kpi(pay_date)
 
             # 2. Upsert dans kpi_snapshot
-            self._upsert_snapshot(period, kpi_data)
+            self._upsert_snapshot(pay_date, kpi_data)
 
             logger.info(
-                f"✓ KPI recalculés pour {period}: {kpi_data.get('cards', {}).get('nb_employes', 0)} employés"
+                f"OK: KPI recalculés pour {pay_date}: {kpi_data.get('cards', {}).get('nb_employes', 0)} employés"
             )
             return kpi_data
 
         except Exception as e:
-            logger.error(f"Erreur recalcul KPI période {period}: {e}")
+            logger.error(f"Erreur recalcul KPI date de paie {pay_date}: {e}")
             raise
 
-    def get_kpi(self, period: str) -> dict[str, Any]:
+    def get_kpi(self, pay_date: str) -> dict[str, Any]:
         """
-        Récupère les KPI pour une période depuis le snapshot.
+        Récupère les KPI pour une date de paie depuis le snapshot.
         Si snapshot inexistant, calcule à la volée.
 
         Args:
-            period: Période au format YYYY-MM (ex: '2025-01')
+            pay_date: Date de paie au format YYYY-MM-DD (ex: '2025-08-28')
 
         Returns:
             dict avec structure:
             {
                 "cards": {...},        # KPI cartes (masse salariale, nb employés, etc.)
                 "tables": {...},       # KPI tables (anomalies, codes, postes)
-                "period": "2025-01",
+                "pay_date": "2025-08-28",
                 "calculated_at": "2025-10-12T14:30:00Z"
             }
         """
-        logger.info(f"Récupération KPI pour période: {period}")
+        logger.info(f"Récupération KPI pour date de paie: {pay_date}")
 
         try:
             # Lire le snapshot
             sql = """
             SELECT data, calculated_at
             FROM payroll.kpi_snapshot
-            WHERE period = %(period)s
+            WHERE period = %(pay_date)s
             """
-            result = self.repo.run_query(sql, {"period": period}, fetch_one=True)
+            result = self.repo.run_query(sql, {"pay_date": pay_date}, fetch_one=True)
 
             if result:
                 data = result[0]
@@ -107,32 +105,32 @@ class KPISnapshotService:
                 data["calculated_at"] = (
                     calculated_at.isoformat() if calculated_at else None
                 )
-                data["period"] = period
+                data["pay_date"] = pay_date
                 data["source"] = "snapshot"
                 logger.info(
-                    f"✓ KPI snapshot trouvé pour {period} (calculé: {calculated_at})"
+                    f"OK: KPI snapshot trouvé pour {pay_date} (calculé: {calculated_at})"
                 )
                 return data
             else:
                 # Snapshot inexistant → calculer à la volée
                 logger.warning(
-                    f"Snapshot KPI inexistant pour {period}, calcul à la volée"
+                    f"Snapshot KPI inexistant pour {pay_date}, calcul à la volée"
                 )
-                kpi_data = self._calculate_kpi(period)
+                kpi_data = self._calculate_kpi(pay_date)
                 kpi_data["source"] = "on_the_fly"
                 return kpi_data
 
         except Exception as e:
-            logger.error(f"Erreur récupération KPI période {period}: {e}")
+            logger.error(f"Erreur récupération KPI date de paie {pay_date}: {e}")
             raise
 
     # ========================
     # MÉTHODES INTERNES
     # ========================
 
-    def _calculate_kpi(self, period: str) -> dict[str, Any]:
+    def _calculate_kpi(self, pay_date: str) -> dict[str, Any]:
         """
-        Calcule les KPI pour une période depuis payroll_transactions.
+        Calcule les KPI pour une date de paie précise depuis payroll_transactions.
 
         Structure retournée:
         {
@@ -147,55 +145,41 @@ class KPISnapshotService:
                 "anomalies": [...],      # Nets négatifs, codes sensibles, etc.
                 "codes_top": [...],      # Top 10 codes par montant
                 "postes_top": [...],     # Top 10 postes budgétaires
-                "nouveaux_codes": [...]  # Codes apparus cette période
+                "nouveaux_codes": [...]  # Codes apparus cette date de paie
             }
         }
         """
-        logger.info(f"Calcul KPI période {period}")
+        logger.info(f"Calcul KPI date de paie {pay_date}")
 
         # 1. KPI CARTES (agrégats globaux)
-        cards = self._calculate_cards(period)
+        cards = self._calculate_cards(pay_date)
 
         # 2. KPI TABLES (listes détaillées)
-        tables = self._calculate_tables(period)
+        tables = self._calculate_tables(pay_date)
 
-        return {"cards": cards, "tables": tables}
+        return {"cards": cards, "tables": tables, "source": "kpi_snapshot"}
 
-    def _calculate_cards(self, period: str) -> dict[str, Any]:
+    def _calculate_cards(self, pay_date: str) -> dict[str, Any]:
         """Calcule les KPI cartes (agrégats globaux) - LOGIQUE CORRECTE."""
+        # Le paramètre pay_date est une date exacte au format 'YYYY-MM-DD' (ex: '2025-08-28')
         sql = """
         SELECT 
-            -- Salaire net total (somme simple de tous les montants employé)
-            COALESCE(SUM(amount_employee_norm_cents) / 100.0, 0) as salaire_net_total,
-            
-            -- Masse salariale (montants positifs employé) - pour information
-            COALESCE(SUM(CASE WHEN amount_employee_norm_cents > 0 THEN amount_employee_norm_cents ELSE 0 END) / 100.0, 0) as masse_salariale,
-            
-            -- Déductions (montants négatifs employé) - pour information
-            COALESCE(SUM(CASE WHEN amount_employee_norm_cents < 0 THEN amount_employee_norm_cents ELSE 0 END) / 100.0, 0) as deductions,
-            
-            -- Masse employeur
-            COALESCE(SUM(amount_employer_norm_cents) / 100.0, 0) as masse_employeur,
-            
-            -- Net moyen (salaire net total / nb employés)
+            COALESCE(SUM(pt.amount_cents) / 100.0, 0) AS salaire_net_total,
+            COALESCE(SUM(CASE WHEN pt.amount_cents > 0 THEN pt.amount_cents ELSE 0 END) / 100.0, 0) AS masse_salariale,
+            COALESCE(SUM(CASE WHEN pt.amount_cents < 0 THEN pt.amount_cents ELSE 0 END) / 100.0, 0) AS deductions,
+            0.0 AS masse_employeur,
             CASE 
-                WHEN COUNT(DISTINCT employee_id) > 0 
-                THEN (SUM(amount_employee_norm_cents) / 100.0) / COUNT(DISTINCT employee_id)
+                WHEN COUNT(DISTINCT pt.employee_id) > 0
+                THEN (SUM(pt.amount_cents) / 100.0) / COUNT(DISTINCT pt.employee_id)
                 ELSE 0
-            END as net_moyen,
-            
-            -- Nombre d'employés distincts
-            COUNT(DISTINCT employee_id) as nb_employes,
-            
-            -- Nombre de transactions
-            COUNT(*) as nb_transactions
-        
+            END AS net_moyen,
+            COUNT(DISTINCT pt.employee_id) AS nb_employes,
+            COUNT(*) AS nb_transactions
         FROM payroll.payroll_transactions pt
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
+        WHERE pt.pay_date = %(pay_date)s::date
         """
 
-        result = self.repo.run_query(sql, {"period": period}, fetch_one=True)
+        result = self.repo.run_query(sql, {"pay_date": pay_date}, fetch_one=True)
 
         if result:
             return {
@@ -220,46 +204,45 @@ class KPISnapshotService:
                 "nb_transactions": 0,
             }
 
-    def _calculate_tables(self, period: str) -> dict[str, Any]:
+    def _calculate_tables(self, pay_date: str) -> dict[str, Any]:
         """Calcule les KPI tables (listes détaillées)."""
         tables = {}
 
         # 1. ANOMALIES (nets négatifs)
-        tables["anomalies"] = self._get_anomalies(period)
+        tables["anomalies"] = self._get_anomalies(pay_date)
 
         # 2. TOP CODES PAY
-        tables["codes_top"] = self._get_top_pay_codes(period)
+        tables["codes_top"] = self._get_top_pay_codes(pay_date)
 
         # 3. TOP POSTES BUDGÉTAIRES
-        tables["postes_top"] = self._get_top_budget_posts(period)
+        tables["postes_top"] = self._get_top_budget_posts(pay_date)
 
-        # 4. NOUVEAUX CODES (codes apparus cette période mais pas période précédente)
+        # 4. NOUVEAUX CODES (codes apparus cette date de paie mais pas date précédente)
         # Pour l'instant on retourne liste vide (implémentation future)
         tables["nouveaux_codes"] = []
 
         return tables
 
-    def _get_anomalies(self, period: str, limit: int = 20) -> list[dict]:
+    def _get_anomalies(self, pay_date: str, limit: int = 20) -> list[dict]:
         """Récupère les anomalies (nets négatifs, montants suspects)."""
         sql = """
         SELECT 
-            e.matricule,
-            e.nom || ' ' || e.prenom as nom_prenom,
-            pc.label as code_label,
-            pt.amount_employee_norm_cents / 100.0 as montant,
-            pp.pay_date::text as date_paie,
-            'Net négatif' as type_anomalie
+            COALESCE(e.matricule, pt.employee_id::text) AS matricule,
+            COALESCE(e.nom || ' ' || e.prenom, 'N/A') AS nom_prenom,
+            COALESCE(pc.label, pt.pay_code) AS code_label,
+            pt.amount_cents / 100.0 AS montant,
+            pt.pay_date::text AS date_paie,
+            'Net négatif' AS type_anomalie
         FROM payroll.payroll_transactions pt
-        JOIN core.employees e ON pt.employee_id = e.employee_id
-        JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
-          AND pt.amount_employee_norm_cents < -100000  -- < -1000$ (suspect)
-        ORDER BY pt.amount_employee_norm_cents ASC
+        LEFT JOIN core.employees e ON pt.employee_id = e.employee_id
+        LEFT JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
+        WHERE pt.pay_date = %(pay_date)s::date
+          AND pt.amount_cents < -100000
+        ORDER BY pt.amount_cents ASC
         LIMIT %(limit)s
         """
 
-        result = self.repo.run_query(sql, {"period": period, "limit": limit})
+        result = self.repo.run_query(sql, {"pay_date": pay_date, "limit": limit})
 
         anomalies = []
         if result:
@@ -277,25 +260,24 @@ class KPISnapshotService:
 
         return anomalies
 
-    def _get_top_pay_codes(self, period: str, limit: int = 10) -> list[dict]:
+    def _get_top_pay_codes(self, pay_date: str, limit: int = 10) -> list[dict]:
         """Récupère le top N codes de paie par montant."""
         sql = """
         SELECT 
-            pc.pay_code,
-            pc.label,
-            pc.category,
-            COUNT(*) as nb_transactions,
-            SUM(pt.amount_employee_norm_cents) / 100.0 as total_montant
+            COALESCE(pc.pay_code, pt.pay_code) AS pay_code,
+            COALESCE(pc.label, pt.pay_code) AS label,
+            COALESCE(pc.category, 'Inconnu') AS category,
+            COUNT(*) AS nb_transactions,
+            SUM(pt.amount_cents) / 100.0 AS total_montant
         FROM payroll.payroll_transactions pt
-        JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
-        GROUP BY pc.pay_code, pc.label, pc.category
-        ORDER BY ABS(SUM(pt.amount_employee_norm_cents)) DESC
+        LEFT JOIN core.pay_codes pc ON pt.pay_code = pc.pay_code
+        WHERE pt.pay_date = %(pay_date)s::date
+        GROUP BY COALESCE(pc.pay_code, pt.pay_code), COALESCE(pc.label, pt.pay_code), COALESCE(pc.category, 'Inconnu')
+        ORDER BY ABS(SUM(pt.amount_cents)) DESC
         LIMIT %(limit)s
         """
 
-        result = self.repo.run_query(sql, {"period": period, "limit": limit})
+        result = self.repo.run_query(sql, {"pay_date": pay_date, "limit": limit})
 
         codes = []
         if result:
@@ -312,24 +294,31 @@ class KPISnapshotService:
 
         return codes
 
-    def _get_top_budget_posts(self, period: str, limit: int = 10) -> list[dict]:
+    def _get_top_budget_posts(self, pay_date: str, limit: int = 10) -> list[dict]:
         """Récupère le top N postes budgétaires par montant."""
+        # Note: payroll_transactions n'a pas budget_post_id directement
+        # On utilise imported_payroll_master qui a cette information
+        # Colonnes réelles: description_poste_budgetaire, montant_employe
         sql = """
         SELECT 
-            bp.code,
-            bp.description,
+            ipm.poste_budgetaire AS code,
+            COALESCE(ipm.description_poste_budgetaire, ipm.poste_budgetaire) AS description,
             COUNT(*) as nb_transactions,
-            SUM(pt.amount_employee_norm_cents) / 100.0 as total_montant
-        FROM payroll.payroll_transactions pt
-        JOIN core.budget_posts bp ON pt.budget_post_id = bp.budget_post_id
-        JOIN payroll.pay_periods pp ON pt.period_id = pp.period_id
-        WHERE TO_CHAR(pp.pay_date, 'YYYY-MM') = %(period)s
-        GROUP BY bp.code, bp.description
-        ORDER BY ABS(SUM(pt.amount_employee_norm_cents)) DESC
+            SUM(ipm.montant_employe) as total_montant
+        FROM payroll.imported_payroll_master ipm
+        WHERE ipm.date_paie = %(pay_date)s::date
+          AND ipm.poste_budgetaire IS NOT NULL
+          AND ipm.poste_budgetaire != ''
+        GROUP BY ipm.poste_budgetaire, COALESCE(ipm.description_poste_budgetaire, ipm.poste_budgetaire)
+        ORDER BY ABS(SUM(ipm.montant_employe)) DESC
         LIMIT %(limit)s
         """
 
-        result = self.repo.run_query(sql, {"period": period, "limit": limit})
+        try:
+            result = self.repo.run_query(sql, {"pay_date": pay_date, "limit": limit})
+        except Exception as e:
+            logger.warning(f"Erreur récupération top postes budgétaires: {e}")
+            return []
 
         postes = []
         if result:
@@ -345,17 +334,17 @@ class KPISnapshotService:
 
         return postes
 
-    def _upsert_snapshot(self, period: str, kpi_data: dict) -> None:
+    def _upsert_snapshot(self, pay_date: str, kpi_data: dict) -> None:
         """
         Insert ou update le snapshot KPI dans payroll.kpi_snapshot.
 
         Args:
-            period: Période (ex: '2025-01')
+            pay_date: Date de paie au format YYYY-MM-DD (ex: '2025-08-28')
             kpi_data: Données KPI (dict qui sera sérialisé en JSONB)
         """
         sql = """
         INSERT INTO payroll.kpi_snapshot (period, data, calculated_at, row_count)
-        VALUES (%(period)s, %(data)s, CURRENT_TIMESTAMP, %(row_count)s)
+        VALUES (%s, %s, CURRENT_TIMESTAMP, %s)
         ON CONFLICT (period) DO UPDATE SET
             data = EXCLUDED.data,
             calculated_at = EXCLUDED.calculated_at,
@@ -364,19 +353,26 @@ class KPISnapshotService:
 
         row_count = kpi_data.get("cards", {}).get("nb_transactions", 0)
 
-        self.repo.execute_dml(
-            sql,
-            {"period": period, "data": json.dumps(kpi_data), "row_count": row_count},
-        )
+        try:
+            self.repo.execute_dml(sql, (pay_date, json.dumps(kpi_data), row_count))
+            logger.info(
+                f"OK: Snapshot KPI upserted pour {pay_date} ({row_count} transactions)"
+            )
+        except Exception as e:
+            # Si erreur de droits, on log mais on ne fait pas échouer le calcul
+            logger.warning(
+                f"⚠️ Impossible de sauvegarder snapshot KPI pour {pay_date} (droits insuffisants?): {e}"
+            )
+            logger.info(
+                "Les KPI ont été calculés avec succès mais n'ont pas été sauvegardés dans kpi_snapshot"
+            )
 
-        logger.info(f"✓ Snapshot KPI upserted pour {period} ({row_count} transactions)")
-
-    def list_periods_with_snapshots(self) -> list[dict]:
+    def list_pay_dates_with_snapshots(self) -> list[dict]:
         """
-        Liste toutes les périodes avec leurs snapshots KPI.
+        Liste toutes les dates de paie avec leurs snapshots KPI.
 
         Returns:
-            Liste de dicts avec 'period', 'calculated_at', 'row_count'
+            Liste de dicts avec 'pay_date', 'calculated_at', 'row_count'
         """
         sql = """
         SELECT period, calculated_at, row_count
@@ -386,18 +382,20 @@ class KPISnapshotService:
 
         result = self.repo.run_query(sql)
 
-        periods = []
+        pay_dates = []
         if result:
             for row in result:
-                periods.append(
+                pay_dates.append(
                     {
-                        "period": row[0],
+                        "pay_date": row[
+                            0
+                        ],  # period contient la date de paie YYYY-MM-DD
                         "calculated_at": row[1].isoformat() if row[1] else None,
                         "row_count": int(row[2] or 0),
                     }
                 )
 
-        return periods
+        return pay_dates
 
 
 # ========================================

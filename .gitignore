@@ -9,6 +9,21 @@ RAPPORT_*.txt
 strict_ruff_output.txt
 top20_files.txt
 tmp*
+__pycache__/
+*.pyc
+# Fichiers temporaires préfixés par un point
+.tmp*
+.current_backup_timestamp
+.backup_timestamp
+*.current_backup_timestamp
+*.backup_timestamp
+# Sauvegardes horodatées diverses
+*.bak.*
+# Sauvegarde d’environnement
+.env.bak.*
+# Fichiers Excel temporaires
+app/test_import_*.xlsx
+RAPPORT_*.zip
 # Auto-added by cleanup script
 *.diff
 *.patch

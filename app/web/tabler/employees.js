@@ -43,6 +43,84 @@
     },
     drawer: null
   };
+
+  const HAS_TABLER_LITE_UI = typeof document !== 'undefined'
+    && document.getElementById('tbl-employees')
+    && document.getElementById('btn-apply-date');
+
+  const HAS_LEGACY_EMPLOYEES_UI = typeof document !== 'undefined'
+    && document.getElementById('sel-period');
+
+  const tablerLiteState = {
+    active: !!HAS_TABLER_LITE_UI,
+    dt: null,
+    rows: [],
+    modalChart: null,
+    lastDate: null
+  };
+
+  const tablerLiteSampleEmployees = [
+    {
+      employee_id: 1,
+      nom: 'Amin Ajarar',
+      matricule: 'A001',
+      statut: 'actif',
+      categorie_emploi: 'Comptabilité',
+      titre_emploi: 'Agent de gestion comptable',
+      salaire_net: 398464.35,
+      salaire_prev: 370000,
+      salary_trend: [
+        { date: '2024-11-01', value: 360000 },
+        { date: '2024-12-01', value: 370000 },
+        { date: '2025-01-01', value: 398464.35 }
+      ]
+    },
+    {
+      employee_id: 2,
+      nom: 'AMIN AJARAR',
+      matricule: 'A001',
+      statut: 'inactif',
+      categorie_emploi: 'Comptabilité',
+      titre_emploi: 'Ancien agent',
+      salaire_net: 0,
+      salaire_prev: 1200,
+      salary_trend: [
+        { date: '2024-11-01', value: 1200 },
+        { date: '2024-12-01', value: 0 },
+        { date: '2025-01-01', value: 0 }
+      ]
+    },
+    {
+      employee_id: 3,
+      nom: 'Jean Allaaain',
+      matricule: 'B220',
+      statut: 'inactif',
+      categorie_emploi: 'Technique',
+      titre_emploi: 'Technicien',
+      salaire_net: 800,
+      salaire_prev: 1000,
+      salary_trend: [
+        { date: '2024-11-01', value: 950 },
+        { date: '2024-12-01', value: 1000 },
+        { date: '2025-01-01', value: 800 }
+      ]
+    },
+    {
+      employee_id: 4,
+      nom: 'Marie Dupont',
+      matricule: 'C333',
+      statut: 'actif',
+      categorie_emploi: 'Administration',
+      titre_emploi: 'Chef bureau',
+      salaire_net: 4200.5,
+      salaire_prev: 4100,
+      salary_trend: [
+        { date: '2024-11-01', value: 3900 },
+        { date: '2024-12-01', value: 4100 },
+        { date: '2025-01-01', value: 4200.5 }
+      ]
+    }
+  ];
   
   // ========================================================================
   // API BRIDGE (QWebChannel)
@@ -100,6 +178,9 @@
       const kpiStr = await callBridge('get_kpi', periodId);
       return typeof kpiStr === 'string' ? JSON.parse(kpiStr) : kpiStr;
     },
+    async getEmployeesByDate(dateIso) {
+      return callBridge('getEmployees', dateIso);
+    },
     async listEmployees(_periodId, filters, page, pageSize) {
       return callBridge('list_employees', _periodId, JSON.stringify(filters||{}), page, pageSize);
     },
@@ -118,6 +199,386 @@
       return [];
     }
   };
+
+  // ========================================================================
+  // TABLER LITE HELPERS (employees.html)
+  // ========================================================================
+
+  const tablerLiteIntl = new Intl.NumberFormat('fr-CA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  function tablerLiteFmtMoney(value) {
+    return tablerLiteIntl.format(Number(value || 0));
+  }
+
+  function tablerLiteComputeDelta(cur, prev) {
+    const current = Number(cur || 0);
+    const previous = Number(prev || 0);
+    if (previous === 0) {
+      if (current === 0) return { pct: 0, dir: 'neutral' };
+      return { pct: 100, dir: 'up' };
+    }
+    const pct = ((current - previous) / Math.abs(previous)) * 100;
+    return {
+      pct,
+      dir: pct > 0.1 ? 'up' : pct < -0.1 ? 'down' : 'neutral'
+    };
+  }
+
+  function tablerLiteRenderDelta(cur, prev) {
+    const result = tablerLiteComputeDelta(cur, prev);
+    const pctStr = (Math.abs(result.pct) >= 1 || result.pct === 0)
+      ? result.pct.toFixed(1) + '%'
+      : result.pct.toFixed(2) + '%';
+
+    if (result.dir === 'up') {
+      return `<span class="arrow-up">▲ ${pctStr}</span>`;
+    }
+    if (result.dir === 'down') {
+      return `<span class="arrow-down">▼ ${pctStr}</span>`;
+    }
+    return `<span class="arrow-neutral">— ${pctStr}</span>`;
+  }
+
+  function tablerLiteCreateSparkline(canvasId, trend) {
+    if (!Array.isArray(trend) || !trend.length) return;
+    const node = document.getElementById(canvasId);
+    if (!node || typeof Chart === 'undefined') return;
+
+    node.width = 140;
+    node.height = 36;
+    const ctx = node.getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: trend.map(t => t.date),
+        datasets: [{
+          data: trend.map(t => t.value),
+          borderColor: '#0b69ff',
+          backgroundColor: 'rgba(11,105,255,0.08)',
+          tension: 0.3,
+          pointRadius: 0
+        }]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: { x: { display: false }, y: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => tablerLiteFmtMoney(ctx.parsed.y)
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function tablerLiteOpenModal(row) {
+    const modalTitle = document.getElementById('modalTitle');
+    const modalCanvas = document.getElementById('modalChart');
+    const modalElement = document.getElementById('modalDetail');
+    if (!modalElement || !modalCanvas) return;
+
+    if (modalTitle) {
+      modalTitle.textContent = `Historique salaire — ${row.nom || ''}`;
+    }
+
+    if (tablerLiteState.modalChart) {
+      tablerLiteState.modalChart.destroy();
+      tablerLiteState.modalChart = null;
+    }
+
+    if (typeof Chart !== 'undefined') {
+      const ctx = modalCanvas.getContext('2d');
+      tablerLiteState.modalChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: (row.salary_trend || []).map(t => t.date),
+          datasets: [{
+            label: 'Salaire net',
+            data: (row.salary_trend || []).map(t => t.value),
+            borderColor: '#16a34a',
+            backgroundColor: 'rgba(22,163,74,0.08)',
+            tension: 0.2
+          }]
+        },
+        options: {
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (ctx) => tablerLiteFmtMoney(ctx.parsed.y)
+              }
+            }
+          }
+        }
+      });
+    }
+
+    if (window.tabler && tabler.Core && tabler.Core.Modal) {
+      new tabler.Core.Modal(modalElement).show();
+    } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      const bsModal = new bootstrap.Modal(modalElement);
+      bsModal.show();
+    } else {
+      modalElement.style.display = 'block';
+      modalElement.classList.add('show');
+    }
+  }
+
+  function tablerLitePrepareRows(rawRows) {
+    const rows = Array.isArray(rawRows) ? rawRows : tablerLiteSampleEmployees;
+    return rows.map((r, idx) => {
+      const statut = (r.statut || '').toLowerCase() === 'actif' ? 'actif' : 'inactif';
+      const prev = Number(r.salaire_prev || 0);
+      const net = Number(r.salaire_net || 0);
+      return {
+        employee_id: r.employee_id || idx + 1,
+        nom: r.nom || '',
+        matricule: r.matricule || '',
+        statut,
+        categorie: r.categorie_emploi || r.categorie || '',
+        titre: r.titre_emploi || r.titre || '',
+        salaire_net: net,
+        salaire_prev: prev,
+        salary_trend: Array.isArray(r.salary_trend) ? r.salary_trend : [],
+        deltaHtml: tablerLiteRenderDelta(net, prev)
+      };
+    });
+  }
+
+  function tablerLiteInitDataTable(rows) {
+    const prepared = tablerLitePrepareRows(rows);
+    const $ = window.jQuery;
+    if (!$ || !$.fn || !$.fn.DataTable) {
+      console.error('[Employees][Lite] DataTables non disponible');
+      return;
+    }
+
+    const tableEl = document.getElementById('tbl-employees');
+    if (!tableEl) return;
+
+    const applyTrend = () => {
+      prepared.forEach((row) => {
+        const canvasId = `spark_${row.employee_id}`;
+        setTimeout(() => tablerLiteCreateSparkline(canvasId, row.salary_trend), 40);
+      });
+    };
+
+    const columns = [
+      {
+        data: 'nom',
+        render: (d, _t, row) => `<a href="#" class="emp-link" data-id="${row.employee_id}">${d}</a>`
+      },
+      { data: 'matricule' },
+      {
+        data: 'statut',
+        render: (value) => value === 'actif'
+          ? '<span class="badge-actif">Actif</span>'
+          : '<span class="badge-inactif">Ancien</span>'
+      },
+      { data: 'categorie' },
+      { data: 'titre' },
+      {
+        data: 'salaire_net',
+        className: 'text-end',
+        render: (value) => tablerLiteFmtMoney(value)
+      },
+      {
+        data: 'deltaHtml',
+        className: 'text-center',
+        orderable: false,
+        searchable: false
+      },
+      {
+        data: 'salary_trend',
+        orderable: false,
+        searchable: false,
+        render: (_trend, _t, row) => `<canvas id="spark_${row.employee_id}" class="spark-canvas"></canvas>`
+      },
+      {
+        data: null,
+        orderable: false,
+        searchable: false,
+        render: (_d, _t, row) =>
+          `<div class="btn-group"><button class="btn btn-sm btn-outline-primary btn-detail" data-id="${row.employee_id}">Détails</button></div>`
+      }
+    ];
+
+    const drawCallback = function() {
+      applyTrend();
+    };
+
+    const existingDt = window._employees_dt || tablerLiteState.dt;
+    if (existingDt && $.fn.DataTable.isDataTable('#tbl-employees')) {
+      existingDt.clear().rows.add(prepared).draw();
+      applyTrend();
+      window._employees_dt = existingDt;
+      tablerLiteState.dt = existingDt;
+    } else {
+      const dtInstance = $('#tbl-employees').DataTable({
+        data: prepared,
+        columns,
+        createdRow: (_row, data) => {
+          if (data && data.statut && data.statut === data.statut.toUpperCase()) {
+            // déjà géré via deltaHtml (pas nécessaire)
+          }
+        },
+        dom: 'Bfrtip',
+        buttons: ['excelHtml5', 'csvHtml5', 'pdfHtml5', 'print', 'pageLength'],
+        pageLength: 10,
+        responsive: true,
+        drawCallback,
+        footerCallback: function() {
+          const api = this.api();
+          const rowsData = api.rows({ search: 'applied' }).data().toArray();
+          let total = 0;
+          rowsData.forEach((r) => { total += Number(r.salaire_net || 0); });
+          const fmt = window.DataTablesHelper?.formatCurrency
+            ? window.DataTablesHelper.formatCurrency(total)
+            : tablerLiteFmtMoney(total);
+          $(api.column(5).footer()).html(`<strong>${fmt}</strong>`);
+        }
+      });
+
+      window._employees_dt = dtInstance;
+      tablerLiteState.dt = dtInstance;
+
+      $('#tbl-employees tbody')
+        .off('click.emp-detail')
+        .on('click.emp-detail', '.btn-detail', function() {
+          const id = Number(this.getAttribute('data-id'));
+          const rowData = tablerLiteState.rows.find(r => r.employee_id == id);
+          if (rowData) {
+            tablerLiteOpenModal(rowData);
+          }
+        })
+        .on('click.emp-link', function(e) {
+          const anchor = e.target.closest('.emp-link');
+          if (!anchor) return;
+          e.preventDefault();
+          const id = Number(anchor.getAttribute('data-id'));
+          const rowData = tablerLiteState.rows.find(r => r.employee_id == id);
+          if (rowData) {
+            tablerLiteOpenModal(rowData);
+          }
+        });
+    }
+
+    tablerLiteState.rows = prepared;
+  }
+
+  function tablerLiteApplyStatusFilter(filterValue) {
+    if (!tablerLiteState.dt) return;
+    if (!filterValue || filterValue === 'all') {
+      tablerLiteState.dt.column(2).search('').draw();
+    } else {
+      const term = filterValue === 'actif' ? 'Actif' : 'Ancien';
+      tablerLiteState.dt.column(2).search(term).draw();
+    }
+  }
+
+  async function tablerLiteRefresh(dateIso) {
+    const targetDate = (dateIso || tablerLiteState.lastDate || '').trim() || new Date().toISOString().slice(0, 10);
+    tablerLiteState.lastDate = targetDate;
+
+    try {
+      if (!state.bridge) {
+        throw new Error('AppBridge non disponible');
+      }
+
+      const rows = await API.getEmployeesByDate(targetDate);
+      if (Array.isArray(rows)) {
+        tablerLiteInitDataTable(rows);
+        console.log('[Employees][Lite] Table initialisée depuis AppBridge.getEmployees');
+      } else if (rows && rows.error) {
+        throw new Error(rows.error);
+      } else {
+        throw new Error('Réponse inattendue');
+      }
+    } catch (err) {
+      console.error('[Employees][Lite] AppBridge.getEmployees failed:', err);
+      console.warn('[Employees][Lite] Fallback sur les données exemples locales');
+      tablerLiteInitDataTable(tablerLiteSampleEmployees);
+    }
+
+    const statusSelect = document.getElementById('filter-statut');
+    if (statusSelect) {
+      tablerLiteApplyStatusFilter(statusSelect.value);
+    }
+  }
+
+  async function tablerLiteResolveActiveDate() {
+    try {
+      if (!state.bridge) {
+        return null;
+      }
+      const raw = await callBridge('get_active_pay_date');
+      const info = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const payDate = info && info.pay_date ? info.pay_date : null;
+      if (payDate) {
+        console.log(`[Employees][Lite] Période active détectée: ${payDate} (source: ${info.source || 'unknown'})`);
+      } else {
+        console.warn('[Employees][Lite] Aucune période active retournée');
+      }
+      return payDate;
+    } catch (err) {
+      console.warn('[Employees][Lite] Impossible de récupérer la période active:', err);
+      return null;
+    }
+  }
+
+  function tablerLiteBindControls() {
+    const dateInput = document.getElementById('pay-date');
+    if (dateInput && !dateInput.value) {
+      dateInput.value = tablerLiteState.lastDate || new Date().toISOString().slice(0, 10);
+    }
+
+    const applyBtn = document.getElementById('btn-apply-date');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', async () => {
+        const value = dateInput?.value || new Date().toISOString().slice(0, 10);
+        try {
+          await tablerLiteRefresh(value);
+        } catch (err) {
+          console.error('[Employees][Lite] Rafraîchissement manuel échoué, fallback local', err);
+          tablerLiteInitDataTable(tablerLiteSampleEmployees);
+        }
+      });
+    }
+
+    const statusSelect = document.getElementById('filter-statut');
+    if (statusSelect) {
+      statusSelect.addEventListener('change', () => {
+        tablerLiteApplyStatusFilter(statusSelect.value);
+      });
+    }
+
+    const toggleBtn = document.getElementById('btn-toggle-borders');
+    if (toggleBtn) {
+      const tableEl = document.getElementById('tbl-employees');
+      toggleBtn.addEventListener('click', () => {
+        if (!tableEl) return;
+        const hasNoBorders = tableEl.classList.toggle('table-no-borders');
+        toggleBtn.textContent = hasNoBorders ? 'Afficher bordures' : 'Masquer bordures';
+      });
+    }
+  }
+
+  async function initTablerLiteUI() {
+    tablerLiteBindControls();
+    const dateInput = document.getElementById('pay-date');
+    const activeDate = await tablerLiteResolveActiveDate();
+    const initialDate = activeDate || dateInput?.value || new Date().toISOString().slice(0, 10);
+    if (dateInput) {
+      dateInput.value = initialDate;
+    }
+    await tablerLiteRefresh(initialDate);
+  }
   
   // ========================================================================
   // PERSISTENCE (LocalStorage)
@@ -1073,21 +1534,30 @@
     new QWebChannel(qt.webChannelTransport, (channel) => {
       state.bridge = channel.objects.AppBridge;
       console.log('[Bridge] QWebChannel connecté');
-      init().catch(err => {
+      const initializer = tablerLiteState.active ? initTablerLiteUI : init;
+      initializer().catch(err => {
         console.error('[App] Erreur initialisation:', err);
-        showToast('Erreur critique au démarrage', 'error');
+        if (!tablerLiteState.active) {
+          showToast('Erreur critique au démarrage', 'error');
+        }
       });
     });
+  } else if (tablerLiteState.active) {
+    console.warn('[Bridge] QWebChannel non disponible - mode démo');
+    initTablerLiteUI().catch(err => console.error('[Employees][Lite] init fallback:', err));
   } else {
     console.error('[Bridge] QWebChannel non disponible');
-    document.getElementById('tbody').innerHTML = `
-      <tr>
-        <td colspan="5" class="text-center text-danger py-4">
-          <i class="ti ti-plug-off icon me-2"></i>
-          Application non connectée (QWebChannel manquant)
-        </td>
-      </tr>
-    `;
+    const legacyBody = document.getElementById('tbody');
+    if (legacyBody) {
+      legacyBody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center text-danger py-4">
+            <i class="ti ti-plug-off icon me-2"></i>
+            Application non connectée (QWebChannel manquant)
+          </td>
+        </tr>
+      `;
+    }
   }
   
 })();

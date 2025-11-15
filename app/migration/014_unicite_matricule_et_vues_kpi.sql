@@ -89,7 +89,7 @@ DROP VIEW IF EXISTS paie.v_kpi_mois CASCADE;
 -- Vue mensuelle/quotidienne consolidée
 CREATE OR REPLACE VIEW paie.v_kpi_mois AS
 SELECT
-    TO_CHAR(t.pay_date, 'YYYY-MM')    AS periode_paie,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(t.pay_date, 'YYYY-MM-DD') AS date_paie,
     COALESCE(SUM(CASE WHEN t.amount_cents > 0 THEN t.amount_cents ELSE 0 END), 0) / 100.0 AS gains_brut,
     COALESCE(SUM(CASE WHEN t.amount_cents < 0 THEN t.amount_cents ELSE 0 END), 0) / 100.0 AS deductions_net,
@@ -100,8 +100,8 @@ SELECT
     COUNT(DISTINCT CASE WHEN t.amount_cents <> 0 THEN t.employee_id END) AS nb_employes,
     COUNT(*) AS nb_transactions
 FROM payroll.payroll_transactions t
-GROUP BY TO_CHAR(t.pay_date, 'YYYY-MM'), TO_CHAR(t.pay_date, 'YYYY-MM-DD')
-ORDER BY periode_paie, date_paie;
+GROUP BY t.pay_date, TO_CHAR(t.pay_date, 'YYYY-MM-DD')
+ORDER BY date_paie;
 
 COMMENT ON VIEW paie.v_kpi_mois IS 'KPI consolidés par mois/jour pour overview (net, coût total, etc.)';
 
@@ -111,14 +111,13 @@ WITH
 agg AS (
     SELECT
         t.pay_date::date                              AS date_paie,
-        TO_CHAR(t.pay_date, 'YYYY-MM')                AS periode_paie,
         t.employee_id,
         COALESCE(SUM(CASE WHEN t.amount_cents > 0 THEN t.amount_cents ELSE 0 END), 0) / 100.0 AS gains_brut,
         COALESCE(SUM(CASE WHEN t.amount_cents < 0 THEN t.amount_cents ELSE 0 END), 0) / 100.0 AS deductions,
         COALESCE(SUM(t.amount_cents), 0) / 100.0                                         AS net,
         COALESCE(SUM(CASE WHEN t.amount_cents > 0 THEN t.amount_cents * 0.15 ELSE 0 END), 0) / 100.0 AS part_employeur
     FROM payroll.payroll_transactions t
-    GROUP BY t.pay_date, TO_CHAR(t.pay_date, 'YYYY-MM'), t.employee_id
+    GROUP BY t.pay_date, TO_CHAR(t.pay_date, 'YYYY-MM-DD'), t.employee_id
 ),
 stg_agg AS (
     SELECT
@@ -133,7 +132,7 @@ stg_agg AS (
     GROUP BY s.date_paie, COALESCE(s.matricule::text, '')
 )
 SELECT
-    a.periode_paie,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(a.date_paie, 'YYYY-MM-DD') AS date_paie,
     -- Compatibilité: exposer une colonne 'matricule' (texte) pour l'UI
     COALESCE(e.matricule_norm, e.matricule)::text     AS matricule,
@@ -152,7 +151,7 @@ JOIN core.employees e
 LEFT JOIN stg_agg sa
   ON sa.date_paie = a.date_paie
  AND (sa.matricule = e.matricule OR sa.matricule = e.matricule_norm)
-ORDER BY a.periode_paie, a.date_paie, e.matricule_norm NULLS LAST, e.matricule NULLS LAST;
+ORDER BY a.date_paie, e.matricule_norm NULLS LAST, e.matricule NULLS LAST;
 
 COMMENT ON VIEW paie.v_kpi_par_employe_mois IS 'KPI par employé et période (mois/jour) pour top-employes et détail.';
 

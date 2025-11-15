@@ -1,35 +1,37 @@
 # payroll_app_qt_Version4.py — MainWindow PyQt6 avec UI Tabler pure + WebChannel + PostgreSQL
 # Version: 2.0.1 (Production Hardened)
-import sys
-import os
-import json
 import hashlib
-import unicodedata
+import json
+import os
+import sys
 import tempfile
-from datetime import datetime, date
+import unicodedata
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from time import time
+from typing import Optional
 
 # Charger .env AVANT tout (priorité PAYROLL_DSN)
 from dotenv import load_dotenv
 
 load_dotenv()
 
+from PyQt6.QtCore import (  # noqa: E402
+    QCoreApplication,
+    QObject,
+    Qt,
+    QThread,
+    QUrl,
+    pyqtSignal,
+    pyqtSlot,
+)
+from PyQt6.QtWebChannel import QWebChannel  # noqa: E402
+from PyQt6.QtWebEngineCore import QWebEngineProfile  # noqa: E402
+from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: E402
+
 # noqa: E402 - Imports PyQt6 après load_dotenv() car nécessaire pour charger .env avant
 from PyQt6.QtWidgets import QApplication, QMainWindow  # noqa: E402
-from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: E402
-from PyQt6.QtWebChannel import QWebChannel  # noqa: E402
-from PyQt6.QtCore import (  # noqa: E402
-    Qt,
-    QCoreApplication,
-    QUrl,
-    QObject,
-    pyqtSlot,
-    QThread,
-    pyqtSignal,
-)
-from PyQt6.QtWebEngineCore import QWebEngineProfile  # noqa: E402
 
 # Import API client pour source de vérité unique
 
@@ -103,8 +105,9 @@ def parse_amount_neutral(value, context: str = ""):
     Returns:
         float ou None si parsing impossible
     """
-    import pandas as pd
     import re
+
+    import pandas as pd
 
     if value is None or pd.isna(value):
         return None
@@ -125,7 +128,7 @@ def parse_amount_neutral(value, context: str = ""):
 
     # Retirer caractères non numériques courants
     # NBSP (non-breaking space U+202F et U+00A0)
-    cleaned = raw_value.replace("\u202F", "").replace("\u00A0", "")
+    cleaned = raw_value.replace("\u202f", "").replace("\u00a0", "")
     cleaned = cleaned.replace("$", "").replace("CA", "").replace("CAD", "")
 
     # Retirer tous les espaces
@@ -156,6 +159,7 @@ def parse_amount_neutral(value, context: str = ""):
 def parse_excel_date_robust(date_value, row_idx):
     """Parse robuste des dates Excel avec nettoyage intelligent et détection de faux serial numbers"""
     import re
+
     import pandas as pd
 
     # 1. Valeur vide/NaN
@@ -262,6 +266,7 @@ class AppBridge(QObject):
         self.main_window = main_window
         self.current_user = None  # Session utilisateur
         self.current_importer = None  # Référence à l'importeur en cours pour annulation
+        self.active_period: Optional[dict] = None
 
         # Utiliser PostgresProvider comme source de vérité unique
         try:
@@ -273,6 +278,7 @@ class AppBridge(QObject):
             raise RuntimeError(f"Impossible de se connecter à PostgreSQL: {e}")
 
         print("✅ Provider PostgreSQL actif - accès direct aux données réelles")
+        self._refresh_active_period()
 
     @pyqtSlot()
     def cancelImport(self):
@@ -286,6 +292,35 @@ class AppBridge(QObject):
         """Test connexion WebChannel"""
         return json.dumps({"status": "ok", "message": "WebChannel actif"})
 
+    def _refresh_active_period(self) -> Optional[dict]:
+        """Met à jour la période active depuis la base."""
+        if not self.provider:
+            self.active_period = None
+            return None
+        self.active_period = self.provider.get_latest_pay_date()
+        return self.active_period
+
+    def _get_active_period(self) -> Optional[dict]:
+        """Retourne la période active (avec lazy refresh)."""
+        if not self.active_period:
+            return self._refresh_active_period()
+        return self.active_period
+
+    def _resolve_pay_date(self, pay_date: Optional[str]) -> Optional[str]:
+        """Retourne la date fournie ou la période active."""
+        if pay_date:
+            return pay_date
+        active = self._get_active_period()
+        if active and active.get("pay_date"):
+            return active["pay_date"]
+        return None
+
+    @pyqtSlot(result=str)
+    def get_active_pay_date(self):
+        """Expose la dernière date de paie détectée pour l'UI."""
+        period = self._get_active_period() or {}
+        return json.dumps(period)
+
     @pyqtSlot(str, result=str)
     def get_kpis(self, pay_date=""):
         """
@@ -298,7 +333,8 @@ class AppBridge(QObject):
             if not self.provider:
                 raise RuntimeError("Provider PostgreSQL non disponible")
 
-            kpis = self.provider.get_kpis(pay_date)
+            target_pay_date = self._resolve_pay_date(pay_date)
+            kpis = self.provider.get_kpis(target_pay_date)
 
             print(f"✅ KPIs envoyés (PostgreSQL): {kpis}")
             return json.dumps(kpis)
@@ -311,7 +347,7 @@ class AppBridge(QObject):
                 "nb_employes": 295,
                 "deductions": -433705.65,
                 "net_moyen": 1825.09,
-                "period": pay_date or "2025-08-28",
+                "period": target_pay_date or pay_date or "2025-08-28",
                 "source": "Fallback_Real",
             }
             return json.dumps(kpis)
@@ -325,6 +361,57 @@ class AppBridge(QObject):
             pay_date: Date de paie exacte au format YYYY-MM-DD (ex: '2025-08-28')
         """
         return self.get_kpis(pay_date)
+
+    @pyqtSlot(str, result=str)
+    def getEmployees(self, date_iso=""):
+        """Retourne JSON list d'employés pour la pay_date fournie (YYYY-MM-DD)."""
+        import json
+
+        try:
+            if not getattr(self, "provider", None) or not getattr(
+                self.provider, "repo", None
+            ):
+                return json.dumps({"error": "Provider PostgreSQL non disponible"})
+
+            pay_date = self._resolve_pay_date(date_iso)
+            if not pay_date:
+                return json.dumps({"rows": [], "error": "Aucune période active"})
+
+            sql = """
+            SELECT
+              ve.employee_id,
+              COALESCE(ve.nom_complet, ve.nom_norm || ', ' || COALESCE(ve.prenom_norm,'')) AS nom,
+              COALESCE(ve.matricule_norm, '') AS matricule,
+              COALESCE(ve.statut, '') AS statut,
+              COALESCE(ve.categorie_emploi, '') AS categorie_emploi,
+              COALESCE(ve.titre_emploi, '') AS titre_emploi,
+              COALESCE(SUM(t.amount_cents),0) / 100.0 AS salaire_net
+            FROM payroll.payroll_transactions t
+            JOIN core.v_employees_enriched ve ON ve.employee_id = t.employee_id
+            WHERE t.pay_date = %(pay_date)s::date
+            GROUP BY ve.employee_id, ve.nom_complet, ve.nom_norm, ve.prenom_norm, ve.matricule_norm, ve.statut, ve.categorie_emploi, ve.titre_emploi
+            ORDER BY nom NULLS LAST
+            """
+
+            rows = self.provider.repo.run_query(sql, {"pay_date": pay_date})
+            result = []
+            for r in rows:
+                result.append(
+                    {
+                        "employee_id": r[0],
+                        "nom": r[1],
+                        "matricule": r[2],
+                        "statut": r[3],
+                        "categorie_emploi": r[4],
+                        "titre_emploi": r[5],
+                        "salaire_net": float(r[6] or 0.0),
+                        "salaire_prev": 0.0,
+                        "salary_trend": [],
+                    }
+                )
+            return json.dumps(result, default=str)
+        except Exception as e:
+            return json.dumps({"error": str(e)})
 
     @pyqtSlot(result=str)
     def refresh_kpis(self):
@@ -363,6 +450,19 @@ class AppBridge(QObject):
                     "source": "Error",
                 }
             )
+
+    @pyqtSlot(str, result=str)
+    def get_dashboard_charts(self, pay_date=""):
+        """Retourne les séries pour les graphiques du dashboard."""
+        try:
+            if not self.provider:
+                raise RuntimeError("Provider PostgreSQL non disponible")
+            target_date = self._resolve_pay_date(pay_date)
+            data = self.provider.get_dashboard_charts(target_date)
+            return json.dumps(data)
+        except Exception as e:
+            print(f"❌ Erreur get_dashboard_charts: {e}")
+            return json.dumps({})
 
     @pyqtSlot(int, int, str, result=str)
     def get_table(self, offset=0, limit=50, filters="{}"):
@@ -888,7 +988,7 @@ class AppBridge(QObject):
 
     @pyqtSlot(result=str)
     def get_periods(self):
-        """Récupère la liste des périodes de paie depuis payroll.pay_periods"""
+        """Récupère la liste des périodes de paie (pay_periods + fallback transactions/importés)"""
         print("🔄 get_periods() appelé")
 
         if not self.provider or not self.provider.repo:
@@ -918,20 +1018,93 @@ class AppBridge(QObject):
             print(f"📊 Résultat SQL: {len(result) if result else 0} périodes")
 
             periods = []
+            periods_by_date: dict[str, dict] = {}
             if result:
                 for row in result:
+                    pay_date = row[1]
                     period_data = {
                         "period_id": row[0],
-                        "pay_date": row[1],
+                        "pay_date": pay_date,
                         "pay_year": row[2],
                         "pay_month": row[3],
                         "status": row[4],
                         "count": row[5],
+                        "auto": False,
                     }
                     periods.append(period_data)
+                    periods_by_date[pay_date] = period_data
                     print(
-                        f"  ✅ Période: {period_data['pay_date']} (ID: {period_data['period_id'][:8]}..., {period_data['count']} transactions, statut: {period_data['status']})"
+                        f"  ✅ Période: {pay_date} (ID: {row[0][:8]}..., {row[5]} transactions, statut: {row[4]})"
                     )
+
+            # Compléter avec les pay_dates réelles présentes dans payroll_transactions
+            sql_tx = """
+            SELECT 
+                pay_date::text,
+                COUNT(*) AS transaction_count,
+                COUNT(DISTINCT employee_id) AS employee_count
+            FROM payroll.payroll_transactions
+            GROUP BY pay_date
+            ORDER BY pay_date DESC
+            """
+            tx_rows = self.provider.repo.run_query(sql_tx, {})
+            for tx_row in tx_rows or []:
+                pay_date, tx_count, employee_count = tx_row
+                entry = periods_by_date.get(pay_date)
+                if entry:
+                    entry["count"] = tx_count
+                    entry["employee_count"] = employee_count
+                else:
+                    year = int(pay_date.split("-")[0])
+                    month = int(pay_date.split("-")[1])
+                    entry = {
+                        "period_id": f"auto-{pay_date}",
+                        "pay_date": pay_date,
+                        "pay_year": year,
+                        "pay_month": month,
+                        "status": "auto",
+                        "count": tx_count,
+                        "employee_count": employee_count,
+                        "auto": True,
+                    }
+                    periods.append(entry)
+                    periods_by_date[pay_date] = entry
+
+            # Ajouter les dates présentes uniquement dans imported_payroll_master
+            sql_imported = """
+            SELECT 
+                date_paie::text,
+                COUNT(*) AS row_count,
+                COUNT(DISTINCT matricule) AS employee_count
+            FROM payroll.imported_payroll_master
+            GROUP BY date_paie
+            """
+            imported_rows = self.provider.repo.run_query(sql_imported, {})
+            for imp_row in imported_rows or []:
+                pay_date, row_count, employee_count = imp_row
+                entry = periods_by_date.get(pay_date)
+                if entry:
+                    entry.setdefault("imported_rows", row_count)
+                    entry.setdefault("imported_employee_count", employee_count)
+                    if entry.get("count", 0) == 0:
+                        entry["count"] = row_count
+                else:
+                    year = int(pay_date.split("-")[0])
+                    month = int(pay_date.split("-")[1])
+                    entry = {
+                        "period_id": f"auto-{pay_date}",
+                        "pay_date": pay_date,
+                        "pay_year": year,
+                        "pay_month": month,
+                        "status": "imported_only",
+                        "count": row_count,
+                        "employee_count": employee_count,
+                        "auto": True,
+                    }
+                    periods.append(entry)
+                    periods_by_date[pay_date] = entry
+
+            periods.sort(key=lambda p: p["pay_date"], reverse=True)
 
             response = {"success": True, "periods": periods}
             print(f"✅ Retour get_periods: {len(periods)} périodes")
@@ -953,33 +1126,55 @@ class AppBridge(QObject):
         try:
             print(f"🗑️  Suppression COMPLÈTE de la période ID: {period_id}...")
 
-            # ============================================================
-            # ÉTAPE 1: Récupérer TOUTES les informations AVANT suppression
-            # ============================================================
+            # Gestion des périodes synthétiques (auto-YYYY-MM-DD)
+            is_auto_period = period_id.startswith("auto-")
+            pay_date = None
+            pay_year = None
+            pay_month = None
+            status = "auto"
+            period_seq_in_year = None
 
-            # Récupérer les infos complètes de la période avant suppression
-            sql_info = """
-            SELECT pay_date::text, pay_year, pay_month, status, 
-                   period_seq_in_year, created_at, closed_at
-            FROM payroll.pay_periods 
-            WHERE period_id = %(period_id)s
-            """
-            info_result = self.provider.repo.run_query(
-                sql_info, {"period_id": period_id}
-            )
+            if is_auto_period:
+                pay_date = period_id.replace("auto-", "")
+                try:
+                    parts = pay_date.split("-")
+                    pay_year = int(parts[0])
+                    pay_month = int(parts[1])
+                except Exception:
+                    pass
+                print(
+                    f"  📅 Période synthétique (auto) détectée pour la date {pay_date}"
+                )
+            else:
+                # ============================================================
+                # ÉTAPE 1: Récupérer TOUTES les informations AVANT suppression
+                # ============================================================
+                sql_info = """
+                SELECT pay_date::text, pay_year, pay_month, status, 
+                       period_seq_in_year, created_at, closed_at
+                FROM payroll.pay_periods 
+                WHERE period_id = %(period_id)s
+                """
+                info_result = self.provider.repo.run_query(
+                    sql_info, {"period_id": period_id}
+                )
 
-            if not info_result:
-                return json.dumps({"success": False, "error": "Période introuvable"})
+                if not info_result:
+                    return json.dumps(
+                        {"success": False, "error": "Période introuvable"}
+                    )
 
-            pay_date = info_result[0][0]
-            pay_year = info_result[0][1]
-            pay_month = info_result[0][2]
-            status = info_result[0][3]
-            period_seq_in_year = info_result[0][4] if len(info_result[0]) > 4 else None
+                pay_date = info_result[0][0]
+                pay_year = info_result[0][1]
+                pay_month = info_result[0][2]
+                status = info_result[0][3]
+                period_seq_in_year = (
+                    info_result[0][4] if len(info_result[0]) > 4 else None
+                )
 
-            print(
-                f"  📅 Période: {pay_date} (année: {pay_year}, mois: {pay_month}, statut: {status})"
-            )
+                print(
+                    f"  📅 Période: {pay_date} (année: {pay_year}, mois: {pay_month}, statut: {status})"
+                )
 
             # Compter les transactions AVANT suppression (pour audit)
             sql_count_trans = """
@@ -1032,48 +1227,48 @@ class AppBridge(QObject):
             # ============================================================
             # ÉTAPE 2: Créer la trace d'audit AVANT toute suppression
             # ============================================================
-
-            # Construire une note détaillée pour l'audit
-            notes_audit = (
-                f"Période supprimée: {pay_date} | "
-                f"Employés dans période: {count_employees_in_period} | "
-                f"Employés orphelins: {count_employees_orphans_before} | "
-                f"Séquence année: {period_seq_in_year or 'N/A'}"
-            )
-
-            try:
-                sql_audit = """
-                INSERT INTO payroll.deleted_periods_audit 
-                (period_id, pay_date, pay_year, pay_month, status, 
-                 transactions_count, deleted_at, deleted_by, notes)
-                VALUES (%(period_id)s, %(pay_date)s::date, %(pay_year)s, %(pay_month)s, 
-                        %(status)s, %(transactions_count)s, NOW(), %(deleted_by)s, %(notes)s)
-                """
-                self.provider.repo.run_query(
-                    sql_audit,
-                    {
-                        "period_id": period_id,
-                        "pay_date": pay_date,
-                        "pay_year": pay_year,
-                        "pay_month": pay_month,
-                        "status": status,
-                        "transactions_count": count_transactions,
-                        "deleted_by": "user",  # TODO: Remplacer par l'utilisateur réel si disponible
-                        "notes": notes_audit,
-                    },
+            if not is_auto_period:
+                notes_audit = (
+                    f"Période supprimée: {pay_date} | "
+                    f"Employés dans période: {count_employees_in_period} | "
+                    f"Employés orphelins: {count_employees_orphans_before} | "
+                    f"Séquence année: {period_seq_in_year or 'N/A'}"
                 )
-                print(
-                    f"  ✅ Trace d'audit créée (period_id: {period_id}, transactions: {count_transactions})"
-                )
-            except Exception as audit_error:
-                # Log détaillé de l'erreur mais ne pas bloquer la suppression
-                import traceback
 
-                error_details = traceback.format_exc()
-                print(f"  ⚠️  ERREUR lors de la création de l'audit: {audit_error}")
-                print(f"  ⚠️  Détails: {error_details}")
-                print("  ⚠️  La suppression continuera malgré l'erreur d'audit")
-                # Ne pas lever l'exception pour permettre la suppression de continuer
+                try:
+                    sql_audit = """
+                    INSERT INTO payroll.deleted_periods_audit 
+                    (period_id, pay_date, pay_year, pay_month, status, 
+                     transactions_count, deleted_at, deleted_by, notes)
+                    VALUES (%(period_id)s, %(pay_date)s::date, %(pay_year)s, %(pay_month)s, 
+                            %(status)s, %(transactions_count)s, NOW(), %(deleted_by)s, %(notes)s)
+                    """
+                    self.provider.repo.run_query(
+                        sql_audit,
+                        {
+                            "period_id": period_id,
+                            "pay_date": pay_date,
+                            "pay_year": pay_year,
+                            "pay_month": pay_month,
+                            "status": status,
+                            "transactions_count": count_transactions,
+                            "deleted_by": "user",  # TODO: Remplacer par l'utilisateur réel si disponible
+                            "notes": notes_audit,
+                        },
+                    )
+                    print(
+                        f"  ✅ Trace d'audit créée (period_id: {period_id}, transactions: {count_transactions})"
+                    )
+                except Exception as audit_error:
+                    # Log détaillé de l'erreur mais ne pas bloquer la suppression
+                    import traceback
+
+                    error_details = traceback.format_exc()
+                    print(f"  ⚠️  ERREUR lors de la création de l'audit: {audit_error}")
+                    print(f"  ⚠️  Détails: {error_details}")
+                    print("  ⚠️  La suppression continuera malgré l'erreur d'audit")
+            else:
+                print("  ℹ️ Période auto: audit ignoré (pas d'UUID)")
 
             # ============================================================
             # ÉTAPE 3: Supprimer les transactions (AVANT les employés)
@@ -1107,13 +1302,20 @@ class AppBridge(QObject):
             # Bien que fk_import_batch ait ON DELETE SET NULL (non-bloquant),
             # on supprime d'abord les transactions pour éviter des références
             # orphelines temporaires. L'ordre est logique et sûr.
-            sql_delete_batches = """
-                DELETE FROM payroll.import_batches 
-                WHERE pay_date = %(pay_date)s OR period_id = %(period_id)s
-            """
-            self.provider.repo.run_query(
-                sql_delete_batches, {"pay_date": pay_date, "period_id": period_id}
-            )
+            if is_auto_period:
+                sql_delete_batches = """
+                    DELETE FROM payroll.import_batches 
+                    WHERE pay_date = %(pay_date)s
+                """
+                self.provider.repo.run_query(sql_delete_batches, {"pay_date": pay_date})
+            else:
+                sql_delete_batches = """
+                    DELETE FROM payroll.import_batches 
+                    WHERE pay_date = %(pay_date)s OR period_id = %(period_id)s
+                """
+                self.provider.repo.run_query(
+                    sql_delete_batches, {"pay_date": pay_date, "period_id": period_id}
+                )
             print("  ✅ Batches d'import supprimés")
 
             # ============================================================
@@ -1139,14 +1341,20 @@ class AppBridge(QObject):
             # IMPORTANT: On supprime la période EN DERNIER car toutes les
             # données dépendantes ont déjà été supprimées. Cela garantit
             # la cohérence globale de la base de données.
-            sql_delete_period = (
-                "DELETE FROM payroll.pay_periods WHERE period_id = %(period_id)s"
-            )
-            self.provider.repo.run_query(sql_delete_period, {"period_id": period_id})
-            print("  ✅ Période supprimée de pay_periods")
+            if not is_auto_period:
+                sql_delete_period = (
+                    "DELETE FROM payroll.pay_periods WHERE period_id = %(period_id)s"
+                )
+                self.provider.repo.run_query(
+                    sql_delete_period, {"period_id": period_id}
+                )
+                print("  ✅ Période supprimée de pay_periods")
+            else:
+                print("  ℹ️ Période auto: aucune ligne pay_periods à supprimer")
 
             print(f"✅ Suppression TOTALE terminée: {pay_date}")
 
+            active_period = self._refresh_active_period()
             return json.dumps(
                 {
                     "success": True,
@@ -1154,6 +1362,9 @@ class AppBridge(QObject):
                     "employees_deleted": count_employees_orphans_deleted,
                     "employees_in_period": count_employees_in_period,
                     "pay_date": pay_date,
+                    "active_period": (
+                        active_period.get("pay_date") if active_period else None
+                    ),
                     "message": f"Période {pay_date} supprimée: {count_transactions} transactions et {count_employees_orphans_deleted} employés orphelins supprimés ({count_employees_in_period - count_employees_orphans_deleted} employés conservés car utilisés dans d'autres périodes)",
                 }
             )
@@ -1940,10 +2151,11 @@ class AppBridge(QObject):
             )
 
         try:
-            import pandas as pd
-            import io
-            import csv
             import base64
+            import csv
+            import io
+
+            import pandas as pd
 
             # Limite de taille (50 MB)
             MAX_SIZE = 50 * 1024 * 1024
@@ -2323,12 +2535,17 @@ class AppBridge(QObject):
                 self.current_importer = None
 
                 if result["status"] == "success":
+                    self._refresh_active_period()
+                    active_period = self._get_active_period()
                     return json.dumps(
                         {
                             "success": True,
                             "message": f"Import réussi: {result['rows_count']} lignes",
                             "rows_count": result["rows_count"],
                             "batch_id": result["batch_id"],
+                            "active_period": (
+                                active_period.get("pay_date") if active_period else None
+                            ),
                         }
                     )
                 else:
@@ -2427,7 +2644,7 @@ class AppBridge(QObject):
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">
-                                <svg class="icon icon-{config['color']} me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <svg class="icon icon-{config["color"]} me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                     <path d="M12 9v2m0 4v.01"/>
                                     <path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"/>
@@ -2437,7 +2654,7 @@ class AppBridge(QObject):
                             <button type="button" class="btn-close" onclick="closeErrorMessage()"></button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-{config['color']} alert-dismissible" role="alert">
+                            <div class="alert alert-{config["color"]} alert-dismissible" role="alert">
                                 <div class="d-flex">
                                     <div>
                                         <svg class="icon me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -2454,7 +2671,7 @@ class AppBridge(QObject):
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-{config['color']}" onclick="closeErrorMessage()">
+                            <button type="button" class="btn btn-{config["color"]}" onclick="closeErrorMessage()">
                                 Fermer
                             </button>
                         </div>
@@ -2650,10 +2867,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.web_view)
 
         # WebChannel pour communication Python-JavaScript
-        self.web_channel = QWebChannel()
-        self.bridge = AppBridge(self)
-        self.web_channel.registerObject("AppBridge", self.bridge)
-        self.web_view.page().setWebChannel(self.web_channel)
+        self.web_channel = None
+        self.app_bridge = None
+        self._setup_web_channel()
 
         # Neutraliser caches pour garantir données fraîches
         try:
@@ -2701,6 +2917,29 @@ class MainWindow(QMainWindow):
             """
             self.web_view.setHtml(error_html)
             print(f"❌ Tabler non trouvé: {tabler_path}")
+
+    def _setup_web_channel(self):
+        """Initialise QWebChannel et enregistre AppBridge si possible."""
+        if getattr(self, "web_view", None) is None:
+            print("⚠️ Impossible d'initialiser QWebChannel: web_view absent")
+            return
+
+        try:
+            self.app_bridge = AppBridge(self)
+        except Exception as exc:
+            self.app_bridge = None
+            print(f"❌ Création AppBridge échouée: {exc}")
+            return
+
+        try:
+            channel = QWebChannel()
+            channel.registerObject("AppBridge", self.app_bridge)
+            self.web_view.page().setWebChannel(channel)
+            self.web_channel = channel
+            print("✅ AppBridge enregistré via QWebChannel")
+        except Exception as exc:
+            self.web_channel = None
+            print(f"❌ AppBridge registration failed: {exc}")
 
 
 if __name__ == "__main__":

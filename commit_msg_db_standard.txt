@@ -1,0 +1,9 @@
+refactor: standardiser connexions DB - utiliser connection_standard
+
+- Remplacer psycopg.connect() par open_connection() dans etl_paie.py
+- Remplacer os.getenv('PAYROLL_DSN') par get_dsn() dans etl_paie.py
+- Ajouter imports depuis config.connection_standard
+- Mise à jour script forbid_direct_db_connect.py pour exclure fix_db_connections.py
+
+Tous les accès DB passent maintenant par l'API standardisée.
+

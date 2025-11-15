@@ -5,7 +5,7 @@
 
 -- Contrat de colonnes minimal pour toutes les vues v_kpi_*
 -- Colonnes obligatoires :
--- - periode (YYYY-MM ou YYYY-MM-DD selon le contexte)
+-- - date_paie (YYYY-MM-DD - date exacte de paie, OBLIGATOIRE)
 -- - gains_brut (alias: brut)
 -- - deductions_net (alias: deductions_employe) 
 -- - net_a_payer (alias: net)
@@ -24,8 +24,7 @@ DROP VIEW IF EXISTS v_kpi_periode CASCADE;
 
 CREATE VIEW v_kpi_periode AS
 SELECT 
-    -- Période (format YYYY-MM pour agrégation mensuelle)
-    TO_CHAR(pay_date, 'YYYY-MM') as periode,
+    -- Date de paie exacte (OBLIGATOIRE - format YYYY-MM-DD)
     TO_CHAR(pay_date, 'YYYY-MM-DD') as date_paie,
     
     -- Masse salariale brute (montants positifs)
@@ -59,8 +58,8 @@ SELECT
     COALESCE(SUM(CASE WHEN amount_cents < 0 AND pay_code LIKE '%REMBOURSE%' THEN amount_cents ELSE 0 END), 0) / 100.0 as remboursements
 
 FROM payroll.payroll_transactions
-GROUP BY TO_CHAR(pay_date, 'YYYY-MM'), TO_CHAR(pay_date, 'YYYY-MM-DD')
-ORDER BY periode, date_paie;
+GROUP BY pay_date, TO_CHAR(pay_date, 'YYYY-MM-DD')
+ORDER BY date_paie;
 
 -- =====================================================
 -- 2. VUE PAR CATÉGORIE D'EMPLOI
@@ -69,7 +68,7 @@ DROP VIEW IF EXISTS v_kpi_par_categorie_emploi CASCADE;
 
 CREATE VIEW payroll.v_kpi_par_categorie_emploi AS
 SELECT 
-    TO_CHAR(t.pay_date, 'YYYY-MM') as periode,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(t.pay_date, 'YYYY-MM-DD') as date_paie,
     COALESCE(e.categorie_emploi, 'Non défini') as categorie_emploi,
     
@@ -87,8 +86,8 @@ SELECT
 
 FROM payroll.payroll_transactions t
 LEFT JOIN payroll.employees e ON t.employee_id = e.employee_id
-GROUP BY TO_CHAR(t.pay_date, 'YYYY-MM'), TO_CHAR(t.pay_date, 'YYYY-MM-DD'), e.categorie_emploi
-ORDER BY periode, categorie_emploi;
+GROUP BY t.pay_date, TO_CHAR(t.pay_date, 'YYYY-MM-DD'), e.categorie_emploi
+ORDER BY date_paie, categorie_emploi;
 
 -- =====================================================
 -- 3. VUE PAR CODE DE PAIE
@@ -97,7 +96,7 @@ DROP VIEW IF EXISTS payroll.v_kpi_par_code_paie CASCADE;
 
 CREATE VIEW payroll.v_kpi_par_code_paie AS
 SELECT 
-    TO_CHAR(pay_date, 'YYYY-MM') as periode,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(pay_date, 'YYYY-MM-DD') as date_paie,
     pay_code,
     
@@ -114,8 +113,8 @@ SELECT
     COALESCE(SUM(CASE WHEN amount_cents < 0 AND pay_code LIKE '%REMBOURSE%' THEN amount_cents ELSE 0 END), 0) / 100.0 as remboursements
 
 FROM payroll.payroll_transactions
-GROUP BY TO_CHAR(pay_date, 'YYYY-MM'), TO_CHAR(pay_date, 'YYYY-MM-DD'), code_paie
-ORDER BY periode, code_paie;
+GROUP BY pay_date, TO_CHAR(pay_date, 'YYYY-MM-DD'), pay_code
+ORDER BY date_paie, code_paie;
 
 -- =====================================================
 -- 4. VUE PAR POSTE BUDGÉTAIRE
@@ -124,7 +123,7 @@ DROP VIEW IF EXISTS payroll.v_kpi_par_poste_budgetaire CASCADE;
 
 CREATE VIEW payroll.v_kpi_par_poste_budgetaire AS
 SELECT 
-    TO_CHAR(t.pay_date, 'YYYY-MM') as periode,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(t.pay_date, 'YYYY-MM-DD') as date_paie,
     COALESCE(e.poste_budgetaire, 'Non défini') as poste_budgetaire,
     
@@ -142,8 +141,8 @@ SELECT
 
 FROM payroll.payroll_transactions t
 LEFT JOIN payroll.employees e ON t.employee_id = e.employee_id
-GROUP BY TO_CHAR(t.pay_date, 'YYYY-MM'), TO_CHAR(t.pay_date, 'YYYY-MM-DD'), e.poste_budgetaire
-ORDER BY periode, poste_budgetaire;
+GROUP BY t.pay_date, TO_CHAR(t.pay_date, 'YYYY-MM-DD'), e.poste_budgetaire
+ORDER BY date_paie, poste_budgetaire;
 
 -- =====================================================
 -- 5. VUE PAR EMPLOYÉ ET PÉRIODE
@@ -152,7 +151,7 @@ DROP VIEW IF EXISTS payroll.v_kpi_par_employe_periode CASCADE;
 
 CREATE VIEW payroll.v_kpi_par_employe_periode AS
 SELECT 
-    TO_CHAR(pay_date, 'YYYY-MM') as periode,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(pay_date, 'YYYY-MM-DD') as date_paie,
     employee_id,
     
@@ -169,8 +168,8 @@ SELECT
     COALESCE(SUM(CASE WHEN amount_cents < 0 AND pay_code LIKE '%REMBOURSE%' THEN amount_cents ELSE 0 END), 0) / 100.0 as remboursements
 
 FROM payroll.payroll_transactions
-GROUP BY TO_CHAR(pay_date, 'YYYY-MM'), TO_CHAR(pay_date, 'YYYY-MM-DD'), employee_id
-ORDER BY periode, employee_id;
+GROUP BY pay_date, TO_CHAR(pay_date, 'YYYY-MM-DD'), employee_id
+ORDER BY date_paie, employee_id;
 
 -- =====================================================
 -- 6. VUE TEMPS MENSUEL
@@ -179,7 +178,7 @@ DROP VIEW IF EXISTS payroll.v_kpi_temps_mensuel CASCADE;
 
 CREATE VIEW payroll.v_kpi_temps_mensuel AS
 SELECT 
-    TO_CHAR(pay_date, 'YYYY-MM') as periode,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(pay_date, 'YYYY-MM-DD') as date_paie,
     
     -- Contrat de colonnes standard
@@ -195,8 +194,8 @@ SELECT
     COALESCE(SUM(CASE WHEN amount_cents < 0 AND pay_code LIKE '%REMBOURSE%' THEN amount_cents ELSE 0 END), 0) / 100.0 as remboursements
 
 FROM payroll.payroll_transactions
-GROUP BY TO_CHAR(pay_date, 'YYYY-MM'), TO_CHAR(pay_date, 'YYYY-MM-DD')
-ORDER BY periode;
+GROUP BY pay_date, TO_CHAR(pay_date, 'YYYY-MM-DD')
+ORDER BY date_paie;
 
 -- =====================================================
 -- 7. VUE TEMPS ANNUEL
@@ -205,7 +204,7 @@ DROP VIEW IF EXISTS payroll.v_kpi_temps_annuel CASCADE;
 
 CREATE VIEW payroll.v_kpi_temps_annuel AS
 SELECT 
-    TO_CHAR(pay_date, 'YYYY') as periode,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(pay_date, 'YYYY-MM-DD') as date_paie,
     
     -- Contrat de colonnes standard
@@ -221,8 +220,8 @@ SELECT
     COALESCE(SUM(CASE WHEN amount_cents < 0 AND pay_code LIKE '%REMBOURSE%' THEN amount_cents ELSE 0 END), 0) / 100.0 as remboursements
 
 FROM payroll.payroll_transactions
-GROUP BY TO_CHAR(pay_date, 'YYYY'), TO_CHAR(pay_date, 'YYYY-MM-DD')
-ORDER BY periode;
+GROUP BY pay_date, TO_CHAR(pay_date, 'YYYY-MM-DD')
+ORDER BY date_paie;
 
 -- =====================================================
 -- ALIAS RÉTRO-COMPATIBLES
@@ -231,7 +230,6 @@ ORDER BY periode;
 -- Alias pour compatibilité avec l'ancien code
 CREATE VIEW payroll.v_kpi_periode_compat AS
 SELECT 
-    periode,
     date_paie,
     gains_brut as brut,
     deductions_net as deductions_employe,
@@ -254,8 +252,8 @@ COMMENT ON VIEW payroll.v_kpi_par_categorie_emploi IS 'KPI par catégorie d''emp
 COMMENT ON VIEW payroll.v_kpi_par_code_paie IS 'KPI par code de paie - contrat harmonisé';
 COMMENT ON VIEW payroll.v_kpi_par_poste_budgetaire IS 'KPI par poste budgétaire - contrat harmonisé';
 COMMENT ON VIEW payroll.v_kpi_par_employe_periode IS 'KPI par employé et période - contrat harmonisé';
-COMMENT ON VIEW payroll.v_kpi_temps_mensuel IS 'KPI temps mensuel - contrat harmonisé';
-COMMENT ON VIEW payroll.v_kpi_temps_annuel IS 'KPI temps annuel - contrat harmonisé';
+COMMENT ON VIEW payroll.v_kpi_temps_mensuel IS 'KPI par date de paie exacte (YYYY-MM-DD) - contrat harmonisé';
+COMMENT ON VIEW payroll.v_kpi_temps_annuel IS 'KPI par date de paie exacte (YYYY-MM-DD) - contrat harmonisé';
 
 -- =====================================================
 -- GRANTS ET PERMISSIONS

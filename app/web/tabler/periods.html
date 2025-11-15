@@ -320,8 +320,9 @@
             const detailMessage = result.employees_in_period 
               ? `\n\nTransactions supprimées: ${result.deleted_count}\nEmployés orphelins supprimés: ${result.employees_deleted}\nEmployés conservés: ${result.employees_in_period - result.employees_deleted}`
               : `\n\nTransactions supprimées: ${result.deleted_count}\nEmployés orphelins supprimés: ${result.employees_deleted}`;
+            const nextPeriodInfo = result.active_period ? `\nNouvelle période active: ${window.fmtDate(result.active_period)}` : `\nAucune période active détectée.`;
             
-            alert(`✓ Période supprimée avec succès !${detailMessage}`);
+            alert(`✓ Période supprimée avec succès !${detailMessage}${nextPeriodInfo}`);
             loadPeriods();
           } else {
             alert('❌ Erreur: ' + (result.error || result.message || 'Erreur inconnue'));

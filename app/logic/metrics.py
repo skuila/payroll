@@ -1,10 +1,12 @@
 # logic/metrics.py — chargement robuste & colonnes canoniques pour les audits
 from __future__ import annotations
+
+import re
 import sys
 import unicodedata
-import re
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 # Import DataRepository pour PostgreSQL
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -81,7 +83,7 @@ def _to_number(series_like) -> pd.Series:
     s = pd.Series(series_like)
     s = (
         s.astype(str)
-        .str.replace("\u00A0", " ")
+        .str.replace("\u00a0", " ")
         .str.replace(" ", "")
         .str.replace(",", ".")
     )
@@ -154,7 +156,8 @@ def _load_df() -> pd.DataFrame:
     # dérivées
     df["_IsMetaRow"] = df["_MntCmb"] == 0.0
     df["_IsInactive"] = df["_EmpName"].apply(_is_all_upper)
-    df["_Period"] = df["_Date"].dt.strftime("%Y-%m")  # utile pour les évolutions
+    df["_PayDate"] = df["_Date"].dt.strftime("%Y-%m-%d")  # Date de paie exacte
+    df["_Period"] = df["_Date"].dt.strftime("%Y-%m")  # Compatibilité (mois)
 
     return df
 
@@ -176,8 +179,13 @@ def summary() -> dict:
     }
 
 
-def get_latest_period() -> str | None:
-    """Retourne la dernière période disponible dans la DB (format YYYY-MM)."""
+def get_latest_pay_date() -> str | None:
+    """
+    Retourne la dernière date de paie disponible dans la DB (format YYYY-MM-DD).
+
+    Returns:
+        Date de paie au format YYYY-MM-DD ou None si aucune date trouvée
+    """
     try:
         df = _load_df()
         if df.empty or "_Date" not in df.columns:
@@ -186,9 +194,15 @@ def get_latest_period() -> str | None:
         if dates.empty:
             return None
         last_date = dates.max()
-        return last_date.strftime("%Y-%m")
+        return last_date.strftime("%Y-%m-%d")
     except Exception:
         return None
+
+
+# Alias pour compatibilité
+def get_latest_period() -> str | None:
+    """Alias pour get_latest_pay_date (compatibilité)"""
+    return get_latest_pay_date()
 
 
 __all__ = [

@@ -1,9 +1,8 @@
+from datetime import date, datetime
+
 import pandas as pd
-from datetime import datetime, date
+from config.connection_standard import get_connection, run_select
 from logic.formatting import _normalize_period, _parse_number_safe
-
-from config.connection_standard import run_select, get_connection
-
 
 CODES_SENSIBLES = ["401", "501", "701", "999"]
 
@@ -133,21 +132,31 @@ def compare_periods(p1, p2):
         return {"delta_net": 0, "pct": 0, "error": str(e)}
 
 
-def _load_period_data(period):
-    """Charge les données de période depuis PostgreSQL."""
+def _load_period_data(pay_date):
+    """
+    Charge les données de date de paie depuis PostgreSQL.
+
+    Args:
+        pay_date: Date de paie exacte au format YYYY-MM-DD (ex: '2025-08-28')
+    """
     try:
-        if period:
-            period_str = (
-                _normalize_period(period).strftime("%Y-%m")
-                if isinstance(period, (date, datetime))
-                else str(period)
-            )
+        if pay_date:
+            # Normaliser la date
+            if isinstance(pay_date, (date, datetime)):
+                pay_date_str = pay_date.strftime("%Y-%m-%d")
+            else:
+                # Essayer de parser la date
+                normalized = _normalize_period(pay_date)
+                pay_date_str = (
+                    normalized.strftime("%Y-%m-%d") if normalized else str(pay_date)
+                )
+
             query = """
                 SELECT *
                 FROM payroll.imported_payroll_master 
-                WHERE "date de paie " LIKE %(period)s || '%%'
+                WHERE "date de paie " = %(pay_date)s::date
             """
-            rows = run_select(query, {"period": period_str})
+            rows = run_select(query, {"pay_date": pay_date_str})
         else:
             query = "SELECT * FROM payroll.imported_payroll_master"
             rows = run_select(query)
