@@ -61,7 +61,10 @@ SKIP_DIRS = {
     "archive",
 }
 
-SKIP_FILES = {Path(__file__).resolve()}
+SKIP_FILES = {
+    Path(__file__).resolve(),
+    ROOT / "fix_db_connections.py",
+}
 
 
 def is_whitelisted(path: Path) -> bool:
