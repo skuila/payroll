@@ -6,8 +6,8 @@ Create Date: 2025-10-12 14:00:00.000000
 
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
@@ -32,7 +32,7 @@ def upgrade() -> None:
             "period",
             sa.String(20),
             primary_key=True,
-            comment="Période au format YYYY-MM (ex: 2025-01)",
+            comment="Date de paie exacte au format YYYY-MM-DD (ex: 2025-08-28)",
         ),
         sa.Column(
             "period_id",

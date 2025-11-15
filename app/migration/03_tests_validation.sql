@@ -51,7 +51,7 @@ SELECT
     'Ancien comptage 2025-08' AS test,
     COUNT(DISTINCT "matricule ") AS resultat
 FROM payroll.imported_payroll_master
-WHERE TO_CHAR("date de paie ", 'YYYY-MM') = '2025-08';
+WHERE "date de paie " >= '2025-08-01'::date AND "date de paie " < '2025-09-01'::date;
 
 -- TEST 1.5: Montant total (montants ≠ 0)
 \echo ''
@@ -73,14 +73,14 @@ WHERE COALESCE("montant ", 0) = 0;
 
 -- TEST 1.7: Périodes couvertes
 \echo ''
-\echo 'TEST 1.7: Périodes couvertes'
+\echo 'TEST 1.7: Dates de paie couvertes'
 SELECT 
-    TO_CHAR("date de paie ", 'YYYY-MM') AS mois,
+    TO_CHAR("date de paie ", 'YYYY-MM-DD') AS date_paie,
     COUNT(*) AS nb_lignes,
     COUNT(DISTINCT "matricule ") AS nb_employes_brut
 FROM payroll.imported_payroll_master
-GROUP BY TO_CHAR("date de paie ", 'YYYY-MM')
-ORDER BY mois DESC
+GROUP BY "date de paie ", TO_CHAR("date de paie ", 'YYYY-MM-DD')
+ORDER BY date_paie DESC
 LIMIT 10;
 
 \echo ''
@@ -111,7 +111,7 @@ SELECT
     'Nouveau comptage 2025-08' AS test,
     COUNT(DISTINCT t.employee_id) AS resultat
 FROM payroll.payroll_transactions t
-WHERE TO_CHAR(t.pay_date, 'YYYY-MM') = '2025-08';
+WHERE t.pay_date >= '2025-08-01'::date AND t.pay_date < '2025-09-01'::date;
 
 -- TEST 2.4: Montant total (cohérence)
 \echo ''
@@ -224,27 +224,27 @@ FROM ancien, nouveau;
 \echo 'TEST 3.2: Comparaison montants (Top 5 périodes)'
 WITH ancien AS (
     SELECT 
-        TO_CHAR("date de paie ", 'YYYY-MM') AS mois,
+        TO_CHAR("date de paie ", 'YYYY-MM-DD') AS date_paie,
         ROUND(SUM(COALESCE("montant ", 0))::NUMERIC, 2) AS montant
     FROM payroll.imported_payroll_master
     WHERE COALESCE("montant ", 0) <> 0
-    GROUP BY TO_CHAR("date de paie ", 'YYYY-MM')
+    GROUP BY "date de paie ", TO_CHAR("date de paie ", 'YYYY-MM-DD')
 ),
 nouveau AS (
     SELECT 
-        TO_CHAR(pay_date, 'YYYY-MM') AS mois,
+        TO_CHAR(pay_date, 'YYYY-MM-DD') AS date_paie,
         ROUND(SUM(amount_cents)::NUMERIC / 100, 2) AS montant
     FROM payroll.payroll_transactions
-    GROUP BY TO_CHAR(pay_date, 'YYYY-MM')
+    GROUP BY pay_date, TO_CHAR(pay_date, 'YYYY-MM-DD')
 )
 SELECT
-    COALESCE(a.mois, n.mois) AS mois,
+    COALESCE(a.date_paie, n.date_paie) AS date_paie,
     a.montant AS ancien_montant,
     n.montant AS nouveau_montant,
     ROUND(ABS(COALESCE(a.montant, 0) - COALESCE(n.montant, 0))::NUMERIC, 2) AS ecart
 FROM ancien a
-FULL OUTER JOIN nouveau n ON a.mois = n.mois
-ORDER BY mois DESC
+FULL OUTER JOIN nouveau n ON a.date_paie = n.date_paie
+ORDER BY date_paie DESC
 LIMIT 5;
 
 \echo ''

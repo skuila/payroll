@@ -4,15 +4,15 @@ Version: 3.0.0 (Référentiel Employés)
 Architecture: core.employees (DIM) + payroll.payroll_transactions (FACT)
 """
 
+import logging
 import os
-import sys
 import re
-from typing import Dict, Any, Optional, TYPE_CHECKING
+import sys
+from typing import TYPE_CHECKING, Any, Dict, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
 from psycopg import OperationalError
-import logging
 
 from .data_provider import AbstractDataProvider
 
@@ -20,10 +20,11 @@ if TYPE_CHECKING:
     from app.services.data_repo import DataRepository
 
 # NOTE: we avoid mutating sys.path here to prevent duplicate-module issues during
-# static analysis (mypy). Import the package-qualified module instead.
-from app.services.data_repo import DataRepository
 import atexit
 import builtins
+
+# static analysis (mypy). Import the package-qualified module instead.
+from app.services.data_repo import DataRepository
 
 
 def _safe_print(*args, **kwargs):
@@ -267,6 +268,38 @@ class PostgresProvider(AbstractDataProvider):
             if not pay_date_str:
                 return self._mock_kpis(pay_date)
 
+            # 1) Essayer de lire le snapshot KPI
+            try:
+                snapshot_row = self.repo.run_query(
+                    """
+                    SELECT data
+                    FROM payroll.kpi_snapshot
+                    WHERE period = %(pay_date)s
+                    """,
+                    {"pay_date": pay_date_str},
+                    fetch_one=True,
+                )
+                if snapshot_row and snapshot_row[0]:
+                    snapshot = snapshot_row[0]
+                    cards = snapshot.get("cards", {})
+                    tables = snapshot.get("tables", {})
+                    return {
+                        "salaire_net_total": float(cards.get("salaire_net_total", 0.0)),
+                        "masse_salariale": float(cards.get("masse_salariale", 0.0)),
+                        "nb_employes": int(cards.get("nb_employes", 0) or 0),
+                        "deductions": float(cards.get("deductions", 0.0)),
+                        "net_moyen": float(cards.get("net_moyen", 0.0)),
+                        "pay_date": pay_date_str,
+                        "period": pay_date_str,
+                        "source": snapshot.get("source", "kpi_snapshot"),
+                        "tables": tables,
+                    }
+            except Exception:
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    "Impossible de lire kpi_snapshot, calcul live", exc_info=True
+                )
+
             # Requête sur nouvelle structure (core.employees + payroll.payroll_transactions)
             # Utiliser TO_DATE pour garantir le format correct
             sql = """
@@ -300,7 +333,7 @@ class PostgresProvider(AbstractDataProvider):
                     "net_moyen": salaire_net_total / nb_emp if nb_emp > 0 else 0,
                     "pay_date": pay_date_str,
                     "period": pay_date_str,  # Compatibilité avec code existant
-                    "source": "referentiel_employees",  # Nouvelle source
+                    "source": "transactions_live",  # Calcul en direct
                 }
             else:
                 return self._mock_kpis(pay_date_str)
@@ -309,6 +342,37 @@ class PostgresProvider(AbstractDataProvider):
             logger = logging.getLogger(__name__)
             logger.exception("Erreur get_kpis PostgreSQL")
             return self._mock_kpis(pay_date)
+
+    def get_latest_pay_date(self) -> Optional[Dict[str, str]]:
+        """
+        Retourne la dernière date de paie disponible (transactions > imported).
+
+        Returns:
+            {"pay_date": "YYYY-MM-DD", "source": "transactions|imported"} | None
+        """
+        if not self.repo:
+            return None
+
+        try:
+            result_tx = self.repo.run_query(
+                "SELECT MAX(pay_date)::text FROM payroll.payroll_transactions",
+                fetch_one=True,
+            )
+            if result_tx and result_tx[0]:
+                return {"pay_date": result_tx[0], "source": "transactions"}
+
+            result_imported = self.repo.run_query(
+                "SELECT MAX(date_paie)::text FROM payroll.imported_payroll_master",
+                fetch_one=True,
+            )
+            if result_imported and result_imported[0]:
+                return {"pay_date": result_imported[0], "source": "imported"}
+
+            return None
+        except Exception:
+            logger = logging.getLogger(__name__)
+            logger.exception("Erreur get_latest_pay_date")
+            return None
 
     def _mock_kpis(self, pay_date: Optional[str]) -> Dict[str, Any]:
         """Fallback mock data si erreur"""
@@ -524,6 +588,53 @@ class PostgresProvider(AbstractDataProvider):
             logger = logging.getLogger(__name__)
             logger.exception("Erreur get_kpi_details")
             return empty
+
+    def get_dashboard_charts(self, pay_date: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Séries de graphiques pour le dashboard (dernières 30 dates).
+        """
+        if not self.repo:
+            return {}
+        try:
+            pay_date_str = self._normalize_pay_date(pay_date) if pay_date else None
+            sql = """
+            WITH ordered AS (
+                SELECT 
+                    t.pay_date::text AS pay_date,
+                    SUM(CASE WHEN t.amount_cents > 0 THEN t.amount_cents ELSE 0 END) / 100.0 AS gains,
+                    SUM(t.amount_cents) / 100.0 AS net,
+                    COUNT(*) AS tx
+                FROM payroll.payroll_transactions t
+                WHERE (%(pay_date)s::date IS NULL OR t.pay_date <= %(pay_date)s::date)
+                GROUP BY t.pay_date
+                ORDER BY t.pay_date DESC
+                LIMIT 30
+            )
+            SELECT * FROM ordered ORDER BY pay_date ASC
+            """
+            rows = self.repo.run_query(sql, {"pay_date": pay_date_str})
+            if not rows:
+                return {}
+
+            labels = [row[0] for row in rows]
+            gains = [float(row[1] or 0) for row in rows]
+            net = [float(row[2] or 0) for row in rows]
+            tx = [int(row[3] or 0) for row in rows]
+
+            return {
+                "revenue": {
+                    "labels": labels,
+                    "values": gains,
+                    "name": "Masse salariale",
+                },
+                "active": {"labels": labels, "values": tx, "name": "Transactions"},
+                "net": {"labels": labels, "values": net, "name": "Salaire net"},
+                "purchases": {"labels": labels, "values": tx, "name": "Transactions"},
+            }
+        except Exception:
+            logger = logging.getLogger(__name__)
+            logger.exception("Erreur get_dashboard_charts")
+            return {}
 
     def get_table(
         self, offset: int = 0, limit: int = 50, filters: Optional[Dict] = None
@@ -1305,8 +1416,8 @@ class PostgresProvider(AbstractDataProvider):
             "excel_view": f"employees_view_{timestamp}.xlsx",
             "excel_pack": f"employees_pack_{timestamp}.xlsx",
             "pdf_period": f"period_{timestamp}.pdf",
-            "pdf_employee": f'employee_{payload.get("employee_id", "unknown")}_{timestamp}.pdf',
-            "excel_employee": f'employee_{payload.get("employee_id", "unknown")}_{timestamp}.xlsx',
+            "pdf_employee": f"employee_{payload.get('employee_id', 'unknown')}_{timestamp}.pdf",
+            "excel_employee": f"employee_{payload.get('employee_id', 'unknown')}_{timestamp}.xlsx",
         }
 
         filename = filename_map.get(export_type, f"export_{timestamp}.xlsx")

@@ -2,7 +2,7 @@
 """Interface abstraite pour les providers de données de paie"""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 class AbstractDataProvider(ABC):
@@ -15,12 +15,12 @@ class AbstractDataProvider(ABC):
     """
 
     @abstractmethod
-    def get_kpis(self, period: Optional[str] = None) -> Dict[str, Any]:
+    def get_kpis(self, pay_date: Optional[str] = None) -> Dict[str, Any]:
         """
-        Retourne les KPI pour une période donnée.
+        Retourne les KPI pour une date de paie donnée.
 
         Args:
-            period: Période au format YYYY-MM (ex: "2024-03"), None = période actuelle
+            pay_date: Date de paie exacte au format YYYY-MM-DD (ex: "2025-08-28"), None = dernière date de paie
 
         Returns:
             Dict avec clés:
@@ -28,7 +28,8 @@ class AbstractDataProvider(ABC):
             - nb_employes (int): Nombre d'employés distincts
             - deductions (float): Total des déductions (négatif)
             - net_moyen (float): Salaire net moyen
-            - period (str): Période effective
+            - pay_date (str): Date de paie effective (YYYY-MM-DD)
+            - period (str): Alias pour pay_date (compatibilité)
         """
         pass
 

@@ -5,14 +5,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aperçu Liste Employés — PayrollAnalyzer</title>
+  <title>Employés - Tabler</title>
 
-  <!-- Tabler CSS (CDN) -->
-  <link href="https://unpkg.com/tabler@1.0.0-beta8/dist/css/tabler.min.css" rel="stylesheet" />
-
-  <!-- DataTables CSS -->
-  <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-  <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" rel="stylesheet" />
+  <!-- CSS files -->
+  <link rel="stylesheet" href="./dist/css/tabler.min.css?1692870487" />
+  <link rel="stylesheet" href="./dist/css/tabler-vendors.min.css?1692870487" />
 
   <style>
     body {
@@ -66,6 +63,11 @@
       margin-bottom: 10px;
     }
 
+    .table-no-borders th,
+    .table-no-borders td {
+      border: none !important;
+    }
+
     .legend {
       margin-top: 8px;
       font-size: 0.9rem;
@@ -76,20 +78,73 @@
 </head>
 
 <body>
-
   <div class="page">
+    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+      <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <h1 class="navbar-brand navbar-brand-autodark">
+          <a href="./index.html">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-dashboard" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+              <path d="M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+              <path d="M13.45 11.55l2.05 -2.05"></path>
+              <path d="M6.4 20a9 9 0 1 1 11.2 0z"></path>
+            </svg>
+            Tabler
+          </a>
+        </h1>
+        <div class="collapse navbar-collapse" id="sidebar-menu">
+          <ul class="navbar-nav pt-lg-3">
+            <li class="nav-item">
+              <a class="nav-link" href="./index.html">
+                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l-2 0l9 -9l9 9l-2 0l0 7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -7z" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg>
+                </span>
+                <span class="nav-link-title">Accueil</span>
+              </a>
+            </li>
+            <li class="nav-item active">
+              <a class="nav-link" href="./employees.html">
+                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg>
+                </span>
+                <span class="nav-link-title">Employés</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="./periods.html">
+                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M7 15h.01" /><path d="M11 15h.01" /><path d="M15 15h.01" /><path d="M3 15h18" /><path d="M7 19h.01" /><path d="M11 19h.01" /><path d="M15 19h.01" /></svg>
+                </span>
+                <span class="nav-link-title">Périodes</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="./database.html">
+                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" /><path d="M4 6v6a8 3 0 0 0 16 0v-6" /><path d="M4 12v6a8 3 0 0 0 16 0v-6" /></svg>
+                </span>
+                <span class="nav-link-title">Base de données</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </aside>
     <div class="page-wrapper">
       <div class="page-header">
         <div class="container-xl">
-          <h2 class="page-title">Liste des employés — Aperçu</h2>
-          <div class="page-subtitle text-muted">Exemple visuel & prototype local</div>
+          <h2 class="page-title">Liste des employés</h2>
+          <div class="page-subtitle text-muted">Données connectées</div>
         </div>
       </div>
 
-
-      <div class="container-xl mt-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
+      <div class="page-body">
+        <div class="container-xl">
+          <div class="card shadow-sm">
+            <div class="card-body">
 
 
             <div class="controls">
@@ -104,11 +159,14 @@
                   <option value="inactif">Anciens</option>
                 </select>
               </div>
+              <button id="btn-toggle-borders" class="btn btn-outline-secondary ms-2">
+                Afficher bordures
+              </button>
             </div>
 
 
             <div class="table-responsive">
-              <table id="tbl-employees" class="table table-bordered table-hover w-100">
+              <table id="tbl-employees" class="table table-hover w-100 table-no-borders">
                 <thead>
                   <tr>
                     <th>Nom</th>
@@ -128,7 +186,7 @@
 
 
             <div class="legend">
-              <strong>Note :</strong> les lignes en <span style="background:#fff0f0">rose</span> signifient que le nom est entièrement en MAJUSCULES (signalé). Karim Benmoussa (exemple) est montré comme actif.
+              <strong>Note :</strong> les lignes en <span style="background:#fff0f0">rose</span> signifient que le nom est entièrement en MAJUSCULES (signalé). Amin Ajarar (exemple) est montré comme actif.
             </div>
 
 
@@ -157,102 +215,20 @@
   </div>
 
 
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://unpkg.com/tabler@1.0.0-beta8/dist/js/tabler.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-
-  <script>
-    (function () {
-      const sampleEmployees = [
-        { employee_id: 1, nom: "Karim Benmoussa", matricule: "K001", statut: "actif", categorie: "Comptabilité", titre: "Agent comptable", salaire_net: 4520.00, salaire_prev: 4300.00, salary_trend: [{ date: "2024-11-01", value: 4200 }, { date: "2024-12-01", value: 4300 }, { date: "2025-01-01", value: 4520 }] },
-        { employee_id: 2, nom: "KARIM BENMOUSSA", matricule: "K001", statut: "inactif", categorie: "Comptabilité", titre: "Ancien agent", salaire_net: 0, salaire_prev: 1200, salary_trend: [{ date: "2024-11-01", value: 1200 }, { date: "2024-12-01", value: 0 }, { date: "2025-01-01", value: 0 }] },
-        { employee_id: 3, nom: "Luc Tremblay", matricule: "L220", statut: "inactif", categorie: "Technique", titre: "Technicien", salaire_net: 900.00, salaire_prev: 1000.00, salary_trend: [{ date: "2024-11-01", value: 950 }, { date: "2024-12-01", value: 1000 }, { date: "2025-01-01", value: 900 }] },
-        { employee_id: 4, nom: "Sophie Roy", matricule: "S333", statut: "actif", categorie: "Administration", titre: "Chef bureau", salaire_net: 4200.50, salaire_prev: 4100.00, salary_trend: [{ date: "2024-11-01", value: 3900 }, { date: "2024-12-01", value: 4100 }, { date: "2025-01-01", value: 4200.5 }] }
-      ];
-
-
-      function fmtMoney(n) { return new Intl.NumberFormat('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n)); }
-      function computeDeltaPct(cur, prev) { cur = Number(cur || 0); prev = Number(prev || 0); if (prev === 0) { if (cur === 0) return { pct: 0, dir: 'neutral' }; return { pct: 100, dir: 'up' } } const pct = ((cur - prev) / Math.abs(prev)) * 100; return { pct: pct, dir: (pct > 0.1 ? 'up' : (pct < -0.1 ? 'down' : 'neutral')) }; }
-      function renderDelta(cur, prev) { const d = computeDeltaPct(cur, prev); const pctStr = (Math.abs(d.pct) >= 1 || d.pct === 0) ? d.pct.toFixed(1) + '%' : d.pct.toFixed(2) + '%'; if (d.dir === 'up') return `<span class="arrow-up">▲ ${pctStr}</span>`; if (d.dir === 'down') return `<span class="arrow-down">▼ ${pctStr}</span>`; return `<span class="arrow-neutral">— ${pctStr}</span>`; }
-
-
-      function createSparkline(canvasId, trend) { const node = document.getElementById(canvasId); if (!node) return; node.width = 140; node.height = 36; const ctx = node.getContext('2d'); new Chart(ctx, { type: 'line', data: { labels: trend.map(t => t.date), datasets: [{ data: trend.map(t => t.value), borderColor: '#0b69ff', backgroundColor: 'rgba(11,105,255,0.08)', tension: 0.3, pointRadius: 0 }] }, options: { responsive: false, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmtMoney(ctx.parsed.y) } } } } }); }
-
-
-      let modalChart = null; function openModalHistory(title, trend) { document.getElementById('modalTitle').textContent = `Historique salaire — ${title}`; const ctx = document.getElementById('modalChart').getContext('2d'); if (modalChart) modalChart.destroy(); modalChart = new Chart(ctx, { type: 'line', data: { labels: trend.map(t => t.date), datasets: [{ label: 'Salaire net', data: trend.map(t => t.value), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.08)', tension: 0.2 }] }, options: { plugins: { tooltip: { callbacks: { label: ctx => fmtMoney(ctx.parsed.y) } } } } }); new tabler.Core.Modal(document.getElementById('modalDetail')).show(); }
-
-
-      function prepareRows(data) { return data.map(r => { const isUpper = String(r.nom).trim() === String(r.nom).trim().toUpperCase(); const deltaHtml = renderDelta(r.salaire_net, r.salaire_prev); return { employee_id: r.employee_id, nom: r.nom, matricule: r.matricule, statut: r.statut, categorie: r.categorie, titre: r.titre, salaire_net: r.salaire_net, salaire_prev: r.salaire_prev, deltaHtml: deltaHtml, salary_trend: r.salary_trend, is_upper: isUpper }; }); }
-
-
-      let table = null; function initDataTable(rows) {
-        if (table) { table.clear().rows.add(rows).draw(); return; }
-        table = $('#tbl-employees').DataTable({
-          data: rows, columns: [
-            { data: 'nom', render: (d, t, r) => `<a href="#" class="emp-link" data-id="${r.employee_id}">${d}</a>` },
-            { data: 'matricule' },
-            { data: 'statut', render: d => d === 'actif' ? '<span class="badge-actif">Actif</span>' : '<span class="badge-inactif">Ancien</span>' },
-            { data: 'categorie' },
-            { data: 'titre' },
-            { data: 'salaire_net', className: 'text-end', render: d => fmtMoney(d) },
-            { data: null, className: 'text-center', render: (d, t, r) => r.deltaHtml },
-            { data: 'salary_trend', orderable: false, searchable: false, render: (trend, t, r) => `<canvas id="spark_${r.employee_id}" class="spark-canvas"></canvas>` },
-            { data: null, render: (d, t, r) => `<div class="btn-group"><button class="btn btn-sm btn-outline-primary btn-detail" data-id="${r.employee_id}">Détails</button></div>` }
-          ],
-          createdRow: function (row, data) {
-            if (data.is_upper) $(row).addClass('row-uppercase');
-            setTimeout(() => {
-              createSparkline(`spark_${data.employee_id}`, data.salary_trend);
-            }, 40);
-          },
-          dom: 'Bfrtip',
-          buttons: ['excelHtml5', 'csvHtml5', 'print'],
-          pageLength: 10,
-          responsive: true
-        });
-        $('#tbl-employees tbody').on('click', '.btn-detail', function () {
-          const id = $(this).data('id');
-          const rowData = table.rows().data().toArray().find(r => r.employee_id == id);
-          if (rowData) openModalHistory(rowData.nom, rowData.salary_trend);
-        });
-        $('#tbl-employees tbody').on('click', '.emp-link', function (e) {
-          e.preventDefault();
-          const id = $(this).data('id');
-          const rowData = table.rows().data().toArray().find(r => r.employee_id == id);
-          if (rowData) openModalHistory(rowData.nom, rowData.salary_trend);
-        });
-      }
-
-
-      document.addEventListener('DOMContentLoaded', async function () {
-        document.getElementById('pay-date').value = '2025-01-01';
-        const rows = prepareRows(sampleEmployees);
-        initDataTable(rows);
-        document.getElementById('filter-statut').addEventListener('change', function () {
-          const v = this.value;
-          if (v === 'all') {
-            table.column(2).search('').draw();
-          } else {
-            table.column(2).search(v === 'actif' ? 'Actif' : 'Ancien').draw();
-          }
-        });
-        document.getElementById('btn-apply-date').addEventListener('click', function () {
-          const rows = prepareRows(sampleEmployees);
-          initDataTable(rows);
-        });
-      });
-
-
-    })();
-  </script>
+  <!-- JS files -->
+  <script src="./dist/libs/datatables/js/jquery.min.js"></script>
+  <script src="./dist/libs/datatables/js/jquery.dataTables.min.js"></script>
+  <script src="./dist/libs/datatables/js/dataTables.bootstrap5.min.js"></script>
+  <script src="./dist/libs/datatables/js/dataTables.buttons.min.js"></script>
+  <script src="./dist/libs/datatables/js/buttons.bootstrap5.min.js"></script>
+  <script src="./dist/libs/datatables/js/jszip.min.js"></script>
+  <script src="./dist/libs/datatables/js/buttons.html5.min.js"></script>
+  <script src="./dist/libs/datatables/js/buttons.print.min.js"></script>
+  <script src="./dist/libs/chartjs/chart.umd.min.js"></script>
+  <script src="./dist/js/tabler.min.js?1692870487"></script>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  <script src="./app_bridge.js"></script>
+  <script src="./employees.js"></script>
 
 </body>
 

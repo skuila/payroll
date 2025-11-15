@@ -1,10 +1,12 @@
 # ui/data_provider.py — Provider unifié (API V2 + compat V1) avec détection tolérante des colonnes
 # VERSION POSTGRESQL (DataRepository + psycopg3)
 from __future__ import annotations
+
 import sys
-from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_dt
 
@@ -366,9 +368,10 @@ class PayrollDataProvider:
         cat_col = self._last_columns.get("category") if self._last_columns else None
         labels, values = self._distribution(df, cat_col, amount_col, topn=8)
         if not labels and self._last:
-            labels, values = self._last.get("pie", {}).get(
-                "labels", []
-            ), self._last.get("pie", {}).get("values", [])
+            labels, values = (
+                self._last.get("pie", {}).get("labels", []),
+                self._last.get("pie", {}).get("values", []),
+            )
         return labels, values
 
     def periods(self) -> List[str]:
@@ -657,8 +660,8 @@ class PayrollDataProvider:
         Récupère tous les KPI avancés via le moteur kpi_engine.
 
         Args:
-            period: Période au format "YYYY-MM" (None = dernière période)
-            compare_to: Période de comparaison (None = période précédente automatique)
+            period: Date de paie exacte au format "YYYY-MM-DD" (ex: '2025-08-28') (None = dernière date de paie)
+            compare_to: Date de paie de comparaison (None = date précédente automatique)
 
         Returns:
             Liste de dict avec les KPI formatés pour l'UI
@@ -706,6 +709,7 @@ class PayrollDataProvider:
         """
         try:
             from logic.kpi_engine import get_engine
+
             from app.logic.metrics import _load_df
 
             engine = get_engine()

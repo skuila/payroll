@@ -57,7 +57,7 @@ WITH taux AS (
     SELECT COALESCE((SELECT value_num FROM ref.parameters WHERE key = 'part_employeur_taux' LIMIT 1), 0.15) AS t
 )
 SELECT
-    TO_CHAR(t.pay_date, 'YYYY-MM')    AS periode_paie,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(t.pay_date, 'YYYY-MM-DD') AS date_paie,
     COALESCE(SUM(CASE WHEN t.amount_cents > 0 THEN t.amount_cents ELSE 0 END), 0) / 100.0 AS gains_brut,
     COALESCE(SUM(CASE WHEN t.amount_cents < 0 THEN t.amount_cents ELSE 0 END), 0) / 100.0 AS deductions_net,
@@ -69,8 +69,8 @@ SELECT
     COUNT(DISTINCT CASE WHEN t.amount_cents <> 0 THEN t.employee_id END) AS nb_employes,
     COUNT(*) AS nb_transactions
 FROM payroll.payroll_transactions t
-GROUP BY TO_CHAR(t.pay_date, 'YYYY-MM'), TO_CHAR(t.pay_date, 'YYYY-MM-DD')
-ORDER BY periode_paie, date_paie;
+GROUP BY t.pay_date, TO_CHAR(t.pay_date, 'YYYY-MM-DD')
+ORDER BY date_paie;
 
 COMMENT ON VIEW paie.v_kpi_mois IS 'KPI consolidés par mois/jour (paramètre part_employeur via ref.parameters)';
 
@@ -80,7 +80,7 @@ WITH taux AS (
     SELECT COALESCE((SELECT value_num FROM ref.parameters WHERE key = 'part_employeur_taux' LIMIT 1), 0.15) AS t
 )
 SELECT
-    TO_CHAR(t.pay_date, 'YYYY-MM')    AS periode_paie,
+    -- Date de paie exacte (OBLIGATOIRE)
     TO_CHAR(t.pay_date, 'YYYY-MM-DD') AS date_paie,
     t.employee_id                      AS matricule,
     COALESCE(s.nom_prenom, 'N/A')      AS nom_prenom,
@@ -97,9 +97,9 @@ FROM payroll.payroll_transactions t
 LEFT JOIN paie.stg_paie_transactions s
   ON t.source_file = s.source_file
  AND t.source_row_no = s.source_row_number
-GROUP BY TO_CHAR(t.pay_date, 'YYYY-MM'), TO_CHAR(t.pay_date, 'YYYY-MM-DD'),
+GROUP BY t.pay_date, TO_CHAR(t.pay_date, 'YYYY-MM-DD'),
          t.employee_id, s.nom_prenom, s.categorie_emploi, s.titre_emploi, s.poste_budgetaire
-ORDER BY periode_paie, date_paie, matricule;
+ORDER BY date_paie, matricule;
 
 COMMENT ON VIEW paie.v_kpi_par_employe_mois IS 'KPI par employé et période (paramètre part_employeur via ref.parameters)';
 
