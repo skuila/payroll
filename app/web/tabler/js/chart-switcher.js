@@ -36,36 +36,79 @@
         }
       };
       
+      // add custom Options icon to toolbar (merge with existing toolbar config)
+      chartConfig.chart = chartConfig.chart || {};
+      chartConfig.chart.toolbar = chartConfig.chart.toolbar || {};
+      chartConfig.chart.toolbar.tools = chartConfig.chart.toolbar.tools || {};
+      chartConfig.chart.toolbar.tools.customIcons = chartConfig.chart.toolbar.tools.customIcons || [];
+      chartConfig.chart.toolbar.tools.customIcons.push({
+        icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v2"/><path d="M12 17v2"/><path d="M5 12h2"/><path d="M17 12h2"/><circle cx="12" cy="12" r="3"/></svg>',
+        index: -1,
+        title: 'Options',
+        class: 'apx-custom-options',
+        click: function(chartRef){
+          if (window.ChartOptions && typeof window.ChartOptions.showOptionsPanel === 'function') {
+            window.ChartOptions.showOptionsPanel(chartRef);
+          } else {
+            console.warn('ChartOptions not available');
+          }
+        }
+      });
+      
       const chart = new ApexCharts(document.querySelector(selector), chartConfig);
       chart.render();
       
+      // attach central ChartOptions module if present
+      try {
+        if (window.ChartOptions && typeof window.ChartOptions.attachChartOptions === 'function') {
+          window.ChartOptions.attachChartOptions(selector, pageId, chartId, chart, dataFetcher);
+        }
+      } catch (e) {
+        console.warn('ChartOptions attach failed', e);
+      }
+      
       // Charger les données réelles si dataFetcher fourni
       if (typeof dataFetcher === 'function') {
-        dataFetcher().then(realData => {
-          if (realData) {
-            // Adapter les données selon le type
-            if (variant.config.chart.type === 'pie' || variant.config.chart.type === 'donut') {
-              // Pour pie/donut: extraire dernière valeur de chaque série
-              const series = realData.series.map(s => {
-                const lastPoint = s.data[s.data.length - 1];
-                return Math.abs(lastPoint.y);
+        Promise.resolve(dataFetcher())
+          .then(realData => {
+            if (!realData) return;
+            if (realData.options) chart.updateOptions(realData.options);
+            if (realData.xaxis) chart.updateOptions({ xaxis: realData.xaxis });
+            if (realData.yaxis) chart.updateOptions({ yaxis: realData.yaxis });
+            if (realData.labels) chart.updateOptions({ labels: realData.labels });
+            if (realData.colors) chart.updateOptions({ colors: realData.colors });
+            const type = variant.config.chart?.type;
+            if (type === 'pie' || type === 'donut') {
+              if (Array.isArray(realData.series) && typeof realData.series[0] === 'number') {
+                chart.updateOptions({ series: realData.series, labels: realData.labels });
+                return;
+              }
+              const sourceSeries = realData.series || [];
+              const series = sourceSeries.map(s => {
+                const lastPoint = (s.data || [])[s.data.length - 1];
+                return lastPoint ? Math.abs(lastPoint.y) : 0;
               });
-              const labels = realData.series.map(s => s.name);
-              chart.updateOptions({series, labels});
-            } else if (variant.config.chart.type === 'radialBar') {
-              // Pour radialBar: extraire pourcentages
-              const series = realData.series.slice(0, 4).map(s => {
-                const lastPoint = s.data[s.data.length - 1];
+              const labels = sourceSeries.map(s => s.name);
+              chart.updateOptions({ series, labels });
+            } else if (type === 'radialBar') {
+              if (Array.isArray(realData.series) && typeof realData.series[0] === 'number') {
+                chart.updateSeries(realData.series);
+                if (realData.labels) chart.updateOptions({ labels: realData.labels });
+                return;
+              }
+              const sourceSeries = (realData.series || []).slice(0, 4);
+              const series = sourceSeries.map(s => {
+                const lastPoint = (s.data || [])[s.data.length - 1];
+                if (!lastPoint) return 0;
                 return Math.min(100, Math.abs(lastPoint.y / 1000));
               });
-              const labels = realData.series.slice(0, 4).map(s => s.name);
-              chart.updateOptions({series, labels});
+              const labels = sourceSeries.map(s => s.name);
+              chart.updateOptions({ series, labels });
             } else {
-              // Pour line/bar/area: utiliser tel quel
-              chart.updateSeries(realData.series);
+              if (realData.series) chart.updateSeries(realData.series);
             }
-          }
-        }).catch(err => console.error('Error loading chart data:', err));
+          })
+          .catch(err => console.error('Error loading chart data:', err));
       }
       
       return chart;

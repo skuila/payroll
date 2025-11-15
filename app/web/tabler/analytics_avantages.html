@@ -34,7 +34,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Coûts par famille d’avantage</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Coûts par famille d’avantage</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-ava" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -55,15 +58,21 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
-          ChartsHelper.mount('#chart-ava', 'bar', {
+          let chartAva = ChartsHelper.mount('#chart-ava', 'bar', {
             series: [],
             xaxis: { categories: [] },
             plotOptions: { bar: { stacked: true } }
           });
+          if (window.ChartOptions && chartAva) {
+            window.ChartOptions.attachChartOptions('#chart-ava','avantages','couts', chartAva);
+          }
           DataTablesHelper.init('#tbl-ava', [], [
             {title:'Code', data:0},
             {title:'Description', data:1},

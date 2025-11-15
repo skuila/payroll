@@ -36,13 +36,19 @@
             <div class="row">
               <div class="col-md-7">
                 <div class="card mb-3">
-                  <div class="card-header"><h3 class="card-title">Top 10 employés (Total combine)</h3></div>
+                  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h3 class="card-title mb-0">Top 10 employés (Total combine)</h3>
+                    <!-- options centralized: removed -->
+                  </div>
                   <div class="card-body"><div id="chart-top-emps" style="height:300px;"></div></div>
                 </div>
               </div>
               <div class="col-md-5">
                 <div class="card mb-3">
-                  <div class="card-header"><h3 class="card-title">Répartition par catégorie (sélection)</h3></div>
+                  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h3 class="card-title mb-0">Répartition par catégorie (sélection)</h3>
+                    <!-- options centralized: removed -->
+                  </div>
                   <div class="card-body"><div id="chart-donut-emps" style="height:300px;"></div></div>
                 </div>
               </div>
@@ -65,19 +71,29 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
-          ChartsHelper.mount('#chart-top-emps', 'bar', {
+          let chartTopEmps = ChartsHelper.mount('#chart-top-emps', 'bar', {
             series: [{name:'Total combine', data: []}],
             xaxis: { categories: [] },
             dataLabels: { enabled: false }
           });
-          ChartsHelper.mount('#chart-donut-emps', 'donut', {
+          if (window.ChartOptions && chartTopEmps) {
+            window.ChartOptions.attachChartOptions('#chart-top-emps','employes','top10', chartTopEmps);
+          }
+
+          let chartDonut = ChartsHelper.mount('#chart-donut-emps', 'donut', {
             series: [],
             labels: []
           });
+          if (window.ChartOptions && chartDonut) {
+            window.ChartOptions.attachChartOptions('#chart-donut-emps','employes','repartition', chartDonut);
+          }
           DataTablesHelper.init('#tbl-emps', [], [
             {title:'Matricule', data:0},
             {title:'Nom', data:1},

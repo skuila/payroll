@@ -37,7 +37,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Tendance (Gains / Déductions / Net / Part employeur / Masse)</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Tendance (Gains / Déductions / Net / Part employeur / Masse)</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-masse" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -60,6 +63,7 @@
     <script src="./js/analytics-helpers.js"></script>
     <script src="./js/apex-chart-catalog.js"></script>
     <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script>
@@ -68,13 +72,18 @@
         document.addEventListener('DOMContentLoaded', function(){
           new QWebChannel(qt.webChannelTransport, function(channel){
             const bridge = channel.objects.AppBridge;
+            window.AppBridge = bridge;
             // Charger séries via AppBridge
             Promise.resolve(bridge.get_masse_series('', ''))
               .then(json => {
                 const payload = JSON.parse(json||'{}');
                 const series = payload.series || [];
                 try {
-                  currentChart = ChartSwitcher.createChart('#chart-masse', 'masse', 'main', 'line-basic', async () => ({ series }));
+                  const dataFetcher = async () => ({ series });
+                  currentChart = ChartSwitcher.createChart('#chart-masse', 'masse', 'main', 'line-basic', dataFetcher);
+                  if (window.ChartOptions && currentChart) {
+                    window.ChartOptions.attachChartOptions('#chart-masse','masse','main', currentChart, dataFetcher);
+                  }
                 } catch (e) { console.warn(e); }
                 // Construire tableau à partir des séries
                 const idx = Object.fromEntries(series.map((s, i)=>[s.name, i]));

@@ -34,7 +34,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Tendance HS/Primes</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Tendance HS/Primes</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-hs" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -55,14 +58,20 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
-          ChartsHelper.mount('#chart-hs', 'line', {
+          let chartHs = ChartsHelper.mount('#chart-hs', 'line', {
             series: [{name:'HS/Primes', data: []}],
             xaxis: { type: 'category' }
           });
+          if (window.ChartOptions && chartHs) {
+            window.ChartOptions.attachChartOptions('#chart-hs','heures_primes','trend', chartHs);
+          }
           DataTablesHelper.init('#tbl-hs', [], [
             {title:'Poste', data:0},
             {title:'Total HS/Primes', data:1, className:'text-end', render: DataTablesHelper.formatCurrency},

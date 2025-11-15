@@ -34,7 +34,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Flux mensuels</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Flux mensuels</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-turnover" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -55,17 +58,23 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
-          ChartsHelper.mount('#chart-turnover', 'bar', {
+          let chartTurnover = ChartsHelper.mount('#chart-turnover', 'bar', {
             series: [
               {name:'Entrées', data: []},
               {name:'Sorties', data: []},
             ],
             xaxis: { type: 'category' }
           });
+          if (window.ChartOptions && chartTurnover) {
+            window.ChartOptions.attachChartOptions('#chart-turnover','turnover','flux', chartTurnover);
+          }
           DataTablesHelper.init('#tbl-turn', [], [
             {title:'Type', data:0},
             {title:'Matricule', data:1},

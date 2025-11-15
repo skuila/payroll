@@ -34,7 +34,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Distribution par fonction</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Distribution par fonction</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-equite" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -55,15 +58,21 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
           // ApexCharts n'a pas de boxPlot de base via simple config - placeholder
-          ChartsHelper.mount('#chart-equite', 'bar', {
+          let chartEquite = ChartsHelper.mount('#chart-equite', 'bar', {
             series: [{name:'Médiane', data: []}],
             xaxis: { categories: [] }
           });
+          if (window.ChartOptions && chartEquite) {
+            window.ChartOptions.attachChartOptions('#chart-equite','equite','distribution', chartEquite);
+          }
           DataTablesHelper.init('#tbl-equite', [], [
             {title:'Titre', data:0},
             {title:'Médiane', data:1, className:'text-end', render: DataTablesHelper.formatCurrency},
