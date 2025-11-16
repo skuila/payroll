@@ -34,7 +34,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Top 10 postes (Total combine)</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Top 10 postes (Total combine)</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-postes" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -55,15 +58,21 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
-          ChartsHelper.mount('#chart-postes', 'bar', {
+          let chartPostes = ChartsHelper.mount('#chart-postes', 'bar', {
             series: [{name:'Total combine', data: []}],
             xaxis: { categories: [] },
             dataLabels: { enabled: false }
           });
+          if (window.ChartOptions && chartPostes) {
+            window.ChartOptions.attachChartOptions('#chart-postes','postes','top10', chartPostes);
+          }
           DataTablesHelper.init('#tbl-postes', [], [
             {title:'Poste', data:0},
             {title:'Libellé', data:1},

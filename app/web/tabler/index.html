@@ -36,6 +36,8 @@
     <script src="./dist/js/tabler.min.js?1692870487" defer></script>
     <!-- ApexCharts (LOCAL - offline complet) -->
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
+    <!-- Options de graphique -->
+    <script src="./js/chart-options.js"></script>
     <!-- Client API unifié -->
     <script src="./js/api-client.js"></script>
     <script>
@@ -699,32 +701,12 @@
                 </div>
               </div>
               <div class="col-lg-6">
-                <div class="card">
-                  <div class="card-body">
-                    <h3 class="card-title">Development activity</h3>
-                    <div class="d-flex">
-                      <div class="me-auto">
-                        <p class="mb-3">There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration.</p>
-                        <div class="d-flex align-items-center mb-3">
-                          <div class="me-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-md icon-tada text-red" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></svg>
-                          </div>
-                          <div>
-                            <div class="font-weight-medium">13 contributors</div>
-                            <div class="text-secondary">July 2019</div>
-                          </div>
-                        </div>
-                        <div class="d-flex align-items-center mb-3">
-                          <div class="me-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-md icon-tada text-green" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg>
-                          </div>
-                          <div>
-                            <div class="font-weight-medium">7 on GitHub</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div id="chart-development-activity"></div>
-                    </div>
+                <div class="card h-100">
+                  <div class="card-header">
+                    <h3 class="card-title mb-0">Répartition par catégorie d'emploi</h3>
+                  </div>
+                  <div class="card-body p-0">
+                    <div id="chart-category-employment" style="height: 320px;"></div>
                   </div>
                 </div>
               </div>
@@ -924,145 +906,113 @@
       // @formatter:on
     </script>
     <script>
-      // @formatter:off
+      const DASHBOARD_NET_LABELS = ['2020-06-20', '2020-06-21', '2020-06-22', '2020-06-23', '2020-06-24', '2020-06-25', '2020-06-26', '2020-06-27', '2020-06-28', '2020-06-29', '2020-06-30', '2020-07-01', '2020-07-02'];
+      const DASHBOARD_NET_SERIES = [44, 55, 41, 67, 22, 43, 21, 33, 45, 31, 87, 65, 35];
+
+      function getChartOptionsIconConfig() {
+        return {
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v2"/><path d="M12 17v2"/><path d="M5 12h2"/><path d="M17 12h2"/><circle cx="12" cy="12" r="3"/></svg>',
+          index: -1,
+          title: 'Options',
+          class: 'apx-custom-options',
+          click: function(chartRef) {
+            if (window.ChartOptions && typeof window.ChartOptions.showOptionsPanel === 'function') {
+              window.ChartOptions.showOptionsPanel(chartRef);
+            } else {
+              console.warn('ChartOptions indisponible');
+            }
+          }
+        };
+      }
+
       document.addEventListener("DOMContentLoaded", function () {
-      	window.ApexCharts && (new ApexCharts(document.getElementById('chart-demo-area'), {
-      		chart: {
-                id: "dashboard-net",
-      			type: "area",
-      			fontFamily: 'inherit',
-      			height: 240,
-      			parentHeightOffset: 0,
-      			toolbar: {
-      				show: false,
-      			},
-      			animations: {
-      				enabled: false
-      			},
-      		},
-      		dataLabels: {
-      			enabled: false,
-      		},
-      		fill: {
-      			opacity: .16,
-      			type: 'solid'
-      		},
-      		stroke: {
-      			width: 2,
-      			lineCap: "round",
-      			curve: "smooth",
-      		},
-      		series: [{
-      			name: "series1",
-      			data: [44, 55, 41, 67, 22, 43, 21, 33, 45, 31, 87, 65, 35]
-      		}],
-      		tooltip: {
-      			theme: 'dark'
-      		},
-      		grid: {
-      			padding: {
-      				top: -20,
-      				right: 0,
-      				left: -4,
-      				bottom: -4
-      			},
-      			strokeDashArray: 4,
-      		},
-      		xaxis: {
-      			labels: {
-      				padding: 0,
-      			},
-      			tooltip: {
-      				enabled: false
-      			},
-      			axisBorder: {
-      				show: false,
-      			},
-      			type: 'datetime',
-      		},
-      		yaxis: {
-      			labels: {
-      				padding: 4
-      			},
-      		},
-      		labels: [
-      			'2020-06-20', '2020-06-21', '2020-06-22', '2020-06-23', '2020-06-24', '2020-06-25', '2020-06-26', '2020-06-27', '2020-06-28', '2020-06-29', '2020-06-30', '2020-07-01', '2020-07-02'
-      		],
-      		colors: [tabler.getColor("primary")],
-      		legend: {
-      			show: false,
-      		},
-      	})).render();
+        if (!window.ApexCharts) return;
+        const netEl = document.getElementById('chart-demo-area');
+        if (!netEl) return;
+        const netConfig = {
+          chart: {
+            id: "dashboard-net",
+            type: "area",
+            fontFamily: 'inherit',
+            height: 240,
+            parentHeightOffset: 0,
+            toolbar: {
+              show: true,
+              tools: {
+                customIcons: [getChartOptionsIconConfig()]
+              }
+            },
+            animations: {
+              enabled: false
+            },
+          },
+          dataLabels: {
+            enabled: false,
+          },
+          fill: {
+            opacity: .16,
+            type: 'solid'
+          },
+          stroke: {
+            width: 2,
+            lineCap: "round",
+            curve: "smooth",
+          },
+          series: [{
+            name: "Indice net",
+            data: DASHBOARD_NET_SERIES
+          }],
+          tooltip: {
+            theme: 'dark'
+          },
+          grid: {
+            padding: {
+              top: -20,
+              right: 0,
+              left: -4,
+              bottom: -4
+            },
+            strokeDashArray: 4,
+          },
+          xaxis: {
+            labels: {
+              padding: 0,
+            },
+            tooltip: {
+              enabled: false
+            },
+            axisBorder: {
+              show: false,
+            },
+            type: 'datetime',
+          },
+          yaxis: {
+            labels: {
+              padding: 4
+            },
+          },
+          labels: DASHBOARD_NET_LABELS,
+          colors: [tabler.getColor("primary")],
+          legend: {
+            show: false,
+          },
+        };
+        const chartNet = new ApexCharts(netEl, netConfig);
+        const netRows = DASHBOARD_NET_LABELS.map((label, idx) => ({
+          date: label,
+          employee: 'Indice net',
+          poste: 'Indice net',
+          net: DASHBOARD_NET_SERIES[idx] || 0,
+          gross: DASHBOARD_NET_SERIES[idx] || 0,
+          employer_part: DASHBOARD_NET_SERIES[idx] || 0
+        }));
+        chartNet.render().then(() => {
+          if (window.ChartOptions && typeof window.ChartOptions.attachChartOptions === 'function') {
+            window.ChartOptions.attachChartOptions('#chart-demo-area','index','net', chartNet, () => netRows.map(row => ({ ...row })));
+          }
+        });
       });
-      // @formatter:on
     </script>
-    <script>
-      // @formatter:off
-      document.addEventListener("DOMContentLoaded", function () {
-      	window.ApexCharts && (new ApexCharts(document.getElementById('chart-development-activity'), {
-      		chart: {
-                id: "dashboard-purchases",
-      			type: "area",
-      			fontFamily: 'inherit',
-      			height: 192,
-      			sparkline: {
-      				enabled: true
-      			},
-      			animations: {
-      				enabled: false
-      			},
-      		},
-      		dataLabels: {
-      			enabled: false,
-      		},
-      		fill: {
-      			opacity: .16,
-      			type: 'solid'
-      		},
-      		stroke: {
-      			width: 2,
-      			lineCap: "round",
-      			curve: "smooth",
-      		},
-      		series: [{
-      			name: "Purchases",
-      			data: [3, 5, 4, 6, 7, 5, 6, 8, 24, 7, 12, 5, 6, 3, 8, 4, 14, 30, 17, 19, 15, 14, 25, 32, 40, 55, 60, 48, 52, 70]
-      		}],
-      		tooltip: {
-      			theme: 'dark'
-      		},
-      		grid: {
-      			strokeDashArray: 4,
-      		},
-      		xaxis: {
-      			labels: {
-      				padding: 0,
-      			},
-      			tooltip: {
-      				enabled: false
-      			},
-      			axisBorder: {
-      				show: false,
-      			},
-      			type: 'datetime',
-      		},
-      		yaxis: {
-      			labels: {
-      				padding: 4
-      			},
-      		},
-      		labels: [
-      			'2020-06-20', '2020-06-21', '2020-06-22', '2020-06-23', '2020-06-24', '2020-06-25', '2020-06-26', '2020-06-27', '2020-06-28', '2020-06-29', '2020-06-30', '2020-07-01', '2020-07-02', '2020-07-03', '2020-07-04', '2020-07-05', '2020-07-06', '2020-07-07', '2020-07-08', '2020-07-09', '2020-07-10', '2020-07-11', '2020-07-12', '2020-07-13', '2020-07-14', '2020-07-15', '2020-07-16', '2020-07-17', '2020-07-18', '2020-07-19'
-      		],
-      		colors: [tabler.getColor("primary")],
-      		legend: {
-      			show: false,
-      		},
-      	})).render();
-      });
-      // @formatter:on
-    </script>
-    
     <!-- QWebChannel Bridge Python ↔ JavaScript -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script>
@@ -1265,8 +1215,66 @@
         revenue: "dashboard-revenue",
         active: "dashboard-active",
         net: "dashboard-net",
-        purchases: "dashboard-purchases",
       };
+      const CATEGORY_CHART_ID = "dashboard-categories";
+      let categoryDonut = null;
+      let categoryDonutReady = false;
+      let categoryPendingPayload = null;
+      let categoryRowsSnapshot = [];
+
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!window.ApexCharts) return;
+        const container = document.getElementById('chart-category-employment');
+        if (!container) return;
+        window.categoryAbsoluteValues = [];
+        window.categoryAbsoluteTotal = 0;
+        const categoryColors = ['#206bc4','#d63939','#f59f00','#0ca678','#fab005','#ae3ec9','#15aabf','#e64980'];
+        categoryDonut = new ApexCharts(container, {
+          chart: {
+            id: CATEGORY_CHART_ID,
+            type: 'pie',
+            height: 320,
+            width: 380,
+            toolbar: {
+              show: true,
+              tools: {
+                customIcons: [getChartOptionsIconConfig()]
+              }
+            }
+          },
+          labels: [],
+          series: [],
+          colors: categoryColors,
+          legend: { position: 'bottom' },
+          dataLabels: {
+            enabled: true,
+            style: { fontSize: '14px', fontWeight: 600, colors: ['#ffffff'] },
+            dropShadow: { enabled: true }
+          },
+          responsive: [{
+            breakpoint: 480,
+            options: {
+              chart: { width: 200 },
+              legend: { position: 'bottom' }
+            }
+          }]
+        });
+
+        categoryDonut.render().then(() => {
+          categoryDonutReady = true;
+          if (window.ChartOptions && typeof window.ChartOptions.attachChartOptions === 'function') {
+            window.ChartOptions.attachChartOptions('#chart-category-employment','index','categories', categoryDonut, () => categoryRowsSnapshot.map(row => ({ ...row })));
+          }
+          if (categoryPendingPayload) {
+            if (categoryPendingPayload.type === 'data') {
+              renderCategoryData(categoryPendingPayload.labels, categoryPendingPayload.values);
+            } else {
+              renderCategoryPlaceholder();
+            }
+            categoryPendingPayload = null;
+          }
+        });
+      });
 
       async function loadDashboardCharts(payDate) {
         try {
@@ -1279,7 +1287,7 @@
           updateDashboardChart("revenue", data.revenue);
           updateDashboardChart("active", data.active);
           updateDashboardChart("net", data.net);
-          updateDashboardChart("purchases", data.purchases);
+          await loadCategoryDistribution(payDate);
         } catch (error) {
           console.error('Erreur chargement graphiques dynamiques:', error);
         }
@@ -1298,6 +1306,88 @@
           labels,
           series: [{ name: seriesName, data: values }],
         }).catch((err) => console.warn(`⚠️ Impossible de mettre à jour ${chartId}:`, err));
+      }
+
+      function renderCategoryPlaceholder() {
+        if (!categoryDonutReady || !categoryDonut) {
+          categoryPendingPayload = { type: 'placeholder' };
+          return;
+        }
+        categoryRowsSnapshot = [];
+        window.categoryAbsoluteValues = [0];
+        window.categoryAbsoluteTotal = 0;
+        categoryDonut.updateOptions({ labels: ['Données indisponibles'] });
+        categoryDonut.updateSeries([100]);
+      }
+
+      function renderCategoryData(labels, values) {
+        if (!labels.length || !values.length) {
+          renderCategoryPlaceholder();
+          return;
+        }
+        if (!categoryDonutReady || !categoryDonut) {
+          categoryPendingPayload = { type: 'data', labels, values };
+          return;
+        }
+        const total = values.reduce((sum, v) => sum + Number(v || 0), 0);
+        const percentages = total > 0 ? values.map(v => (Number(v || 0) / total) * 100) : values;
+        categoryRowsSnapshot = labels.map((label, idx) => ({
+          date: label,
+          employee: label,
+          poste: label,
+          net: values[idx],
+          gross: values[idx],
+          employer_part: values[idx]
+        }));
+        window.categoryAbsoluteValues = values.slice();
+        window.categoryAbsoluteTotal = total;
+        categoryDonut.updateOptions({ labels });
+        categoryDonut.updateSeries(percentages).then(() => {
+          categoryDonut.updateOptions({
+            tooltip: {
+              y: {
+                formatter: function(val){
+                  return `${val.toFixed(1)}%`;
+                }
+              }
+            }
+          });
+        });
+      }
+
+
+      async function loadCategoryDistribution(payDate) {
+        if (!window.appBridge) {
+          renderCategoryPlaceholder();
+          return;
+        }
+        const safeDate = (payDate || '').replace(/'/g, "''");
+        const dateFilter = safeDate ? `WHERE date_paie = '${safeDate}'::date` : '';
+        const sql = `
+          SELECT
+            COALESCE(NULLIF(categorie_emploi, ''), 'Non classé') AS categorie,
+            SUM(nb_employes) AS nb
+          FROM payroll.v_emp_categories
+          ${dateFilter}
+          GROUP BY categorie
+          ORDER BY nb DESC
+        `;
+        try {
+          const raw = await Promise.resolve(window.appBridge.execute_sql(sql));
+        const payload = typeof raw === 'string' ? raw : JSON.stringify(raw || {});
+        const parsed = JSON.parse(payload || '{}');
+        const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+        if (!rows.length) {
+          renderCategoryPlaceholder();
+          return;
+        }
+        const labels = rows.map(r => r[0] || 'Non classé');
+        const values = rows.map(r => Number(r[1]) || 0);
+          renderCategoryData(labels, values);
+        } catch (error) {
+          console.warn('Impossible de charger la répartition des catégories:', error);
+          renderCategoryPlaceholder();
+        }
       }
     </script>
   </body>

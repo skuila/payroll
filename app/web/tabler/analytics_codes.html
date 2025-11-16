@@ -34,7 +34,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Tendance par code (Top 8)</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Tendance par code (Top 8)</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-codes" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -55,14 +58,20 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
-          ChartsHelper.mount('#chart-codes', 'line', {
+          let chartCodes = ChartsHelper.mount('#chart-codes', 'line', {
             series: [],
             xaxis: { type: 'category' }
           });
+          if (window.ChartOptions && chartCodes) {
+            window.ChartOptions.attachChartOptions('#chart-codes','codes','tendance', chartCodes);
+          }
           DataTablesHelper.init('#tbl-codes', [], [
             {title:'Code', data:0},
             {title:'Description', data:1},

@@ -34,7 +34,10 @@
         <div class="page-body">
           <div class="container mt-4">
             <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Pareto par code</h3></div>
+              <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="card-title mb-0">Pareto par code</h3>
+                <!-- options centralized: removed -->
+              </div>
               <div class="card-body"><div id="chart-categories" style="height:300px;"></div></div>
             </div>
             <div class="card">
@@ -55,15 +58,21 @@
     <script src="./dist/libs/apexcharts/dist/apexcharts.min.js"></script>
     <script src="./js/charts-helper.js"></script>
     <script src="./js/analytics-helpers.js"></script>
+    <script src="./js/apex-chart-catalog.js"></script>
+    <script src="./js/chart-switcher.js"></script>
+    <script src="./js/chart-options.js"></script>
     <script src="./dist/js/tabler.min.js"></script>
     <script>
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
-          const chart = ChartsHelper.mount('#chart-categories', 'bar', {
+          let chart = ChartsHelper.mount('#chart-categories', 'bar', {
             series: [{name:'Montant combine', data: []}],
             xaxis: { categories: [] },
             dataLabels: { enabled: false }
           });
+          if (window.ChartOptions && chart) {
+            window.ChartOptions.attachChartOptions('#chart-categories','categories','pareto', chart);
+          }
           // DataTables côté serveur
           $('#tbl-categories').DataTable({
             processing: true,

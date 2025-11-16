@@ -32,7 +32,7 @@ def parse_amount_neutral(value, context: str = ""):
     if is_negative:
         raw_value = raw_value[1:-1].strip()
 
-    cleaned = raw_value.replace("\u202F", "").replace("\u00A0", "")
+    cleaned = raw_value.replace("\u202f", "").replace("\u00a0", "")
     cleaned = cleaned.replace("$", "").replace("CA", "").replace("CAD", "")
     cleaned = re.sub(r"\s+", "", cleaned)
 

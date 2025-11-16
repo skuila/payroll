@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>Options</title>
+    <link href="./dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="./dist/css/tabler-vendors.min.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <h1 class="navbar-brand navbar-brand-autodark">
+            <a href="./index.html">PayrollAnalyzer</a>
+          </h1>
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+              <li class="nav-item">
+                <a class="nav-link" href="./index.html">
+                  <span class="nav-link-title">Accueil</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="./employees.html">
+                  <span class="nav-link-title">Employés</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="./analytics_masse.html">
+                  <span class="nav-link-title">Analyse</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="./analytics_parametres.html">
+                  <span class="nav-link-title">Paramètres</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link active" href="./options.html">
+                  <span class="nav-link-title">Options</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+      <div class="page-wrapper">
+        <div class="page-header d-print-none border-bottom bg-white">
+          <div class="container-xl">
+            <div class="row g-2 align-items-center">
+              <div class="col">
+                <h2 class="page-title mb-1">Options de l'application</h2>
+                <div class="text-muted">Règles de calcul, fiscalité, employés, audit et affichage.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="page-body">
+          <div class="container-xl mt-4">
+            <!-- Navigation par onglets -->
+            <ul class="nav nav-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a class="nav-link active" id="tab-interface" data-bs-toggle="tab" href="#pane-interface" role="tab" aria-controls="pane-interface" aria-selected="true">
+                  Interface
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" id="tab-calcul" data-bs-toggle="tab" href="#pane-calcul" role="tab" aria-controls="pane-calcul" aria-selected="false">
+                  Calcul de paie
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" id="tab-fiscalite" data-bs-toggle="tab" href="#pane-fiscalite" role="tab" aria-controls="pane-fiscalite" aria-selected="false">
+                  Fiscalité / DAS
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" id="tab-employes" data-bs-toggle="tab" href="#pane-employes" role="tab" aria-controls="pane-employes" aria-selected="false">
+                  Employés & RH
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" id="tab-audit" data-bs-toggle="tab" href="#pane-audit" role="tab" aria-controls="pane-audit" aria-selected="false">
+                  Audit & contrôles
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" id="tab-export" data-bs-toggle="tab" href="#pane-export" role="tab" aria-controls="pane-export" aria-selected="false">
+                  Export & rapports
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a class="nav-link" id="tab-securite" data-bs-toggle="tab" href="#pane-securite" role="tab" aria-controls="pane-securite" aria-selected="false">
+                  Sécurité & confidentialité
+                </a>
+              </li>
+            </ul>
+
+            <!-- Contenu des onglets -->
+            <div class="tab-content">
+              <!-- Onglet Interface -->
+              <div class="tab-pane fade show active" id="pane-interface" role="tabpanel" aria-labelledby="tab-interface">
+                <div class="row g-3 mt-3">
+                  <!-- Section Mode et Thèmes -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Mode et Thèmes</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-mode">Mode global</label>
+                          <select class="form-select" id="opt-mode">
+                            <option value="light">Clair</option>
+                            <option value="dark" selected>Sombre</option>
+                            <option value="system">Système</option>
+                          </select>
+                          <div class="form-text">Contrôle le thème de l'application.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label">Thèmes prédéfinis</label>
+                          <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="opt-theme-preset" id="preset-standard" value="standard" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="preset-standard">Standard</label>
+                            
+                            <input type="radio" class="btn-check" name="opt-theme-preset" id="preset-dark-prof" value="dark-professional" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="preset-dark-prof">Prof. sombre</label>
+                            
+                            <input type="radio" class="btn-check" name="opt-theme-preset" id="preset-contrast" value="high-contrast" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="preset-contrast">Contraste</label>
+                            
+                            <input type="radio" class="btn-check" name="opt-theme-preset" id="preset-blue" value="blue" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="preset-blue">Bleu</label>
+                          </div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-high-contrast">
+                            <label class="form-check-label" for="opt-high-contrast">Contraste élevé</label>
+                          </div>
+                          <div class="form-text">Améliore la lisibilité pour les utilisateurs malvoyants.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Section Couleurs -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Palette de couleurs</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-color-primary">Couleur primaire</label>
+                          <input type="color" class="form-control form-control-color" id="opt-color-primary" value="#0d6efd" title="Choisir la couleur primaire">
+                          <div class="form-text">Couleur principale de l'interface.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-color-secondary">Couleur secondaire</label>
+                          <input type="color" class="form-control form-control-color" id="opt-color-secondary" value="#6c757d" title="Choisir la couleur secondaire">
+                          <div class="form-text">Couleur d'accentuation secondaire.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-color-accent">Couleur d'accent</label>
+                          <input type="color" class="form-control form-control-color" id="opt-color-accent" value="#198754" title="Choisir la couleur d'accent">
+                          <div class="form-text">Couleur pour les éléments importants.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Section Typographie -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Typographie</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-font-size">Taille de texte <span id="opt-font-size-value">14</span>px</label>
+                          <input type="range" class="form-range" id="opt-font-size" min="12" max="18" value="14" step="1">
+                          <div class="form-text">Taille de base pour tout le texte de l'interface.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-font-family">Police de caractères</label>
+                          <select class="form-select" id="opt-font-family">
+                            <option value="Inter, system-ui, -apple-system" selected>System (Inter)</option>
+                            <option value="'Inter', sans-serif">Inter</option>
+                            <option value="'Roboto', sans-serif">Roboto</option>
+                            <option value="'Georgia', serif">Serif (Georgia)</option>
+                          </select>
+                          <div class="form-text">Famille de police utilisée dans l'interface.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Section Densité et Bordures -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Densité et Bordures</h3>
+                  </div>
+                  <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label">Densité d'affichage</label>
+                          <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="opt-density" id="density-compact" value="compact" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="density-compact">Compact</label>
+                            
+                            <input type="radio" class="btn-check" name="opt-density" id="density-standard" value="standard" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="density-standard">Standard</label>
+                            
+                            <input type="radio" class="btn-check" name="opt-density" id="density-comfortable" value="comfortable" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="density-comfortable">Confortable</label>
+                          </div>
+                          <div class="form-text">Espacement et hauteur des lignes dans les tableaux.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-borders" checked>
+                            <label class="form-check-label" for="opt-borders">Afficher les bordures</label>
+                          </div>
+                          <div class="form-text">Active les bordures visibles dans les tableaux et cartes.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#modal-columns">
+                            Choisir colonnes par défaut
+                          </button>
+                          <div class="form-text">Sélectionne les colonnes affichées par défaut dans les tableaux.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Section Format monétaire -->
+                  <div class="col-12">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Format monétaire</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="row g-3">
+                          <div class="col-md-3">
+                            <label class="form-label" for="opt-currency">Devise</label>
+                            <select class="form-select" id="opt-currency">
+                              <option value="CAD" selected>CAD (Dollar canadien)</option>
+                              <option value="USD">USD (Dollar US)</option>
+                              <option value="EUR">EUR (Euro)</option>
+                              <option value="None">Aucune</option>
+                            </select>
+                          </div>
+
+                          <div class="col-md-3">
+                            <label class="form-label">Position du symbole</label>
+                            <div class="btn-group w-100" role="group">
+                              <input type="radio" class="btn-check" name="opt-currency-pos" id="currency-pos-before" value="before" autocomplete="off" checked>
+                              <label class="btn btn-outline-primary" for="currency-pos-before">Avant</label>
+                              
+                              <input type="radio" class="btn-check" name="opt-currency-pos" id="currency-pos-after" value="after" autocomplete="off">
+                              <label class="btn btn-outline-primary" for="currency-pos-after">Après</label>
+                              
+                              <input type="radio" class="btn-check" name="opt-currency-pos" id="currency-pos-none" value="none" autocomplete="off">
+                              <label class="btn btn-outline-primary" for="currency-pos-none">Aucun</label>
+                            </div>
+                          </div>
+
+                          <div class="col-md-2">
+                            <label class="form-label" for="opt-thousand-sep">Séparateur milliers</label>
+                            <select class="form-select" id="opt-thousand-sep">
+                              <option value="space" selected>Espace</option>
+                              <option value="thin-space">Espace fin</option>
+                              <option value="comma">Virgule</option>
+                              <option value="dot">Point</option>
+                              <option value="none">Aucun</option>
+                            </select>
+                          </div>
+
+                          <div class="col-md-2">
+                            <label class="form-label" for="opt-decimal-sep">Séparateur décimal</label>
+                            <select class="form-select" id="opt-decimal-sep">
+                              <option value="comma" selected>Virgule (,)</option>
+                              <option value="dot">Point (.)</option>
+                            </select>
+                          </div>
+
+                          <div class="col-md-2">
+                            <label class="form-label" for="opt-decimals">Décimales</label>
+                            <select class="form-select" id="opt-decimals">
+                              <option value="0">0</option>
+                              <option value="1">1</option>
+                              <option value="2" selected>2</option>
+                              <option value="3">3</option>
+                      </select>
+                          </div>
+                    </div>
+
+                        <div class="row g-3 mt-2">
+                          <div class="col-md-6">
+                            <label class="form-label" for="opt-negative-format">Format négatif</label>
+                            <select class="form-select" id="opt-negative-format">
+                              <option value="-123" selected>-123</option>
+                              <option value="(123)">(123)</option>
+                              <option value="- 123">- 123</option>
+                      </select>
+                          </div>
+                        </div>
+                    </div>
+                    </div>
+                  </div>
+
+                  <!-- Section Format de date et autres -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Format de date</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-date-format">Format de date métier</label>
+                          <select class="form-select" id="opt-date-format">
+                            <option value="DD/MM/YYYY" selected>DD/MM/YYYY</option>
+                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                            <option value="DD MMMM YYYY">15 juin 2025</option>
+                          </select>
+                          <div class="form-text">Format utilisé pour afficher les dates dans l'application.</div>
+                </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-tooltips" checked>
+                            <label class="form-check-label" for="opt-tooltips">Afficher les tooltips</label>
+                          </div>
+                          <div class="form-text">Active les infobulles au survol des éléments.</div>
+                        </div>
+                    </div>
+                    </div>
+                  </div>
+
+                  <!-- Section Actions -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Actions</h3>
+                  </div>
+                  <div class="card-body">
+                        <div class="d-grid gap-2">
+                          <button type="button" class="btn btn-outline-warning" id="btn-reset-interface">
+                            Réinitialiser aux valeurs par défaut
+                          </button>
+                          <button type="button" class="btn btn-primary" id="btn-save-interface-global">
+                            Enregistrer le profil d'interface
+                          </button>
+                        </div>
+                        <div id="interface-feedback" class="small mt-2 text-muted"></div>
+                    </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Onglet Calcul de paie -->
+              <div class="tab-pane fade" id="pane-calcul" role="tabpanel" aria-labelledby="tab-calcul">
+                <div class="row g-3 mt-3">
+                  <!-- Carte: Périodes & paramètres généraux -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Périodes & paramètres généraux</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-default-period">Période de paie par défaut</label>
+                          <select class="form-select" id="opt-default-period">
+                            <option value="">Aucune</option>
+                            <option value="hebdomadaire">Hebdomadaire</option>
+                            <option value="aux_2_semaines">Aux 2 semaines</option>
+                            <option value="mensuelle">Mensuelle</option>
+                            <option value="autre">Autre</option>
+                          </select>
+                          <div class="form-text">Pré-remplit les filtres lors des imports et des analyses.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-current-fiscal-year">Exercice de paie courant</label>
+                          <select class="form-select" id="opt-current-fiscal-year">
+                            <option value="">Sélectionner</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                          </select>
+                          <div class="form-text">Utilisé comme année par défaut pour les totaux et les graphiques.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-date-format-calcul">Format de date métier</label>
+                          <select class="form-select" id="opt-date-format-calcul">
+                            <option value="" selected disabled>Sélectionner un format</option>
+                            <option value="dd/MM/yyyy">JJ/MM/AAAA</option>
+                            <option value="yyyy-MM-dd">AAAA-MM-JJ</option>
+                            <option value="MMMM yyyy">Mois AAAA (texte)</option>
+                          </select>
+                          <div class="form-text">Format utilisé pour l'affichage des dates dans les calculs.</div>
+                        </div>
+                    </div>
+                    </div>
+                  </div>
+
+                  <!-- Carte: Catégorisation & signes -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Catégorisation & signes</h3>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-4">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                              <label class="form-label mb-1">Utiliser la classification par type de paie + code + description</label>
+                              <div class="form-text">Active la fonction categorize_type basée sur TypePaie, CodePaie et Description.</div>
+                        </div>
+                        <div class="form-check form-switch m-0">
+                              <input class="form-check-input" type="checkbox" id="opt-use-categorize-type">
+                              <label class="form-check-label" for="opt-use-categorize-type">Activer</label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="mb-4">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                              <label class="form-label mb-1">Utiliser le fallback par signe</label>
+                              <div class="form-text">Si aucune règle n'est trouvée, la catégorie Gains/Déductions est déduite du signe du montant.</div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                              <input class="form-check-input" type="checkbox" id="opt-use-sign-fallback">
+                              <label class="form-check-label" for="opt-use-sign-fallback">Activer</label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-tolerance-total">Tolérance d'écart de total (import vs contrôle)</label>
+                          <input type="number" class="form-control" id="opt-tolerance-total" placeholder="ex. 1.00 (1 %)">
+                          <div class="form-text">Au-delà de cette tolérance, les écarts sont signalés comme anomalies.</div>
+                        </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  <!-- Carte: Arrondis & montants -->
+                  <div class="col-12">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Arrondis & montants</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="row g-3">
+                          <div class="col-md-6">
+                            <div class="mb-3">
+                              <label class="form-label" for="opt-rounding-mode">Mode d'arrondi des montants analytiques</label>
+                              <select class="form-select" id="opt-rounding-mode">
+                                <option value="" selected disabled>Sélectionner</option>
+                                <option value="round-2">Arrondi à 2 décimales</option>
+                                <option value="truncate-2">Troncature à 2 décimales</option>
+                                <option value="round-cent">Arrondi à 0,01 $</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <div class="mb-3">
+                              <label class="form-label" for="opt-display-decimals">Nombre de décimales pour l'affichage</label>
+                              <select class="form-select" id="opt-display-decimals">
+                                <option value="" selected disabled>Sélectionner</option>
+                                <option value="2">2 décimales</option>
+                                <option value="3">3 décimales</option>
+                                <option value="0">0 décimale</option>
+                      </select>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="form-text text-muted">Ces options affectent l'affichage et certains contrôles, mais pas les montants bruts importés.</div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="button" class="btn btn-primary" id="btn-save-calcul-options">Enregistrer les options de calcul</button>
+                        </div>
+                        <div id="calcul-feedback" class="small mt-2 text-muted"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Onglet Fiscalité / DAS -->
+              <div class="tab-pane fade" id="pane-fiscalite" role="tabpanel" aria-labelledby="tab-fiscalite">
+                <div class="row g-3 mt-3">
+                  <!-- Carte Contexte fiscal -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Contexte fiscal</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-country-province">Pays / Province principale</label>
+                          <select class="form-select" id="opt-country-province">
+                            <option value="Canada - QC" selected>Canada - QC</option>
+                            <option value="Canada - SK">Canada - SK</option>
+                            <option value="Canada - Autre">Canada - Autre</option>
+                            <option value="Autre pays">Autre pays</option>
+                          </select>
+                          <div class="form-text">Région fiscale principale utilisée pour les calculs et rapports.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-fiscal-year-das">Année fiscale courante (DAS / T4 / RL-1)</label>
+                          <select class="form-select" id="opt-fiscal-year-das">
+                            <option value="2024">2024</option>
+                            <option value="2025" selected>2025</option>
+                            <option value="2026">2026</option>
+                          </select>
+                          <div class="form-text">Année utilisée par défaut pour les déclarations fiscales et les fichiers DAS.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Carte Paramètres DAS / retenues -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Paramètres DAS / retenues</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-enable-das-control" checked>
+                            <label class="form-check-label" for="opt-enable-das-control">Activer le contrôle des totaux DAS</label>
+                          </div>
+                          <div class="form-text">Active la vérification automatique des totaux lors de la génération des fichiers DAS.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-das-rounding-mode">Arrondi des retenues fiscales</label>
+                          <select class="form-select" id="opt-das-rounding-mode">
+                            <option value="Arrondi traditionnel" selected>Arrondi traditionnel</option>
+                            <option value="Toujours vers le haut">Toujours vers le haut</option>
+                            <option value="Toujours vers le bas">Toujours vers le bas</option>
+                          </select>
+                          <div class="form-text">Mode d'arrondi appliqué aux montants de retenues fiscales.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-das-profile">Profil de structure des fichiers TXT DAS</label>
+                          <select class="form-select" id="opt-das-profile">
+                            <option value="Profil générique" selected>Profil générique</option>
+                            <option value="Banque / Système 1">Banque / Système 1</option>
+                            <option value="Système interne">Système interne</option>
+                          </select>
+                          <div class="form-text">Structure et format des fichiers TXT générés pour les déclarations DAS.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-das-separator">Séparateur principal des fichiers TXT</label>
+                          <select class="form-select" id="opt-das-separator">
+                            <option value="Tabulation" selected>Tabulation</option>
+                            <option value="Espaces multiples">Espaces multiples</option>
+                            <option value="Point-virgule">Point-virgule</option>
+                          </select>
+                          <div class="form-text">Caractère utilisé pour séparer les champs dans les fichiers TXT DAS.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="button" class="btn btn-primary" id="btn-save-fiscalite-options">Enregistrer les options fiscales</button>
+                        </div>
+                        <div id="fiscalite-options-feedback" class="small mt-2 text-muted"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Onglet Employés & RH -->
+              <div class="tab-pane fade" id="pane-employes" role="tabpanel" aria-labelledby="tab-employes">
+                <div class="row g-3 mt-3">
+                  <!-- Carte Affichage et anonymisation -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Affichage et anonymisation</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-anonymize-names" checked>
+                            <label class="form-check-label" for="opt-anonymize-names">Anonymiser les noms pour l'IA / exports externes</label>
+                          </div>
+                          <div class="form-text">Remplace les noms réels par des identifiants génériques lors des exports et analyses IA.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-employee-id-format">Format principal d'identification</label>
+                          <select class="form-select" id="opt-employee-id-format">
+                            <option value="Matricule + Nom" selected>Matricule + Nom</option>
+                            <option value="Matricule uniquement">Matricule uniquement</option>
+                            <option value="Nom uniquement">Nom uniquement</option>
+                          </select>
+                          <div class="form-text">Format utilisé pour identifier les employés dans les tableaux et exports.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-show-matricule" checked>
+                            <label class="form-check-label" for="opt-show-matricule">Afficher les matricules dans les tableaux</label>
+                          </div>
+                          <div class="form-text">Active l'affichage des matricules dans les colonnes des tableaux d'employés.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Carte Règles d'alertes par employé -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Règles d'alertes par employé</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-alert-uppercase-names" checked>
+                            <label class="form-check-label" for="opt-alert-uppercase-names">Nom entièrement en MAJUSCULES = alerte</label>
+                          </div>
+                          <div class="form-text">Signale les employés dont le nom est entièrement en majuscules (potentiel problème de format).</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-alert-net-negative" checked>
+                            <label class="form-check-label" for="opt-alert-net-negative">Salaire net négatif = alerte critique</label>
+                          </div>
+                          <div class="form-text">Signale immédiatement les employés avec un salaire net négatif comme erreur critique.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-alert-show-summary" checked>
+                            <label class="form-check-label" for="opt-alert-show-summary">Afficher automatiquement un résumé des employés à problème après import</label>
+                          </div>
+                          <div class="form-text">Affiche un résumé automatique des employés présentant des anomalies après chaque import.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-salary-variation-threshold">Seuil de variation de salaire (%)</label>
+                          <input type="number" class="form-control" id="opt-salary-variation-threshold" placeholder="ex. 20" value="20" min="0" max="100">
+                          <div class="form-text">Pourcentage de variation acceptable avant alerte. Exemple : 20% signifie qu'une variation de plus de 20% déclenchera une alerte.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="button" class="btn btn-primary" id="btn-save-employes-options">Enregistrer les options employés</button>
+                        </div>
+                        <div id="employes-options-feedback" class="small mt-2 text-muted"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Onglet Audit & contrôles -->
+              <div class="tab-pane fade" id="pane-audit" role="tabpanel" aria-labelledby="tab-audit">
+                <div class="row g-3 mt-3">
+                  <!-- Carte Règles d'audit automatique -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Règles d'audit automatique</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-audit-net-negative" checked>
+                            <label class="form-check-label" for="opt-audit-net-negative">Contrôler les salaires nets négatifs</label>
+                          </div>
+                          <div class="form-text">Détecte automatiquement les salaires nets négatifs lors des audits.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-audit-uppercase" checked>
+                            <label class="form-check-label" for="opt-audit-uppercase">Contrôler les noms en majuscules</label>
+                          </div>
+                          <div class="form-text">Signale les employés dont le nom est entièrement en majuscules.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-audit-sensitive-codes" checked>
+                            <label class="form-check-label" for="opt-audit-sensitive-codes">Contrôler les codes de paie sensibles</label>
+                          </div>
+                          <div class="form-text">Vérifie automatiquement la présence de codes de paie marqués comme sensibles.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-audit-missing-periods" checked>
+                            <label class="form-check-label" for="opt-audit-missing-periods">Contrôler les périodes manquantes / dates incohérentes</label>
+                          </div>
+                          <div class="form-text">Détecte les périodes manquantes ou les dates incohérentes dans les données.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-audit-open-after-import" checked>
+                            <label class="form-check-label" for="opt-audit-open-after-import">Afficher automatiquement le rapport d'anomalies après chaque import</label>
+                          </div>
+                          <div class="form-text">Ouvre automatiquement le rapport d'anomalies après chaque import de données.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="button" class="btn btn-primary" id="btn-save-audit-options">Enregistrer les options d'audit</button>
+                        </div>
+                        <div id="audit-options-feedback" class="small mt-2 text-muted"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Carte Codes de paie sensibles -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Codes de paie sensibles</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="text-muted mb-3">Gérez la liste des codes de paie qui nécessitent une attention particulière lors des audits.</div>
+                        <button type="button" class="btn btn-primary w-100" id="btn-manage-sensitive-codes" data-bs-toggle="modal" data-bs-target="#modal-sensitive-codes">
+                          Gérer les codes sensibles
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Onglet Export & rapports -->
+              <div class="tab-pane fade" id="pane-export" role="tabpanel" aria-labelledby="tab-export">
+                <div class="row g-3 mt-3">
+                  <!-- Carte Exports Excel -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Exports Excel</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label">Colonnes à inclure par défaut</label>
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="opt-export-col-codepaie" checked>
+                            <label class="form-check-label" for="opt-export-col-codepaie">Code de paie</label>
+                          </div>
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="opt-export-col-description" checked>
+                            <label class="form-check-label" for="opt-export-col-description">Description</label>
+                          </div>
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="opt-export-col-categorie" checked>
+                            <label class="form-check-label" for="opt-export-col-categorie">Catégorie</label>
+                          </div>
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="opt-export-col-poste" checked>
+                            <label class="form-check-label" for="opt-export-col-poste">Poste budgétaire</label>
+                          </div>
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="opt-export-col-statut" checked>
+                            <label class="form-check-label" for="opt-export-col-statut">Statut</label>
+                          </div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-export-filename-pattern">Modèle de nom de fichier</label>
+                          <input type="text" class="form-control" id="opt-export-filename-pattern" placeholder="Paie_{date_paie}_{type_rapport}.xlsx" value="Paie_{date_paie}_{type_rapport}.xlsx">
+                          <div class="form-text">Variables disponibles : {date_paie}, {type_rapport}, {annee}, {mois}</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-export-folder">Dossier d'export par défaut</label>
+                          <input type="text" class="form-control" id="opt-export-folder" placeholder="Ex: C:\Exports\Paie" value="">
+                          <div class="form-text">Dossier de destination par défaut pour les fichiers Excel exportés.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="button" class="btn btn-primary" id="btn-save-export-excel">Enregistrer les options Excel</button>
+                        </div>
+                        <div id="export-excel-feedback" class="small mt-2 text-muted"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Carte Exports PDF -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Exports PDF</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-export-pdf-orientation">Orientation des rapports PDF</label>
+                          <select class="form-select" id="opt-export-pdf-orientation">
+                            <option value="Portrait" selected>Portrait</option>
+                            <option value="Paysage">Paysage</option>
+                          </select>
+                          <div class="form-text">Orientation par défaut pour tous les rapports PDF générés.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-export-pdf-legend" checked>
+                            <label class="form-check-label" for="opt-export-pdf-legend">Inclure la légende des alertes dans le PDF</label>
+                          </div>
+                          <div class="form-text">Ajoute une section explicative des codes d'alerte en fin de document PDF.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="button" class="btn btn-primary" id="btn-save-export-pdf">Enregistrer les options PDF</button>
+                        </div>
+                        <div id="export-pdf-feedback" class="small mt-2 text-muted"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Onglet Sécurité & confidentialité -->
+              <div class="tab-pane fade" id="pane-securite" role="tabpanel" aria-labelledby="tab-securite">
+                <div class="row g-3 mt-3">
+                  <!-- Carte Chiffrement des données -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Chiffrement des données</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-enable-encryption">
+                            <label class="form-check-label" for="opt-enable-encryption">Activer le chiffrement AES-256 des données sensibles</label>
+                          </div>
+                          <div class="form-text text-warning small mt-2">
+                            Le stockage réel de la clé se configure côté serveur / fichier de configuration. Ce panneau ne stocke jamais la clé.
+                          </div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-key-storage-info">Mode de stockage des clés</label>
+                          <input type="text" class="form-control" id="opt-key-storage-info" value="Géré par la configuration serveur" readonly>
+                          <div class="form-text">Information sur le stockage de la clé de chiffrement.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Carte Accès aux options -->
+                  <div class="col-12 col-lg-6">
+                    <div class="card">
+                      <div class="card-header">
+                        <h3 class="card-title">Accès aux options</h3>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="opt-admin-protect-options">
+                            <label class="form-check-label" for="opt-admin-protect-options">Protéger cette page par un code administrateur</label>
+                          </div>
+                          <div class="form-text">Active la protection de la page Options par un mot de passe.</div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label" for="opt-admin-code">Code administrateur (local)</label>
+                          <input type="password" class="form-control" id="opt-admin-code" placeholder="Entrez le code administrateur" value="">
+                          <div class="form-text">Ce code est stocké localement pour l'instant. L'intégration avec une gestion des rôles se fera côté serveur.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="button" class="btn btn-primary" id="btn-save-security-options">Enregistrer les options de sécurité</button>
+                        </div>
+                        <div id="security-options-feedback" class="small mt-2 text-muted"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <!-- Modal pour choisir les colonnes -->
+    <div class="modal modal-blur fade" id="modal-columns" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Choisir les colonnes par défaut</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div id="opt-columns-chooser">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Matricule" id="col-matricule" checked>
+                <label class="form-check-label" for="col-matricule">Matricule</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Nom" id="col-nom" checked>
+                <label class="form-check-label" for="col-nom">Nom</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Poste" id="col-poste" checked>
+                <label class="form-check-label" for="col-poste">Poste</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Catégorie" id="col-categorie" checked>
+                <label class="form-check-label" for="col-categorie">Catégorie</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Salaire Net" id="col-salaire" checked>
+                <label class="form-check-label" for="col-salaire">Salaire Net</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Statut" id="col-statut" checked>
+                <label class="form-check-label" for="col-statut">Statut</label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="btn-save-columns">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal pour gérer les codes de paie sensibles -->
+    <div class="modal modal-blur fade" id="modal-sensitive-codes" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Gérer les codes de paie sensibles</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body">
+            <div class="table-responsive">
+              <table class="table table-vcenter card-table" id="sensitive-codes-table">
+                <thead>
+                  <tr>
+                    <th>CodePaie</th>
+                    <th>Description</th>
+                    <th>Niveau de risque</th>
+                    <th class="w-1">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="sensitive-codes-tbody">
+                  <!-- Les lignes seront générées dynamiquement par JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-primary" id="btn-add-sensitive-code">Ajouter une ligne</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="btn-save-sensitive-codes">Enregistrer la liste</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./dist/js/tabler.min.js"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="./js/theme.js"></script>
+    <script>
+      (function(){
+        const alertBox = document.createElement('div');
+        alertBox.className = 'alert alert-warning d-none';
+        alertBox.textContent = 'Impossible de charger les options.';
+
+        document.addEventListener('DOMContentLoaded', function(){
+          const container = document.querySelector('.container-xl');
+          if (container) {
+            container.prepend(alertBox);
+          }
+          // Initialiser le thème depuis le stockage local
+          if (typeof initThemeFromStorage === 'function') {
+            initThemeFromStorage();
+          }
+          syncThemeToggle();
+          wireSaveButtons();
+          initBridge().then(loadOptions).catch(err => {
+            console.error('Bridge non initialisé', err);
+            showAlert();
+          });
+        });
+
+        function initBridge(){
+          if (typeof window.AppBridgeReady === 'function') {
+            return window.AppBridgeReady();
+          }
+          if (window.AppBridge) {
+            return Promise.resolve(window.AppBridge);
+          }
+          if (window.qt?.webChannelTransport) {
+            return new Promise((resolve, reject) => {
+              new QWebChannel(qt.webChannelTransport, channel => {
+                window.AppBridge = channel.objects.AppBridge || null;
+                if (window.AppBridge) resolve(window.AppBridge);
+                else reject(new Error('AppBridge non disponible'));
+              });
+            });
+          }
+          return Promise.reject(new Error('QWebChannel non disponible'));
+        }
+
+        function showAlert(){
+          alertBox.classList.remove('d-none');
+        }
+
+        function hideAlert(){
+          alertBox.classList.add('d-none');
+        }
+
+        function loadOptions(){
+          hideAlert();
+          if (!window.AppBridge || typeof window.AppBridge.get_options !== 'function') {
+            showAlert();
+            throw new Error('Méthode get_options non disponible côté AppBridge');
+          }
+          return Promise.resolve(window.AppBridge.get_options())
+            .then(raw => {
+              let payload = raw;
+              if (typeof raw === 'string') {
+                try { payload = JSON.parse(raw); }
+                catch (err) {
+                  console.warn('JSON invalide pour get_options', err);
+                  throw err;
+                }
+              }
+              applyOptions(payload || {});
+            })
+            .catch(err => {
+              console.error('Erreur loadOptions', err);
+              showAlert();
+            });
+        }
+
+        function applyOptions(data){
+          const interfaceOpts = data.interface || {};
+          const analytiqueOpts = (data.analytique && data.analytique.synonyms) || {};
+          const paieOpts = data.paie || {};
+
+          // Si interface-options.js est chargé, utiliser sa fonction fillForm et applyInterfaceOptions
+          if (typeof fillForm === 'function' && typeof applyInterfaceOptions === 'function' && Object.keys(interfaceOpts).length > 0) {
+            fillForm(interfaceOpts);
+            applyInterfaceOptions(interfaceOpts);
+          } else {
+            // Fallback pour les anciennes options seulement
+            const langSelect = document.getElementById('opt-language');
+            if (langSelect && interfaceOpts.language) langSelect.value = interfaceOpts.language;
+
+            const dateSelect = document.getElementById('opt-date-format');
+            if (dateSelect && interfaceOpts.date_format) dateSelect.value = interfaceOpts.date_format;
+          }
+
+          const signFallback = document.getElementById('opt-use-sign-fallback');
+          if (signFallback) signFallback.checked = Boolean(paieOpts.use_sign_fallback);
+
+          const defaultPeriod = document.getElementById('opt-default-period');
+          if (defaultPeriod && paieOpts.default_period) {
+            defaultPeriod.value = paieOpts.default_period;
+          }
+        }
+
+        function syncThemeToggle() {
+          const darkInput = document.getElementById('opt-dark-mode');
+          if (!darkInput || typeof getStoredTheme !== 'function') return;
+          darkInput.checked = getStoredTheme() === 'dark';
+          darkInput.addEventListener('change', (event) => {
+            if (typeof setTheme === 'function') {
+              const nextTheme = event.target.checked ? 'dark' : 'light';
+              setTheme(nextTheme);
+            }
+          });
+        }
+
+        function wireSaveButtons() {
+          const interfaceBtn = document.getElementById('btn-save-interface');
+          if (interfaceBtn) {
+            interfaceBtn.addEventListener('click', () => persistOptions('interface'));
+          }
+
+          const calculBtn = document.getElementById('btn-save-calcul-options');
+          if (calculBtn) {
+            calculBtn.addEventListener('click', () => persistOptions('calcul'));
+          }
+        }
+
+        function persistOptions(section) {
+          if (!window.AppBridge || typeof window.AppBridge.update_options !== 'function') {
+            console.warn('update_options indisponible');
+            return;
+          }
+          let payload = {};
+
+          if (section === 'interface') {
+            payload.interface = collectInterfacePayload();
+          } else if (section === 'calcul') {
+            payload.paie = collectCalculPayload();
+          } else {
+            payload = {
+              interface: collectInterfacePayload(),
+              paie: collectCalculPayload(),
+            };
+          }
+
+          const feedbackTarget =
+            section === 'calcul'
+              ? document.getElementById('calcul-feedback')
+              : document.getElementById('interface-feedback');
+
+          if (feedbackTarget) feedbackTarget.textContent = 'Enregistrement...';
+
+          Promise.resolve(window.AppBridge.update_options(JSON.stringify(payload)))
+            .then((raw) => {
+              if (feedbackTarget) feedbackTarget.textContent = 'Enregistré.';
+              try {
+                const resp = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (resp?.status === 'ok') {
+                  if (section === 'interface') {
+                    applyOptions(resp.data || {});
+                  }
+                } else if (feedbackTarget) {
+                  feedbackTarget.textContent = resp?.message || 'Erreur lors de la sauvegarde.';
+                }
+              } catch {
+                // ignore
+              }
+            })
+            .catch((err) => {
+              console.error('Erreur update_options', err);
+              if (feedbackTarget) feedbackTarget.textContent = 'Erreur lors de la sauvegarde.';
+            });
+        }
+
+        function collectInterfacePayload() {
+          // Utiliser getFormOptions si disponible (depuis interface-options.js)
+          if (typeof getFormOptions === 'function') {
+            return getFormOptions();
+          }
+          
+          // Fallback si interface-options.js n'est pas chargé
+          const modeEl = document.getElementById('opt-mode');
+          const primaryEl = document.getElementById('opt-color-primary');
+          const secondaryEl = document.getElementById('opt-color-secondary');
+          const accentEl = document.getElementById('opt-color-accent');
+          const highContrastEl = document.getElementById('opt-high-contrast');
+          const fontSizeEl = document.getElementById('opt-font-size');
+          const fontFamilyEl = document.getElementById('opt-font-family');
+          const bordersEl = document.getElementById('opt-borders');
+          const currencyEl = document.getElementById('opt-currency');
+          const decimalsEl = document.getElementById('opt-decimals');
+          const dateFormatEl = document.getElementById('opt-date-format');
+          const tooltipsEl = document.getElementById('opt-tooltips');
+          
+          const density = Array.from(document.querySelectorAll('input[name="opt-density"]:checked'))[0]?.value || 'standard';
+          const currencyPos = Array.from(document.querySelectorAll('input[name="opt-currency-pos"]:checked'))[0]?.value || 'before';
+          
+          return {
+            mode: modeEl?.value || 'dark',
+            primary: primaryEl?.value || '#0d6efd',
+            secondary: secondaryEl?.value || '#6c757d',
+            accent: accentEl?.value || '#198754',
+            fontSize: fontSizeEl?.value ? `${fontSizeEl.value}px` : '14px',
+            fontFamily: fontFamilyEl?.value || 'Inter, system-ui, -apple-system',
+            density: density,
+            currency: currencyEl?.value || 'CAD',
+            currencySymbol: currencyEl?.value === 'USD' || currencyEl?.value === 'CAD' ? '$' : currencyEl?.value === 'EUR' ? '€' : '',
+            symbolPosition: currencyPos,
+            thousandSeparator: ' ',
+            decimalSeparator: ',',
+            decimals: parseInt(decimalsEl?.value || '2', 10),
+            negativeFormat: '-123',
+            dateFormat: dateFormatEl?.value || 'DD/MM/YYYY',
+            showTooltips: tooltipsEl?.checked !== false,
+            highContrast: highContrastEl?.checked === true,
+            borders: bordersEl?.checked !== false
+          };
+        }
+
+        function collectCalculPayload() {
+          return {
+            use_sign_fallback: Boolean(document.getElementById('opt-use-sign-fallback')?.checked),
+            use_categorize_type: Boolean(document.getElementById('opt-use-categorize-type')?.checked),
+            default_period: document.getElementById('opt-default-period')?.value || '',
+            current_fiscal_year: document.getElementById('opt-current-fiscal-year')?.value || '',
+            tolerance_total: document.getElementById('opt-tolerance-total')?.value || '',
+            rounding_mode: document.getElementById('opt-rounding-mode')?.value || '',
+            display_decimals: document.getElementById('opt-display-decimals')?.value || '',
+          };
+        }
+
+      })();
+    </script>
+
+    <!--
+      Tests manuels conseillés :
+      1) Lancer l'app (`python app/payroll_app_qt_Version4.py`) et ouvrir Options dans la barre latérale.
+      2) Vérifier le pré-remplissage via AppBridge.get_options (valeurs DB ou défauts).
+      3) Modifier les options puis sauvegarder et contrôler les valeurs dans la base de données.
+      4) Basculer "Utiliser le fallback par signe", sauvegarder et vérifier `paie.param_calcul_flags`.
+      5) Changer mode sombre/langue, constater l'effet immédiat et vérifier `paie.param_ui_options`.
+      6) S'assurer qu'aucune exception n'apparaît côté Python / la connexion PostgreSQL reste active.
+    -->
+      <script src="./js/theme-helper.js"></script>
+    <script>if (typeof initThemeFromStorage === 'function') { initThemeFromStorage(); }</script>
+    <script src="./js/interface-options.js"></script>
+    <script src="./js/options-fiscalite.js"></script>
+    <script src="./js/options-employes.js"></script>
+    <script src="./js/options-audit.js"></script>
+    <script src="./js/options-export.js"></script>
+    <script src="./js/options-security.js"></script>
+    <script>
+      // Initialiser le panneau Interface au chargement
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof initInterfacePanel === 'function') {
+          initInterfacePanel();
+        }
+      });
+    </script>
+  </body>
+</html>
