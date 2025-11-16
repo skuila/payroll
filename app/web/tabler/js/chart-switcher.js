@@ -39,6 +39,7 @@
       // add custom Options icon to toolbar (merge with existing toolbar config)
       chartConfig.chart = chartConfig.chart || {};
       chartConfig.chart.toolbar = chartConfig.chart.toolbar || {};
+      chartConfig.chart.toolbar.show = true;
       chartConfig.chart.toolbar.tools = chartConfig.chart.toolbar.tools || {};
       chartConfig.chart.toolbar.tools.customIcons = chartConfig.chart.toolbar.tools.customIcons || [];
       chartConfig.chart.toolbar.tools.customIcons.push({

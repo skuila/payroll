@@ -1,3 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.build/
+dist/
+.python-version
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environnements virtuels
+venv/
+.venv/
+env/
+.env/
+
+# IDE/Editeurs
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs et sorties
+*.log
+logs/
+output.log
+
+# OS / editeurs
+.DS_Store
+Thumbs.db
+
+# Node/Front éventuel
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers sensibles / env
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.crt
+
+# Bases/dumps
+*.sql
+*.dump
+*.backup
+
+# Archives et fichiers volumineux
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.rar
+
+# Données temporaires/tests
+/db.sqlite3
+db.sqlite3
+*_tmp/
+temp/
+tmp/
+*_cache/
+_cache/
+
+# Sauvegardes/Anciennes versions
+*.bak
+*.bak.*
+backups/
+app/backups/
+archive/zip_temp/
+app.zip
+
+# Exemples de données/test
+echantillon_table.csv
+test_import_*.xlsx
+RAPPORT_EMPLOYES.zip
+reports/*.csv
+reports/*.txt
+
+# Alembic builds intermédiaires si présents
+alembic/versions/__pycache__/
 
 # Auto-added by cleanup script
 archive/legacy_non_standard/

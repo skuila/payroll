@@ -627,20 +627,26 @@ class PostgresProvider(AbstractDataProvider):
             if category_reference_date:
                 sql_categories = """
                 SELECT 
-                    COALESCE(NULLIF(e.categorie_emploi, ''), 'Non classé') AS categorie,
-                    COUNT(DISTINCT e.employee_id) AS nb_membres
-                FROM payroll.payroll_transactions t
-                JOIN core.employees e ON e.employee_id = t.employee_id
-                WHERE t.pay_date = %(pay_date)s::date
+                    COALESCE(NULLIF(categorie_emploi, ''), 'Non classé') AS categorie,
+                    SUM(nb_employes) AS nb_membres
+                FROM payroll.v_emp_categories
+                WHERE date_paie = %(pay_date)s::date
                 GROUP BY 1
                 ORDER BY nb_membres DESC
                 """
-                cat_rows = self.repo.run_query(
-                    sql_categories, {"pay_date": category_reference_date}
-                )
-                if cat_rows:
-                    category_labels = [row[0] for row in cat_rows]
-                    category_values = [int(row[1] or 0) for row in cat_rows]
+                try:
+                    cat_rows = self.repo.run_query(
+                        sql_categories, {"pay_date": category_reference_date}
+                    )
+                    if cat_rows:
+                        category_labels = [row[0] for row in cat_rows]
+                        category_values = [int(row[1] or 0) for row in cat_rows]
+                except Exception as cat_err:
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        "Impossible d'accéder à payroll.v_emp_categories (exécuter app/migration/analytics_emp_categories.sql avec un superuser) : %s",
+                        cat_err,
+                    )
 
             return {
                 "revenue": {

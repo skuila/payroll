@@ -1,7 +1,7 @@
 """Create PostgreSQL extensions
 
 Revision ID: 000
-Revises: 
+Revises:
 Create Date: 2025-10-12 05:00:00.000000
 
 """

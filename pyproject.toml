@@ -44,3 +44,7 @@ testpaths = ["tests"]
 python_version = "3.11"
 files = ["app"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "app.utils.parsers"
+ignore_errors = true

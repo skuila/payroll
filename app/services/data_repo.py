@@ -9,11 +9,14 @@ Usage:
 """
 
 import logging
-from typing import Any, Callable, Optional, Union
+import os
 from contextlib import contextmanager
+from typing import Any, Callable, Optional, Union
+
+import json
+from psycopg import errors
 import psycopg
 from psycopg_pool import ConnectionPool
-import os
 
 DEFAULT_STMT_TIMEOUT_MS = int(os.getenv("PG_STATEMENT_TIMEOUT_MS", "8000"))
 DEFAULT_LOCK_TIMEOUT_MS = int(os.getenv("PG_LOCK_TIMEOUT_MS", "2000"))
@@ -432,6 +435,158 @@ class DataRepository:
             f"Suppression de {count_before} employés orphelins (sans transactions dans aucune période)"
         )
         return count_before
+
+    # ====================== OPTIONS UTILISATEUR ======================
+    def get_options(self) -> dict[str, Any]:
+        """Récupère les options UI/Analytique/Paie."""
+        interface_defaults = {
+            "dark_mode": False,
+            "language": "fr",
+            "date_format": "dd/MM/yyyy",
+            "validate_unknown_codes": False,
+            "default_period": "",
+        }
+        interface_payload = dict(interface_defaults)
+        synonyms: dict[str, list[str]] = {"Gains": [], "Deductions": []}
+        paie_flags = {"use_sign_fallback": True}
+
+        sql_syn = """
+            SELECT categorie, synonyms
+            FROM paie.param_categories_synonyms
+            WHERE categorie IN ('Gains', 'Deductions')
+        """
+        sql_flags = "SELECT use_sign_fallback FROM paie.param_calcul_flags WHERE id = 1"
+        sql_ui = "SELECT payload FROM paie.param_ui_options WHERE id = 1"
+
+        with self.get_connection() as conn:
+            try:
+                rows = self.run_select(conn, sql_syn)
+                for categorie, syns in rows:
+                    if categorie in synonyms:
+                        synonyms[categorie] = [s for s in (syns or []) if s]
+            except errors.UndefinedTable:
+                logger.warning(
+                    "Table paie.param_categories_synonyms absente, valeurs par défaut utilisées."
+                )
+            except Exception as exc:
+                logger.error("Erreur lecture synonymes: %s", exc)
+
+            try:
+                rows = self.run_select(conn, sql_flags)
+                if rows:
+                    paie_flags["use_sign_fallback"] = bool(rows[0][0])
+            except errors.UndefinedTable:
+                logger.warning(
+                    "Table paie.param_calcul_flags absente, use_sign_fallback=True."
+                )
+            except Exception as exc:
+                logger.error("Erreur lecture flags paie: %s", exc)
+
+            try:
+                rows = self.run_select(conn, sql_ui)
+                if rows and rows[0][0]:
+                    stored = rows[0][0]
+                    if isinstance(stored, dict):
+                        interface_payload.update(stored)
+                    else:
+                        parsed = json.loads(stored)
+                        if isinstance(parsed, dict):
+                            interface_payload.update(parsed)
+            except errors.UndefinedTable:
+                logger.info(
+                    "Table paie.param_ui_options absente, elle sera créée ultérieurement si besoin."
+                )
+            except Exception as exc:
+                logger.error("Erreur lecture options UI: %s", exc)
+
+        interface = {
+            "dark_mode": bool(
+                interface_payload.get("dark_mode", interface_defaults["dark_mode"])
+            ),
+            "language": interface_payload.get(
+                "language", interface_defaults["language"]
+            ),
+            "date_format": interface_payload.get(
+                "date_format", interface_defaults["date_format"]
+            ),
+            "validate_unknown_codes": bool(
+                interface_payload.get(
+                    "validate_unknown_codes",
+                    interface_defaults["validate_unknown_codes"],
+                )
+            ),
+            "default_period": interface_payload.get(
+                "default_period", interface_defaults["default_period"]
+            ),
+        }
+
+        return {
+            "interface": interface,
+            "analytique": {"synonyms": synonyms},
+            "paie": paie_flags,
+        }
+
+    def update_options(self, payload: dict[str, Any]) -> None:
+        """Enregistre les options UI/Analytique/Paie."""
+        if not isinstance(payload, dict):
+            raise ValueError("Payload options invalide (dict attendu)")
+
+        interface_opts = payload.get("interface")
+        synonyms_opts = payload.get("analytique", {}).get("synonyms", {})
+        paie_opts = payload.get("paie", {})
+
+        with self.get_connection() as conn:
+            if isinstance(interface_opts, dict):
+                self._ensure_ui_table(conn)
+                sql_ui = """
+                    INSERT INTO paie.param_ui_options (id, payload, updated_at)
+                    VALUES (1, %(payload)s::jsonb, NOW())
+                    ON CONFLICT (id)
+                    DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+                """
+                self.run_execute(conn, sql_ui, {"payload": json.dumps(interface_opts)})
+
+            if isinstance(synonyms_opts, dict):
+                sql_syn = """
+                    INSERT INTO paie.param_categories_synonyms (categorie, synonyms, updated_at)
+                    VALUES (%(categorie)s, %(synonyms)s, NOW())
+                    ON CONFLICT (categorie)
+                    DO UPDATE SET synonyms = EXCLUDED.synonyms, updated_at = NOW()
+                """
+                for categorie, values in synonyms_opts.items():
+                    if categorie not in {"Gains", "Deductions"}:
+                        continue
+                    if isinstance(values, str):
+                        cleaned = [v.strip() for v in values.split(",") if v.strip()]
+                    elif isinstance(values, (list, tuple)):
+                        cleaned = [str(v).strip() for v in values if str(v).strip()]
+                    else:
+                        continue
+                    self.run_execute(
+                        conn, sql_syn, {"categorie": categorie, "synonyms": cleaned}
+                    )
+
+            if isinstance(paie_opts, dict) and "use_sign_fallback" in paie_opts:
+                sql_flags = """
+                    INSERT INTO paie.param_calcul_flags (id, use_sign_fallback, updated_at)
+                    VALUES (1, %(value)s, NOW())
+                    ON CONFLICT (id)
+                    DO UPDATE SET use_sign_fallback = EXCLUDED.use_sign_fallback,
+                                  updated_at = NOW()
+                """
+                self.run_execute(
+                    conn, sql_flags, {"value": bool(paie_opts["use_sign_fallback"])}
+                )
+
+    def _ensure_ui_table(self, conn) -> None:
+        ddl = """
+            CREATE TABLE IF NOT EXISTS paie.param_ui_options (
+              id SMALLINT PRIMARY KEY DEFAULT 1,
+              payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        """
+        self.run_execute(conn, ddl)
 
 
 # ========================================

@@ -1,13 +1,13 @@
 """Initial schema: core, payroll, reference, security
 
 Revision ID: 001
-Revises: 
+Revises:
 Create Date: 2025-10-09 14:00:00.000000
 
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.

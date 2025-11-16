@@ -31,6 +31,7 @@
         ...(opts?.chart || {}),
       };
       config.chart.toolbar = config.chart.toolbar || {};
+      config.chart.toolbar.show = true;
       config.chart.toolbar.tools = config.chart.toolbar.tools || {};
       config.chart.toolbar.tools.customIcons = config.chart.toolbar.tools.customIcons || [];
       config.chart.toolbar.tools.customIcons.push({

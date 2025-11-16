@@ -19,6 +19,7 @@
     attachChartOptions(selector, pageId, chartId, chartInstance, dataFetcher) {
       if (!chartInstance) return;
       this._ensurePanel();
+      this._ensureToolbarStyles();
       this._attached.set(chartInstance, { selector, pageId, chartId, dataFetcher });
       const series = (chartInstance.w && chartInstance.w.config && chartInstance.w.config.series) || [];
       this._renderColorPickers(series, chartInstance);
@@ -54,6 +55,7 @@
       const meta = this._attached.get(chartInstance) || {};
       const rows = await this._getRows(meta.dataFetcher);
 
+      const type = (chartInstance.w?.config?.chart?.type || '').toLowerCase();
       const baseSeries = this._buildSeriesFromRows(rows, (group === 'all') ? 'all' : (group === 'employee' ? 'employee' : 'poste'), field);
       const aggregated = this._aggregateSeriesByPeriod(baseSeries, agg);
 
@@ -61,8 +63,11 @@
       const finalColors = [];
       for (let i=0;i<aggregated.length;i++) finalColors.push(colors[i] || palette[i % palette.length]);
 
+      const isCircular = type === 'pie' || type === 'donut' || type === 'radialbar';
       try {
-        chartInstance.updateSeries(aggregated, true);
+        if (!isCircular) {
+          chartInstance.updateSeries(aggregated, true);
+        }
         chartInstance.updateOptions({ colors: finalColors }, false, true);
       } catch (e) {
         console.warn('ChartOptions.applyOptionsToChart update failed', e);
@@ -198,8 +203,28 @@
     _getChartId(chartInstance) {
       if (!chartInstance) return null;
       return chartInstance.w && chartInstance.w.globals && chartInstance.w.globals.domID ? chartInstance.w.globals.domID : String(Math.random());
+    },
+
+    _ensureToolbarStyles() {
+      if (document.getElementById('chart-options-toolbar-style')) return;
+      const style = document.createElement('style');
+      style.id = 'chart-options-toolbar-style';
+      style.textContent = `
+        .apexcharts-toolbar {
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.2s ease;
+        }
+        .apexcharts-canvas:hover .apexcharts-toolbar,
+        .apexcharts-toolbar:focus-within {
+          opacity: 1 !important;
+          pointer-events: auto;
+        }
+      `;
+      document.head.appendChild(style);
     }
   };
 
   window.ChartOptions = window.ChartOptions || ChartOptions;
+  ChartOptions._ensureToolbarStyles();
 })();
